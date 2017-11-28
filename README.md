@@ -1,2 +1,4 @@
 # e3-testsuite
-e3 testsuite driver
+
+Generic Testsuite Driver in Python
+
