@@ -1,9 +1,10 @@
-from e3.env import Env
+from e3.env import Env, BaseEnv
 from e3.os.process import quote_arg
 from e3.fs import find, rm, mkdir, mv
 from e3.yaml import load_with_config
 from e3.main import Main
 from e3.testsuite.driver import TestDriver
+from e3.testsuite.result import TestResult, TestStatus
 from e3.job.scheduler import Scheduler
 from e3.collection.dag import DAG
 from e3.job import Job
@@ -24,6 +25,10 @@ class TooManyErrors(Exception):
     pass
 
 
+class TestAbort(Exception):
+    pass
+
+
 class TestFragment(Job):
     """Job used in a testsuite.
 
@@ -31,7 +36,7 @@ class TestFragment(Job):
     :ivar data: a function to call with the following signature (,) -> None
     """
 
-    def __init__(self, uid, test_instance, fun, notify_end):
+    def __init__(self, uid, test_instance, fun, previous_values, notify_end):
         """Initialize a TestFragment.
 
         :param uid: uid of the test fragment (should be unique)
@@ -45,10 +50,26 @@ class TestFragment(Job):
         """
         super(TestFragment, self).__init__(uid, fun, notify_end)
         self.test_instance = test_instance
+        self.previous_values = previous_values
 
     def run(self):
         """Run the test fragment."""
-        self.data()
+        self.return_value = None
+        try:
+            self.return_value = self.data(self.previous_values)
+        except TestAbort:
+            pass
+        except Exception as e:
+            # In case of exception generate a test result. The name is based
+            # on the test name with an additional random part to avoid
+            # conflicts
+            logger.error('got exception in test: %s', e)
+            test = self.test_instance
+            test.push_result(
+                TestResult('%s__except%s' % (test.test_name, self.index),
+                           env=test.test_env,
+                           status=TestStatus.ERROR))
+            self.return_value = e
 
 
 class TestsuiteCore(object):
@@ -70,11 +91,11 @@ class TestsuiteCore(object):
         """
         self.root_dir = os.path.abspath(root_dir)
         self.test_dir = os.path.join(self.root_dir, self.TEST_SUBDIR)
-        self.global_env = {}
-        self.test_env = {}
-        self.global_env['root_dir'] = self.root_dir
-        self.global_env['test_dir'] = self.test_dir
         self.consecutive_failures = 0
+        self.return_values = {}
+        self.results = {}
+        self.test_counter = 0
+        self.test_status_counters = {s: 0 for s in TestStatus}
 
     def test_result_filename(self, test_name):
         """Return the name of the file in which the result are stored.
@@ -97,7 +118,9 @@ class TestsuiteCore(object):
         """
         # we assume that data[0] is the test instance and data[1] the method
         # to call
-        return TestFragment(uid, data[0], data[1], notify_end)
+        return TestFragment(uid, data[0], data[1],
+                            {k: self.return_values[k] for k in predecessors},
+                            notify_end)
 
     def testsuite_main(self, args=None):
         """Main for the main testsuite script.
@@ -161,6 +184,10 @@ class TestsuiteCore(object):
         # parse options
         self.main.parse_args(args)
 
+        self.env = BaseEnv.from_env()
+        self.env.root_dir = self.root_dir
+        self.env.test_dir = self.test_dir
+
         # At this stage compute commonly used paths
         # Keep the working dir as short as possible, to avoid the risk
         # of having a path that's too long (a problem often seen on
@@ -186,12 +213,9 @@ class TestsuiteCore(object):
         self.setup_result_dir()
 
         # Store in global env: target information and common paths
-        self.global_env['build'] = Env().build
-        self.global_env['host'] = Env().host
-        self.global_env['target'] = Env().target
-        self.global_env['output_dir'] = self.output_dir
-        self.global_env['working_dir'] = self.working_dir
-        self.global_env['options'] = self.main.args
+        self.env.output_dir = self.output_dir
+        self.env.working_dir = self.working_dir
+        self.env.options = self.main.args
 
         # User specific startup
         self.tear_up()
@@ -244,10 +268,11 @@ class TestsuiteCore(object):
         # Add to the test environment the directory in which the test.yaml is
         # stored
         test_env['test_dir'] = os.path.join(
-            self.global_env['test_dir'],
-            os.path.dirname(test_case_file))
+            self.env.test_dir, os.path.dirname(test_case_file))
         test_env['test_case_file'] = test_case_file
         test_env['test_name'] = self.test_name(test_case_file)
+        test_env['working_dir'] = os.path.join(self.env.working_dir,
+                                               test_env['test_name'])
 
         if 'driver' in test_env:
             driver = test_env['driver']
@@ -261,7 +286,7 @@ class TestsuiteCore(object):
             return
 
         try:
-            instance = self.DRIVERS[driver](self.global_env, test_env)
+            instance = self.DRIVERS[driver](self.env, test_env)
             instance.add_test(actions)
 
         except Exception as e:
@@ -281,11 +306,17 @@ class TestsuiteCore(object):
         :param job: a job that is finished
         :type job: TestFragment
         """
+        self.return_values[job.uid] = job.return_value
         while job.test_instance.result_queue:
             result = job.test_instance.result_queue.pop()
             logging.info('%-12s %s' % (str(result.status), result.test_name))
+            assert result.test_name not in self.results, \
+                'cannot push twice results for %s' % result.test_name
             with open(self.test_result_filename(result.test_name), 'wb') as fd:
                 yaml.dump(result, fd)
+            self.results[result.test_name] = result.status
+            self.test_counter += 1
+            self.test_status_counters[result.status] += 1
         return False
 
     def setup_result_dir(self):
@@ -384,7 +415,7 @@ class Testsuite(TestsuiteCore):
 
             for p in result:
                 for s in path_selectors:
-                    if re.match(s, p):
+                    if s == '.' or s == './' or re.match(s, p):
                         filtered_result.append(p)
                         continue
 

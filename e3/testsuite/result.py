@@ -3,6 +3,8 @@ from __future__ import absolute_import, division, print_function
 import logging
 from enum import Enum
 
+import yaml
+
 
 class TestStatus(Enum):
     PASS = 0
@@ -13,6 +15,42 @@ class TestStatus(Enum):
     ERROR = 5
     UNRESOLVED = 6
     UNTESTED = 7
+
+
+class Log(object):
+    """Object to hold long text logs.
+
+    We ensure that when dump to yaml the result will be human readable.
+    """
+
+    def __init__(self, content):
+        """Initialize log instance.
+
+        :param content: an initial message to log
+        :type content: str
+        """
+        self.log = content
+
+    def __iadd__(self, content):
+        """Add additional content to the log.
+
+        :param content: a message to log
+        :type content: str
+        """
+        self.log += content
+        return self
+
+    def __str__(self):
+        return self.log
+
+
+# Enforce representation of Log objects when dumped to yaml
+def log_representer(dumper, data):
+    return dumper.represent_scalar('tag:yaml.org,2002:str',
+                                   data.log, style="|")
+
+
+yaml.add_representer(Log, log_representer)
 
 
 class TestResult(object):
@@ -39,6 +77,9 @@ class TestResult(object):
         else:
             self.status = status
         self.msg = msg
+        self.out = Log('')
+        self.log = Log('')
+        self.processes = []
 
     def set_status(self, status, msg=''):
         """Update the test status.
