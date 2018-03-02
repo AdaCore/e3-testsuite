@@ -13,16 +13,16 @@ class TestDriver(object):
 
     __metaclass__ = abc.ABCMeta
 
-    def __init__(self, global_env, test_env):
+    def __init__(self, env, test_env):
         """Initialize a TestDriver instance.
 
-        :param global_env: the testsuite environment
-        :type global_env: dict
+        :param env: the testsuite environment
+        :type env: dict
         :param test_env: the test env dictionary. One entry called
             test_name is at least expected.
         :type test_env: dict
         """
-        self.global_env = global_env
+        self.env = env
         self.test_env = test_env
         self.test_name = test_env['test_name']
 
@@ -104,20 +104,20 @@ class BasicTestDriver(TestDriver):
         self.add_fragment(dag, 'analyze', after=['run'])
         self.add_fragment(dag, 'tear_down', after=['analyze'])
 
-    def tear_up(self):
+    def tear_up(self, prev):
         """Execute operations before executing a test."""
         pass
 
-    def tear_down(self):
+    def tear_down(self, prev):
         """Execute operations once a test is finished."""
         pass
 
     @abc.abstractmethod
-    def run(self):
+    def run(self, prev):
         """Execute a test."""
         pass
 
     @abc.abstractmethod
-    def analyze(self):
+    def analyze(self, prev):
         """Compute the test result."""
         pass

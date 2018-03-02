@@ -36,7 +36,8 @@ def main():
         return 1
     p = Run([sys.executable,
              os.path.join(root_dir, config['main']),
-             os.path.relpath(cwd, root_dir) + '/'],
+             os.path.relpath(cwd, root_dir) + '/'] +
+            config.get('default_args', []),
             output=None,
             cwd=root_dir)
     return p.status
