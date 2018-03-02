@@ -44,7 +44,7 @@ def test_abort():
             return 'INVALID'
 
         def analyze(self, prev):
-            if prev.values()[0] is None:
+            if prev['run'] is None:
                 self.result.set_status(Status.PASS, 'ok!')
             else:
                 self.result.set_status(Status.FAIL, 'unexpected return value')
@@ -75,7 +75,7 @@ def test_exception_in_driver():
             raise AttributeError('expected exception')
 
         def analyze(self, prev):
-            prev_value = prev.values()[0]
+            prev_value = prev['run']
             logging.debug(prev_value)
             if isinstance(prev_value, Exception):
                 self.result.set_status(Status.PASS, 'ok!')
