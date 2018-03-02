@@ -118,8 +118,22 @@ class TestsuiteCore(object):
         """
         # we assume that data[0] is the test instance and data[1] the method
         # to call
+
+        # When passing return values from predecessors, remove current test
+        # name from the keys to ease referencing by user (the short fragment
+        # name can then be used by user without knowing the full node id).
+        key_prefix = data[0].test_name + '.'
+        key_prefix_len = len(key_prefix)
+
+        def filter_key(k):
+            if k.startswith(key_prefix):
+                return k[key_prefix_len:]
+            else:
+                return k
+
         return TestFragment(uid, data[0], data[1],
-                            {k: self.return_values[k] for k in predecessors},
+                            {filter_key(k): self.return_values[k]
+                             for k in predecessors},
                             notify_end)
 
     def testsuite_main(self, args=None):
@@ -415,13 +429,17 @@ class Testsuite(TestsuiteCore):
 
             for p in result:
                 for s in path_selectors:
-                    if s == '.' or s == './' or re.match(s, p):
+                    # Either we have a match or the selected path is the
+                    # tests root dir or a parent.
+                    if s == '.' or s == './' or s.startswith('..') or \
+                            re.match(s, p):
                         filtered_result.append(p)
                         continue
 
             result = filtered_result
 
-        logging.info("tests:\n  " + "\n  ".join(result))
+        logging.info('Found %s tests', len(result))
+        logging.debug("tests:\n  " + "\n  ".join(result))
         return result
 
     def tear_up(self):
