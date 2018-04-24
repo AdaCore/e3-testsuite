@@ -175,6 +175,13 @@ class TestsuiteCore(object):
             default=True,
             help="disable cleanup of working space")
         parser.add_argument(
+            "-j", "--jobs",
+            dest="jobs",
+            type="int",
+            metavar="N",
+            default=Env().build.cpu.cores,
+            help="Specify the number of jobs to run simultaneously")
+        parser.add_argument(
             "--show-error-output",
             action="store_true",
             help="When testcases fail, display their output. This is for"
@@ -244,7 +251,7 @@ class TestsuiteCore(object):
         self.scheduler = Scheduler(
             job_provider=self.job_factory,
             collect=self.collect_result,
-            tokens=4)
+            tokens=self.main.args.jobs)
         actions = DAG()
         for test in self.test_list:
             self.parse_test(actions, test)
