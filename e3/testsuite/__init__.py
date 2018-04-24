@@ -177,7 +177,7 @@ class TestsuiteCore(object):
         parser.add_argument(
             "-j", "--jobs",
             dest="jobs",
-            type="int",
+            type=int,
             metavar="N",
             default=Env().build.cpu.cores,
             help="Specify the number of jobs to run simultaneously")
