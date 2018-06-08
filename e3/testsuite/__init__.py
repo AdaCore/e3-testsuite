@@ -63,7 +63,7 @@ class TestFragment(Job):
             # In case of exception generate a test result. The name is based
             # on the test name with an additional random part to avoid
             # conflicts
-            logger.error('got exception in test: %s', e)
+            logger.exception('got exception in test: %s', e)
             test = self.test_instance
             test.push_result(
                 TestResult('%s__except%s' % (test.test_name, self.index),
