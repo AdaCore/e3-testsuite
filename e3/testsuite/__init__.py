@@ -182,7 +182,7 @@ class TestsuiteCore(object):
             default=Env().build.cpu.cores,
             help="Specify the number of jobs to run simultaneously")
         parser.add_argument(
-            "--show-error-output",
+            "--show-error-output", "-E",
             action="store_true",
             help="When testcases fail, display their output. This is for"
                  " convenience for interactive use.")
