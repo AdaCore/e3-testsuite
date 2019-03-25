@@ -182,7 +182,7 @@ class TestsuiteCore(object):
             default=Env().build.cpu.cores,
             help="Specify the number of jobs to run simultaneously")
         parser.add_argument(
-            "--show-error-output",
+            "--show-error-output", "-E",
             action="store_true",
             help="When testcases fail, display their output. This is for"
                  " convenience for interactive use.")
@@ -330,7 +330,15 @@ class TestsuiteCore(object):
         self.return_values[job.uid] = job.return_value
         while job.test_instance.result_queue:
             result = job.test_instance.result_queue.pop()
+
             logging.info('%-12s %s' % (str(result.status), result.test_name))
+            if (
+                self.main.args.show_error_output and
+                result.status not in (TestStatus.PASS, TestStatus.XFAIL,
+                                      TestStatus.XPASS)
+            ):
+                logging.info(str(result.log))
+
             assert result.test_name not in self.results, \
                 'cannot push twice results for %s' % result.test_name
             with open(self.test_result_filename(result.test_name), 'wb') as fd:

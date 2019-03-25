@@ -26,6 +26,12 @@ def check_call(driver,
                              'run_args': kwargs})
     result.out += process.out
 
+    # Append the status code and process output to the log to ease post-mortem
+    # investigation.
+    result.log += 'Status code: {}\n'.format(process.status)
+    result.log += 'Output:\n'
+    result.log += process.out
+
     if process.status != 0:
         result.set_status(TestStatus.FAIL, 'command call fails')
         driver.push_result(result)
