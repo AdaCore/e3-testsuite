@@ -239,7 +239,7 @@ class TestsuiteCore(object):
         self.env.options = self.main.args
 
         # User specific startup
-        self.tear_up()
+        self.set_up()
 
         # Retrieve the list of test
         self.test_list = self.get_test_list(self.main.args.sublist)
@@ -420,9 +420,8 @@ class Testsuite(TestsuiteCore):
         directory. If a test.yaml has a variants field, the test is expanded
         in several test, each test being associated with a given variant.
 
-        This function may be overriden.
-        At this stage the self.global_env (after update by the tear_up
-        procedure) is available.
+        This function may be overriden. At this stage the self.global_env
+        (after update by the set_up method) is available.
 
         :param sublist: a list of tests scenarios or patterns
         :type sublist: list[str]
@@ -457,7 +456,7 @@ class Testsuite(TestsuiteCore):
         logging.debug("tests:\n  " + "\n  ".join(result))
         return result
 
-    def tear_up(self):
+    def set_up(self):
         """Execute operations before launching the testsuite.
 
         At this stage arguments have been read. The next step will be
@@ -468,6 +467,12 @@ class Testsuite(TestsuiteCore):
         * set some environment variables
         * adjust self.global_env (dictionary passed to all tests)
         * take into account testsuite specific options
+        """
+        return self.tear_up()
+
+    def tear_up(self):
+        """
+        For backwards compatibility, alternative name for the "set_up" method.
         """
         pass
 
