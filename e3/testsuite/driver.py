@@ -93,19 +93,23 @@ class BasicTestDriver(TestDriver):
     def add_test(self, dag):
         """Create a standard test workflow.
 
-        tear_up -> run -> analyze -> tear_down in which tear_up and tear_down
+        set up -> run -> analyze -> tear_down in which set up and tear_down
         are optional.
 
         :param dag: the DAG to amend
         :type dag: e3.collection.dag.DAG
         """
-        self.add_fragment(dag, 'tear_up')
-        self.add_fragment(dag, 'run', after=['tear_up'])
+        self.add_fragment(dag, 'set_up')
+        self.add_fragment(dag, 'run', after=['set_up'])
         self.add_fragment(dag, 'analyze', after=['run'])
         self.add_fragment(dag, 'tear_down', after=['analyze'])
 
-    def tear_up(self, prev):
+    def set_up(self, prev):
         """Execute operations before executing a test."""
+        return self.tear_up(prev)
+
+    def tear_up(self, prev):
+        """Backwards-compatible name for the "set_up" method."""
         pass
 
     def tear_down(self, prev):
