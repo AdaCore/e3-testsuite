@@ -5,6 +5,7 @@ from e3.yaml import load_with_config
 from e3.main import Main
 from e3.testsuite.driver import TestDriver
 from e3.testsuite.result import TestResult, TestStatus
+from e3.testsuite.report.xunit import dump_xunit_report
 from e3.job.scheduler import Scheduler
 from e3.collection.dag import DAG
 from e3.job import Job
@@ -82,11 +83,13 @@ class TestsuiteCore(object):
     variables.
     """
 
-    def __init__(self, root_dir):
+    def __init__(self, root_dir, testsuite_name='Untitled testsute'):
         """Testsuite constructor.
 
         :param root_dir: root dir of the testsuite. Usually the directory in
             which testsuite.py and runtest.py are located
+        :param str testsuite_name: Name for this testsuite. It can be used to
+            provide a title in some report formats.
         :type root_dir: str | unicode
         """
         self.root_dir = os.path.abspath(root_dir)
@@ -96,6 +99,7 @@ class TestsuiteCore(object):
         self.results = {}
         self.test_counter = 0
         self.test_status_counters = {s: 0 for s in TestStatus}
+        self.testsuite_name = testsuite_name
 
     def test_result_filename(self, test_name):
         """Return the name of the file in which the result are stored.
@@ -196,6 +200,13 @@ class TestsuiteCore(object):
             " file can then be sourced from a Bourne shell to recreate"
             " the environement that existed when this testsuite was run"
             " to produce a given testsuite report.")
+        parser.add_argument(
+            "--xunit-output",
+            dest="xunit_output",
+            metavar="FILE",
+            help="Output testsuite report to the given file in the standard"
+                 " XUnit XML format. This is useful to display results in"
+                 " continuous build systems such as Jenkins.")
         parser.add_argument('sublist', metavar='tests', nargs='*',
                             default=[],
                             help='test')
@@ -261,6 +272,8 @@ class TestsuiteCore(object):
         self.scheduler.run(actions)
 
         self.dump_testsuite_result()
+        if self.main.args.xunit_output:
+            dump_xunit_report(self, self.main.args.xunit_output)
 
         # Clean everything
         self.tear_down()
