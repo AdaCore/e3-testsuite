@@ -8,11 +8,19 @@ from e3.testsuite import TestAbort
 from e3.testsuite.result import Log, TestStatus
 
 
-def check_call(driver,
-               cmd,
-               test_name=None,
-               result=None,
-               **kwargs):
+def check_call(driver, cmd, test_name=None, result=None, **kwargs):
+    """Call a given command in the context of a test, with given test driver
+    ``driver``, and with test result ``result``. Log results and handle
+    automatic failure of the testcase in case of command failure.
+
+    :param list[str] cmd: The command to run.
+
+    :param str|None test_name: The test name this call is being done under. If
+        none, deduced from the driver.
+
+    :param TestResult|None result: The test result for the test. If none,
+        deduced from the driver.
+    """
     if 'cwd' not in kwargs and 'working_dir' in driver.test_env:
         kwargs['cwd'] = driver.test_env['working_dir']
     process = Run(cmd, **kwargs)
