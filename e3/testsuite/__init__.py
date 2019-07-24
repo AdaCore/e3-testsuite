@@ -97,6 +97,11 @@ class TestsuiteCore(object):
         self.test_counter = 0
         self.test_status_counters = {s: 0 for s in TestStatus}
 
+        self.dev_mode = False
+        """Whether this testsuite will be run in dev mode or not. This is
+        initialized in ``testsuite_main``.
+        """
+
     def test_result_filename(self, test_name):
         """Return the name of the file in which the result are stored.
 
@@ -136,13 +141,29 @@ class TestsuiteCore(object):
                              for k in predecessors},
                             notify_end)
 
-    def testsuite_main(self, args=None):
+    def testsuite_main(self, dev_mode=False, args=None):
         """Main for the main testsuite script.
+
+        :param bool dev_mode: Whether this testsuite will be run in dev mode or
+            not. In dev_mode, behavior and command line arguments will be
+            slightly different, to better accomodate a development workflow.
+            The exhaustive list of tweaks:
+
+            1. ``--temp-dir`` behavior is different:
+                * It automatically creates the directory.
+                * No random subdirectory is created, and the working test
+                  directories are directly under ``temp_dir``.
+                * Cleanup is deactivated by default.
+
+            2. ``--disable-cleanup`` option doesn't exist (it's not necessary).
+               Cleanup is only active when no explicit temp dir is specified by
+               the user.
 
         :param args: command line arguments. If None use sys.argv
         :type args: list[str] | None
         """
         self.main = Main(platform_args=self.CROSS_SUPPORT)
+        self.dev_mode = dev_mode
 
         # Add common options
         parser = self.main.argument_parser
@@ -153,6 +174,7 @@ class TestsuiteCore(object):
             help="select output dir")
         parser.add_argument(
             "-t", "--temp-dir",
+            help="Temporary directory to store test driver working files",
             metavar="DIR",
             default=Env().tmp_dir)
         parser.add_argument(
@@ -168,12 +190,15 @@ class TestsuiteCore(object):
             help="This is default with this testsuite framework. The option"
             " is kept only to keep backward compatibility of invocation with"
             " former framework (gnatpython.testdriver)")
-        parser.add_argument(
-            "--disable-cleanup",
-            dest="enable_cleanup",
-            action="store_false",
-            default=True,
-            help="disable cleanup of working space")
+
+        if not self.dev_mode:
+            parser.add_argument(
+                "--disable-cleanup",
+                dest="enable_cleanup",
+                action="store_false",
+                default=True,
+                help="disable cleanup of working space")
+
         parser.add_argument(
             "-j", "--jobs",
             dest="jobs",
@@ -205,6 +230,12 @@ class TestsuiteCore(object):
         # parse options
         self.main.parse_args(args)
 
+        if self.dev_mode:
+            # We never clean-up if there is an explicit tmp dir in dev mode.
+            self.main.args.enable_cleanup = (
+                self.main.args.temp_dir == Env().tmp_dir
+            )
+
         self.env = BaseEnv.from_env()
         self.env.root_dir = self.root_dir
         self.env.test_dir = self.test_dir
@@ -223,12 +254,20 @@ class TestsuiteCore(object):
         self.old_output_dir = os.path.join(d, 'old')
 
         if not os.path.isdir(self.main.args.temp_dir):
-            logging.critical("temp dir '%s' does not exist",
-                             self.main.args.temp_dir)
-            return 1
+            if not self.dev_mode:
+                logging.critical("temp dir '%s' does not exist",
+                                 self.main.args.temp_dir)
+                return 1
+            else:
+                logging.info("temp dir '%s' does not exist, creating it",
+                             os.path.abspath(self.main.args.temp_dir))
+                mkdir(os.path.abspath(self.main.args.temp_dir))
 
-        self.working_dir = tempfile.mkdtemp(
-            '', 'tmp', os.path.abspath(self.main.args.temp_dir))
+        if self.dev_mode:
+            self.working_dir = os.path.abspath(self.main.args.temp_dir)
+        else:
+            self.working_dir = tempfile.mkdtemp(
+                '', 'tmp', os.path.abspath(self.main.args.temp_dir))
 
         # Create the new output directory that will hold the results
         self.setup_result_dir()
