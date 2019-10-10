@@ -1,6 +1,7 @@
 from __future__ import absolute_import, division, print_function
 
 import abc
+import traceback
 
 from e3.testsuite.result import TestResult
 
@@ -30,7 +31,10 @@ class TestDriver(object):
         self.result = TestResult(name=self.test_name,
                                  env=self.test_env)
 
-        # Queue used to push result to the testsuite
+        # Queue used to push result to the testsuite. Each queue item is a
+        # couple that contains the TestResult instance and a string traceback
+        # corresponding to the chain of call that pushed that result. This
+        # traceback is useful to debug test drivers that push twice results.
         self.result_queue = []
 
     def push_result(self, result=None):
@@ -44,7 +48,7 @@ class TestDriver(object):
         """
         if result is None:
             result = self.result
-        self.result_queue.append(result)
+        self.result_queue.append((result, traceback.format_stack()))
 
     def add_fragment(self, dag, name, fun=None, after=None):
         """Add a test fragment.
