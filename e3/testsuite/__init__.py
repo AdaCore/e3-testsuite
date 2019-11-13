@@ -97,6 +97,7 @@ class TestsuiteCore(object):
         self.consecutive_failures = 0
         self.return_values = {}
         self.results = {}
+        self.result_tracebacks = {}
         self.test_counter = 0
         self.test_status_counters = {s: 0 for s in TestStatus}
         self.testsuite_name = testsuite_name
@@ -342,7 +343,7 @@ class TestsuiteCore(object):
         """
         self.return_values[job.uid] = job.return_value
         while job.test_instance.result_queue:
-            result = job.test_instance.result_queue.pop()
+            result, tb = job.test_instance.result_queue.pop()
 
             logging.info('%-12s %s' % (str(result.status), result.test_name))
             if (
@@ -352,11 +353,22 @@ class TestsuiteCore(object):
             ):
                 logging.info(str(result.log))
 
-            assert result.test_name not in self.results, \
-                'cannot push twice results for %s' % result.test_name
+            def indented_tb(tb):
+                return ''.join('  {}'.format(line) for line in tb)
+
+            assert result.test_name not in self.results, (
+                'cannot push twice results for {}'
+                '\nFirst push happened at:'
+                '\n{}'
+                '\nThis one happened at:'
+                '\n{}'
+                .format(result.test_name,
+                        indented_tb(self.result_tracebacks[result.test_name]),
+                        indented_tb(tb)))
             with open(self.test_result_filename(result.test_name), 'wb') as fd:
                 yaml.dump(result, fd)
             self.results[result.test_name] = result.status
+            self.result_tracebacks[result.test_name] = tb
             self.test_counter += 1
             self.test_status_counters[result.status] += 1
         return False
