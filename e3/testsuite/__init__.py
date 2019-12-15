@@ -76,7 +76,7 @@ class TestFragment(Job):
 class TestsuiteCore(object):
     """Testsuite Core driver.
 
-    This class is the base of Testsuite class and should not be instanciated.
+    This class is the base of Testsuite class and should not be instantiated.
     It's not recommended to override any of the functions declared in it.
 
     See documentation of Testsuite class for overridable methods and
@@ -199,7 +199,7 @@ class TestsuiteCore(object):
             help="Dump all environment variables in a file named environ.sh,"
             " located in the output directory (see --output-dir). This"
             " file can then be sourced from a Bourne shell to recreate"
-            " the environement that existed when this testsuite was run"
+            " the environment that existed when this testsuite was run"
             " to produce a given testsuite report.")
         parser.add_argument(
             "--xunit-output",
@@ -421,10 +421,10 @@ class Testsuite(TestsuiteCore):
     def test_name(self, test_case_file):
         """Compute the test name given a testcase spec.
 
-        This function can be overriden. By default it uses the name of the
+        This function can be overridden. By default it uses the name of the
         directory in which the test.yaml is stored
 
-        Note that the test name should be valid filename (not dir seprators,
+        Note that the test name should be valid filename (not dir separators,
         or special characters such as ``:``, ...).
 
         :param test_case_file: path to test.yaml file (relative to test subdir
@@ -445,7 +445,7 @@ class Testsuite(TestsuiteCore):
         directory. If a test.yaml has a variants field, the test is expanded
         in several test, each test being associated with a given variant.
 
-        This function may be overriden. At this stage the self.global_env
+        This function may be overridden. At this stage the self.global_env
         (after update by the set_up method) is available.
 
         :param sublist: a list of tests scenarios or patterns
@@ -453,7 +453,7 @@ class Testsuite(TestsuiteCore):
         :return: the list of selected test
         :rtype: list[str]
         """
-        # First retrive the list of test.yaml files
+        # First retrieve the list of test.yaml files
         result = [os.path.relpath(p, self.test_dir).replace('\\', '/')
                   for p in find(self.test_dir, 'test.yaml')]
         if sublist:
@@ -461,10 +461,13 @@ class Testsuite(TestsuiteCore):
             filtered_result = []
             path_selectors = []
             for s in sublist:
-                subdir = os.path.relpath(os.path.abspath(s), self.test_dir)
-                if s.endswith('/') or s.endswith('\\'):
-                    subdir += '/'
-                path_selectors.append(subdir)
+                if os.path.exists(s):
+                    subdir = os.path.relpath(os.path.abspath(s), self.test_dir)
+                    if s.endswith('/') or s.endswith('\\'):
+                        subdir += '/'
+                    path_selectors.append(subdir)
+                else:
+                    path_selectors.append(s)
 
             for p in result:
                 for s in path_selectors:
