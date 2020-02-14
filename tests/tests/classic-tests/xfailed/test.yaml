@@ -1,0 +1,5 @@
+driver: script-driver
+process:
+    args: [-e]
+control:
+    - [XFAIL, "True", "The purpose of this test is to fail"]
