@@ -1,0 +1,4 @@
+driver: script-driver
+process:
+    args: [-e]
+    catch_error: False
