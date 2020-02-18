@@ -188,6 +188,14 @@ class TestsuiteCore(object):
         )
         parser.add_argument("-t", "--temp-dir", metavar="DIR", default=Env().tmp_dir)
         parser.add_argument(
+            "-d", "--dev-temp",
+            nargs="?", default=None, const="tmp",
+            help="Unlike --temp-dir, use this very directory to store"
+                 " testsuite temporaries (i.e. no random subdirectory). Also"
+                 " automatically disable temp dir cleanup, to be developer"
+                 " friendly. If no directory is provided, use the local"
+                 " \"tmp\" directory")
+        parser.add_argument(
             "--max-consecutive-failures",
             default=0,
             help="If there are more than N consecutive failures, the testsuite"
@@ -282,13 +290,25 @@ class TestsuiteCore(object):
         self.output_dir = os.path.join(d, "new")
         self.old_output_dir = os.path.join(d, "old")
 
-        if not os.path.isdir(self.main.args.temp_dir):
-            logging.critical("temp dir '%s' does not exist", self.main.args.temp_dir)
-            return 1
+        if self.main.args.dev_temp:
+            # Use a temporary directory for developers: make sure it is an
+            # empty directory and disable cleanup to ease post-mortem
+            # investigation.
+            self.working_dir = os.path.abspath(self.main.args.dev_temp)
+            rm(self.working_dir, recursive=True)
+            mkdir(self.working_dir)
+            self.main.args.enable_cleanup = False
 
-        self.working_dir = tempfile.mkdtemp(
-            "", "tmp", os.path.abspath(self.main.args.temp_dir)
-        )
+        else:
+            # If the temp dir is supposed to be randomized, we need to create a
+            # subdirectory, so check that the parent directory exists first.
+            if not os.path.isdir(self.main.args.temp_dir):
+                logging.critical("temp dir '%s' does not exist",
+                                 self.main.args.temp_dir)
+                return 1
+
+            self.working_dir = tempfile.mkdtemp(
+                "", "tmp", os.path.abspath(self.main.args.temp_dir))
 
         # Create the new output directory that will hold the results
         self.setup_result_dir()
