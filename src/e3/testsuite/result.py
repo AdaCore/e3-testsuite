@@ -14,6 +14,27 @@ class TestStatus(Enum):
     UNRESOLVED = 6
     UNTESTED = 7
 
+    def color(self, testsuite):
+        """
+        Return the ANSI color code for this test status, or an empty string if
+        colors are disabled.
+
+        :param testsuite: TestsuiteCore instance.
+        :rtype: str
+        """
+        Fore = testsuite.Fore
+        Style = testsuite.Style
+        return {
+            'PASS': Fore.GREEN,
+            'FAIL': Fore.RED,
+            'UNSUPPORTED': Style.DIM,
+            'XFAIL': Fore.CYAN,
+            'XPASS': Fore.YELLOW,
+            'ERROR': Fore.RED + Style.BRIGHT,
+            'UNRESOLVED': Style.DIM,
+            'UNTESTED': Style.DIM,
+        }[self.name]
+
 
 class Log(object):
     """Object to hold long text logs.
