@@ -1,14 +1,15 @@
-from e3.env import Env, BaseEnv
-from e3.os.process import quote_arg
-from e3.fs import find, rm, mkdir, mv
-from e3.yaml import load_with_config
-from e3.main import Main
-from e3.testsuite.driver import TestDriver
-from e3.testsuite.result import TestResult, TestStatus
-from e3.testsuite.report.xunit import dump_xunit_report
-from e3.job.scheduler import Scheduler
 from e3.collection.dag import DAG
+from e3.env import Env, BaseEnv
+from e3.fs import find, rm, mkdir, mv
+import e3.log
 from e3.job import Job
+from e3.job.scheduler import Scheduler
+from e3.main import Main
+from e3.os.process import quote_arg
+from e3.testsuite.driver import TestDriver
+from e3.testsuite.report.xunit import dump_xunit_report
+from e3.testsuite.result import TestResult, TestStatus
+from e3.yaml import load_with_config
 
 import collections
 import traceback
@@ -19,6 +20,8 @@ import sys
 import re
 import tempfile
 
+from colorama import Fore, Style
+
 logger = logging.getLogger("testsuite")
 
 
@@ -28,6 +31,25 @@ class TooManyErrors(Exception):
 
 class TestAbort(Exception):
     pass
+
+
+def isatty(stream):
+    """Return whether stream is a TTY.
+
+    This is a safe predicate: it works if stream is None or if it does not even
+    support TTY detection: in these cases, be conservative (consider it's not a
+    TTY).
+    """
+    return stream and getattr(stream, 'isatty') and stream.isatty()
+
+
+class DummyColors(object):
+    """
+    Stub object to replace colorama's Fore/Style classes when colors are
+    disabled.
+    """
+    def __getattr__(self, name):
+        return ''
 
 
 class TestFragment(Job):
@@ -231,6 +253,18 @@ class TestsuiteCore(object):
         # parse options
         self.main.parse_args(args)
 
+        # If there is a chance for the logging to end up in a non-tty stream,
+        # disable colors.
+        self.Fore = Fore
+        self.Style = Style
+        if (
+            self.main.args.log_file or
+            not isatty(sys.stdout) or
+            not isatty(sys.stderr)
+        ):
+            self.Fore = DummyColors()
+            self.Style = DummyColors()
+
         self.env = BaseEnv.from_env()
         self.env.root_dir = self.root_dir
         self.env.test_dir = self.test_dir
@@ -342,6 +376,8 @@ class TestsuiteCore(object):
 
         try:
             instance = self.DRIVERS[driver](self.env, test_env)
+            instance.Fore = self.Fore
+            instance.Style = self.Style
             instance.add_test(actions)
 
         except Exception as e:
