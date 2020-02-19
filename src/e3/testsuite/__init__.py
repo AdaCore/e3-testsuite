@@ -388,8 +388,26 @@ class TestsuiteCore(object):
             return
 
     def dump_testsuite_result(self):
-        """To be implemented."""
-        pass
+        """Log a summary of test results.
+
+        Subclasses are free to override this to do whatever is suitable for
+        them.
+        """
+        lines = ['Summary:']
+
+        # Display test count for each status, but only for status that have
+        # at least one test. Sort them by status value, to get consistent
+        # order.
+        stats = sorted(((status, count)
+                        for status, count in self.test_status_counters.items()
+                        if count),
+                       key=lambda (status, _): status.value)
+        for status, count in stats:
+            lines.append('  {}{: <12}{} {}'.format(
+                status.color(self), status.name, self.Style.RESET_ALL, count))
+        if not stats:
+            lines.append('  <no test result>')
+        logging.info('\n'.join(lines))
 
     def collect_result(self, job):
         """Run internal function.
