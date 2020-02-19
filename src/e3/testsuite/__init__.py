@@ -401,13 +401,25 @@ class TestsuiteCore(object):
         while job.test_instance.result_queue:
             result, tb = job.test_instance.result_queue.pop()
 
-            logging.info("%-12s %s" % (str(result.status), result.test_name))
-            if self.main.args.show_error_output and result.status not in (
-                TestStatus.PASS,
-                TestStatus.XFAIL,
-                TestStatus.XPASS,
+            # Log the test result. If requested, include test log
+            log_line = '{}{: <12}{} {}{}{}'.format(
+                result.status.color(self),
+                result.status.name,
+                self.Style.RESET_ALL,
+
+                self.Style.BRIGHT,
+                result.test_name,
+                self.Style.RESET_ALL)
+            if result.msg:
+                log_line += ': {}{}{}'.format(self.Style.DIM, result.msg,
+                                              self.Style.RESET_ALL)
+            if (
+                self.main.args.show_error_output and
+                result.status not in (TestStatus.PASS, TestStatus.XFAIL,
+                                      TestStatus.XPASS)
             ):
-                logging.info(str(result.log))
+                log_line += '\n' + str(result.log) + self.Style.RESET_ALL
+            logging.info(log_line)
 
             def indented_tb(tb):
                 return "".join("  {}".format(line) for line in tb)
