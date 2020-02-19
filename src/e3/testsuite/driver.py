@@ -1,4 +1,5 @@
 import abc
+import os.path
 import traceback
 
 from e3.testsuite.result import TestResult
@@ -70,6 +71,20 @@ class TestDriver(object, metaclass=abc.ABCMeta):
 
         dag.add_vertex(self.test_name + "." + name, (self, fun),
                        predecessors=after)
+
+    def working_dir(self, *args):
+        """
+        Return the working directory, plus any path elements joined to it if
+        passed in *args.
+        """
+        return os.path.join(self.test_env['working_dir'], *args)
+
+    def test_dir(self, *args):
+        """
+        Return the testcase directory, plus any path elements joined to it if
+        passed in *args.
+        """
+        return os.path.join(self.test_env['test_dir'], *args)
 
     @abc.abstractmethod
     def add_test(self, dag):
