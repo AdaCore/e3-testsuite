@@ -283,7 +283,7 @@ class TestsuiteCore(object):
         for test in self.test_list:
             self.parse_test(actions, test)
 
-        with open(os.path.join(self.output_dir, "tests.dot"), "wb") as fd:
+        with open(os.path.join(self.output_dir, "tests.dot"), "w") as fd:
             fd.write(actions.as_dot())
         self.scheduler.run(actions)
 
@@ -387,7 +387,7 @@ class TestsuiteCore(object):
                     indented_tb(tb),
                 )
             )
-            with open(self.test_result_filename(result.test_name), "wb") as fd:
+            with open(self.test_result_filename(result.test_name), "w") as fd:
                 yaml.dump(result, fd)
             self.results[result.test_name] = result.status
             self.result_tracebacks[result.test_name] = tb
