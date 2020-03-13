@@ -1,5 +1,3 @@
-from __future__ import absolute_import, division, print_function
-
 import logging
 import tempfile
 
@@ -24,7 +22,7 @@ class RequirementCoverage(object):
     @classmethod
     def dump(cls):
         if cls.output_filename:
-            with open(cls.output_filename, 'w') as f:
+            with open(cls.output_filename, "w") as f:
                 yaml.dump(cls.results, f)
 
 
@@ -50,31 +48,34 @@ def env_protect(request):
 
 
 def pytest_addoption(parser):
-    parser.addoption('--ci', action='store_true',
-                     help='Tests are running on a CI server')
-    parser.addoption('--requirement-coverage-report',
-                     help='Report requirement coverage')
+    parser.addoption(
+        "--ci", action="store_true", help="Tests are running on a CI server"
+    )
+    parser.addoption(
+        "--requirement-coverage-report", help="Report requirement coverage"
+    )
 
 
 @pytest.fixture(autouse=True)
 def require_git(request):
-    marker = request.node.get_marker('git')
+    marker = request.node.get_marker("git")
     if marker:
         git(request)
 
 
 @pytest.fixture
 def git(request):
-    if not which('git'):
-        if request.config.getoption('ci'):
-            pytest.fail('git not available')
+    if not which("git"):
+        if request.config.getoption("ci"):
+            pytest.fail("git not available")
         else:
-            pytest.skip('git not available')
+            pytest.skip("git not available")
 
 
 def pytest_configure(config):
     RequirementCoverage.output_filename = config.getoption(
-        'requirement_coverage_report')
+        "requirement_coverage_report"
+    )
 
 
 def pytest_itemcollected(item):
@@ -82,8 +83,8 @@ def pytest_itemcollected(item):
     doc = item.obj.__doc__
     if RequirementCoverage.output_filename and doc:
         for line in item.obj.__doc__.splitlines():
-            line = line.strip().strip('.')
-            if line.startswith('REQ-'):
+            line = line.strip().strip(".")
+            if line.startswith("REQ-"):
                 RequirementCoverage.results[item.obj.__name__] = line
 
 

@@ -1,18 +1,14 @@
-from __future__ import absolute_import, division, print_function
-
 import abc
 import traceback
 
 from e3.testsuite.result import TestResult
 
 
-class TestDriver(object):
+class TestDriver(object, metaclass=abc.ABCMeta):
     """Testsuite Driver.
 
     All drivers declared in a testsuite should inherit from this class
     """
-
-    __metaclass__ = abc.ABCMeta
 
     def __init__(self, env, test_env):
         """Initialize a TestDriver instance.
@@ -25,11 +21,10 @@ class TestDriver(object):
         """
         self.env = env
         self.test_env = test_env
-        self.test_name = test_env['test_name']
+        self.test_name = test_env["test_name"]
 
         # Initialize test result
-        self.result = TestResult(name=self.test_name,
-                                 env=self.test_env)
+        self.result = TestResult(name=self.test_name, env=self.test_env)
 
         # Queue used to push result to the testsuite. Each queue item is a
         # couple that contains the TestResult instance and a string traceback
@@ -68,14 +63,12 @@ class TestDriver(object):
         :type after: list[str] | None
         """
         if after is not None:
-            after = [self.test_name + '.' + k for k in after]
+            after = [self.test_name + "." + k for k in after]
 
         if fun is None:
             fun = getattr(self, name)
 
-        dag.add_vertex(self.test_name + '.' + name,
-                       (self, fun),
-                       predecessors=after)
+        dag.add_vertex(self.test_name + "." + name, (self, fun), predecessors=after)
 
     @abc.abstractmethod
     def add_test(self, dag):
@@ -90,10 +83,7 @@ class TestDriver(object):
         pass
 
 
-class BasicTestDriver(TestDriver):
-
-    __metaclass__ = abc.ABCMeta
-
+class BasicTestDriver(TestDriver, metaclass=abc.ABCMeta):
     def add_test(self, dag):
         """Create a standard test workflow.
 
@@ -103,10 +93,10 @@ class BasicTestDriver(TestDriver):
         :param dag: the DAG to amend
         :type dag: e3.collection.dag.DAG
         """
-        self.add_fragment(dag, 'set_up')
-        self.add_fragment(dag, 'run', after=['set_up'])
-        self.add_fragment(dag, 'analyze', after=['run'])
-        self.add_fragment(dag, 'tear_down', after=['analyze'])
+        self.add_fragment(dag, "set_up")
+        self.add_fragment(dag, "run", after=["set_up"])
+        self.add_fragment(dag, "analyze", after=["run"])
+        self.add_fragment(dag, "tear_down", after=["analyze"])
 
     def set_up(self, prev):
         """Execute operations before executing a test."""
