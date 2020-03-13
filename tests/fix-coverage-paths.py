@@ -7,22 +7,26 @@
 import os
 import sys
 
-from coverage.data import CoverageData, PathAliases
+from coverage.sqldata import CoverageData
+from coverage.files import PathAliases
+from tempfile import NamedTemporaryFile
 
 
 def fix_paths(site_pkg_dir, cov_data_file):
     site_pkg_dir = os.path.abspath(site_pkg_dir)
 
     paths = PathAliases()
-    paths.add(site_pkg_dir, ".")
+    paths.add(site_pkg_dir, "src")
 
-    old_coverage_data = CoverageData()
-    old_coverage_data.read_file(cov_data_file)
+    old_cov_file = NamedTemporaryFile()
+    old_cov_file.close()
+    os.rename(cov_data_file, old_cov_file.name)
 
-    new_coverage_data = CoverageData()
-    new_coverage_data.update(old_coverage_data, paths)
-
-    new_coverage_data.write_file(cov_data_file)
+    old_coverage_data = CoverageData(old_cov_file.name)
+    old_coverage_data.read()
+    new_coverage_data = CoverageData(cov_data_file)
+    new_coverage_data.update(old_coverage_data, aliases=paths)
+    new_coverage_data.write()
 
 
 if __name__ == "__main__":
