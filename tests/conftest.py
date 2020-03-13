@@ -58,7 +58,7 @@ def pytest_addoption(parser):
 
 @pytest.fixture(autouse=True)
 def require_git(request):
-    marker = request.node.get_marker("git")
+    marker = request.node.get_closest_marker("git")
     if marker:
         git(request)
 
