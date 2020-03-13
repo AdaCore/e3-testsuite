@@ -19,7 +19,7 @@ import sys
 import re
 import tempfile
 
-logger = logging.getLogger('testsuite')
+logger = logging.getLogger("testsuite")
 
 
 class TooManyErrors(Exception):
@@ -64,12 +64,15 @@ class TestFragment(Job):
             # In case of exception generate a test result. The name is based
             # on the test name with an additional random part to avoid
             # conflicts
-            logger.exception('got exception in test: %s', e)
+            logger.exception("got exception in test: %s", e)
             test = self.test_instance
             test.push_result(
-                TestResult('%s__except%s' % (test.test_name, self.index),
-                           env=test.test_env,
-                           status=TestStatus.ERROR))
+                TestResult(
+                    "%s__except%s" % (test.test_name, self.index),
+                    env=test.test_env,
+                    status=TestStatus.ERROR,
+                )
+            )
             self.return_value = e
 
 
@@ -83,7 +86,7 @@ class TestsuiteCore(object):
     variables.
     """
 
-    def __init__(self, root_dir, testsuite_name='Untitled testsute'):
+    def __init__(self, root_dir, testsuite_name="Untitled testsute"):
         """Testsuite constructor.
 
         :param root_dir: root dir of the testsuite. Usually the directory in
@@ -114,7 +117,7 @@ class TestsuiteCore(object):
             separators
         :rtype: str | unicode
         """
-        return os.path.join(self.output_dir, test_name + '.yaml')
+        return os.path.join(self.output_dir, test_name + ".yaml")
 
     def job_factory(self, uid, data, predecessors, notify_end):
         """Run internal function.
@@ -127,7 +130,7 @@ class TestsuiteCore(object):
         # When passing return values from predecessors, remove current test
         # name from the keys to ease referencing by user (the short fragment
         # name can then be used by user without knowing the full node id).
-        key_prefix = data[0].test_name + '.'
+        key_prefix = data[0].test_name + "."
         key_prefix_len = len(key_prefix)
 
         def filter_key(k):
@@ -136,10 +139,13 @@ class TestsuiteCore(object):
             else:
                 return k
 
-        return TestFragment(uid, data[0], data[1],
-                            {filter_key(k): self.return_values[k]
-                             for k in predecessors},
-                            notify_end)
+        return TestFragment(
+            uid,
+            data[0],
+            data[1],
+            {filter_key(k): self.return_values[k] for k in predecessors},
+            notify_end,
+        )
 
     def testsuite_main(self, args=None):
         """Main for the main testsuite script.
@@ -152,45 +158,51 @@ class TestsuiteCore(object):
         # Add common options
         parser = self.main.argument_parser
         parser.add_argument(
-            "-o", "--output-dir",
+            "-o",
+            "--output-dir",
             metavar="DIR",
             default="./out",
-            help="select output dir")
-        parser.add_argument(
-            "-t", "--temp-dir",
-            metavar="DIR",
-            default=Env().tmp_dir)
+            help="select output dir",
+        )
+        parser.add_argument("-t", "--temp-dir", metavar="DIR", default=Env().tmp_dir)
         parser.add_argument(
             "--max-consecutive-failures",
             default=0,
             help="If there are more than N consecutive failures, the testsuite"
             " is aborted. If set to 0 (default) then the testsuite will never"
-            " be stopped")
+            " be stopped",
+        )
         parser.add_argument(
             "--keep-old-output-dir",
             default=False,
             action="store_true",
             help="This is default with this testsuite framework. The option"
             " is kept only to keep backward compatibility of invocation with"
-            " former framework (gnatpython.testdriver)")
+            " former framework (gnatpython.testdriver)",
+        )
         parser.add_argument(
             "--disable-cleanup",
             dest="enable_cleanup",
             action="store_false",
             default=True,
-            help="disable cleanup of working space")
+            help="disable cleanup of working space",
+        )
         parser.add_argument(
-            "-j", "--jobs",
+            "-j",
+            "--jobs",
             dest="jobs",
             type=int,
             metavar="N",
             default=Env().build.cpu.cores,
-            help="Specify the number of jobs to run simultaneously")
+            help="Specify the number of jobs to run simultaneously",
+        )
         parser.add_argument(
-            "--show-error-output", "-E",
+            "--show-error-output",
+            "-E",
             action="store_true",
             help="When testcases fail, display their output. This is for"
-                 " convenience for interactive use.")
+            " convenience for interactive use.",
+        )
         parser.add_argument(
             "--dump-environ",
             dest="dump_environ",
@@ -200,17 +212,19 @@ class TestsuiteCore(object):
             " located in the output directory (see --output-dir). This"
             " file can then be sourced from a Bourne shell to recreate"
             " the environement that existed when this testsuite was run"
-            " to produce a given testsuite report.")
+            " to produce a given testsuite report.",
+        )
         parser.add_argument(
             "--xunit-output",
             dest="xunit_output",
             metavar="FILE",
             help="Output testsuite report to the given file in the standard"
-                 " XUnit XML format. This is useful to display results in"
-                 " continuous build systems such as Jenkins.")
-        parser.add_argument('sublist', metavar='tests', nargs='*',
-                            default=[],
-                            help='test')
+            " XUnit XML format. This is useful to display results in"
+            " continuous build systems such as Jenkins.",
+        )
+        parser.add_argument(
+            "sublist", metavar="tests", nargs="*", default=[], help="test"
+        )
         # Add user defined options
         self.add_options()
 
@@ -231,16 +245,16 @@ class TestsuiteCore(object):
         # running each test. A relative path would no longer work
         # under those circumstances.
         d = os.path.abspath(self.main.args.output_dir)
-        self.output_dir = os.path.join(d, 'new')
-        self.old_output_dir = os.path.join(d, 'old')
+        self.output_dir = os.path.join(d, "new")
+        self.old_output_dir = os.path.join(d, "old")
 
         if not os.path.isdir(self.main.args.temp_dir):
-            logging.critical("temp dir '%s' does not exist",
-                             self.main.args.temp_dir)
+            logging.critical("temp dir '%s' does not exist", self.main.args.temp_dir)
             return 1
 
         self.working_dir = tempfile.mkdtemp(
-            '', 'tmp', os.path.abspath(self.main.args.temp_dir))
+            "", "tmp", os.path.abspath(self.main.args.temp_dir)
+        )
 
         # Create the new output directory that will hold the results
         self.setup_result_dir()
@@ -263,12 +277,13 @@ class TestsuiteCore(object):
         self.scheduler = Scheduler(
             job_provider=self.job_factory,
             collect=self.collect_result,
-            tokens=self.main.args.jobs)
+            tokens=self.main.args.jobs,
+        )
         actions = DAG()
         for test in self.test_list:
             self.parse_test(actions, test)
 
-        with open(os.path.join(self.output_dir, 'tests.dot'), 'wb') as fd:
+        with open(os.path.join(self.output_dir, "tests.dot"), "w") as fd:
             fd.write(actions.as_dot())
         self.scheduler.run(actions)
 
@@ -290,34 +305,39 @@ class TestsuiteCore(object):
         """
         # Load testcase file
         test_env = load_with_config(
-            os.path.join(self.test_dir, test_case_file),
-            Env().to_dict())
+            os.path.join(self.test_dir, test_case_file), Env().to_dict()
+        )
 
         # Ensure that the test_env act like a dictionary
         if not isinstance(test_env, collections.Mapping):
-            test_env = {'test_name': self.test_name(test_case_file),
-                        'test_yaml_wrong_content': test_env}
+            test_env = {
+                "test_name": self.test_name(test_case_file),
+                "test_yaml_wrong_content": test_env,
+            }
             logger.error("abort test because of invalid test.yaml")
             return
 
         # Add to the test environment the directory in which the test.yaml is
         # stored
-        test_env['test_dir'] = os.path.join(
-            self.env.test_dir, os.path.dirname(test_case_file))
-        test_env['test_case_file'] = test_case_file
-        test_env['test_name'] = self.test_name(test_case_file)
-        test_env['working_dir'] = os.path.join(self.env.working_dir,
-                                               test_env['test_name'])
+        test_env["test_dir"] = os.path.join(
+            self.env.test_dir, os.path.dirname(test_case_file)
+        )
+        test_env["test_case_file"] = test_case_file
+        test_env["test_name"] = self.test_name(test_case_file)
+        test_env["working_dir"] = os.path.join(
+            self.env.working_dir, test_env["test_name"]
+        )
 
-        if 'driver' in test_env:
-            driver = test_env['driver']
+        if "driver" in test_env:
+            driver = test_env["driver"]
         else:
             driver = self.default_driver
 
-        logger.debug('set driver to %s' % driver)
-        if driver not in self.DRIVERS or \
-                not issubclass(self.DRIVERS[driver], TestDriver):
-            logger.error('cannot find driver for %s' % test_case_file)
+        logger.debug("set driver to %s" % driver)
+        if driver not in self.DRIVERS or not issubclass(
+            self.DRIVERS[driver], TestDriver
+        ):
+            logger.error("cannot find driver for %s" % test_case_file)
             return
 
         try:
@@ -327,7 +347,7 @@ class TestsuiteCore(object):
         except Exception as e:
             error_msg = str(e)
             error_msg += "Traceback:\n"
-            error_msg += "\n".join(traceback.format_tb(sys.exc_traceback))
+            error_msg += "\n".join(traceback.format_tb(sys.exc_info()[2]))
             logger.error(error_msg)
             return
 
@@ -345,27 +365,29 @@ class TestsuiteCore(object):
         while job.test_instance.result_queue:
             result, tb = job.test_instance.result_queue.pop()
 
-            logging.info('%-12s %s' % (str(result.status), result.test_name))
-            if (
-                self.main.args.show_error_output and
-                result.status not in (TestStatus.PASS, TestStatus.XFAIL,
-                                      TestStatus.XPASS)
+            logging.info("%-12s %s" % (str(result.status), result.test_name))
+            if self.main.args.show_error_output and result.status not in (
+                TestStatus.PASS,
+                TestStatus.XFAIL,
+                TestStatus.XPASS,
             ):
                 logging.info(str(result.log))
 
             def indented_tb(tb):
-                return ''.join('  {}'.format(line) for line in tb)
+                return "".join("  {}".format(line) for line in tb)
 
             assert result.test_name not in self.results, (
-                'cannot push twice results for {}'
-                '\nFirst push happened at:'
-                '\n{}'
-                '\nThis one happened at:'
-                '\n{}'
-                .format(result.test_name,
-                        indented_tb(self.result_tracebacks[result.test_name]),
-                        indented_tb(tb)))
-            with open(self.test_result_filename(result.test_name), 'wb') as fd:
+                "cannot push twice results for {}"
+                "\nFirst push happened at:"
+                "\n{}"
+                "\nThis one happened at:"
+                "\n{}".format(
+                    result.test_name,
+                    indented_tb(self.result_tracebacks[result.test_name]),
+                    indented_tb(tb),
+                )
+            )
+            with open(self.test_result_filename(result.test_name), "w") as fd:
                 yaml.dump(result, fd)
             self.results[result.test_name] = result.status
             self.result_tracebacks[result.test_name] = tb
@@ -382,10 +404,11 @@ class TestsuiteCore(object):
         mkdir(self.output_dir)
 
         if self.main.args.dump_environ:
-            with open(os.path.join(self.output_dir, 'environ.sh'), 'w') as f:
+            with open(os.path.join(self.output_dir, "environ.sh"), "w") as f:
                 for var_name in sorted(os.environ):
-                    f.write('export %s=%s\n'
-                            % (var_name, quote_arg(os.environ[var_name])))
+                    f.write(
+                        "export %s=%s\n" % (var_name, quote_arg(os.environ[var_name]))
+                    )
 
 
 class Testsuite(TestsuiteCore):
@@ -399,7 +422,7 @@ class Testsuite(TestsuiteCore):
     # set CROSS_SUPPORT to true if the driver should accept --target, --build
     # --host switches
 
-    TEST_SUBDIR = '.'
+    TEST_SUBDIR = "."
     # Subdir in which the tests are actually stored
 
     DRIVERS = {}
@@ -434,8 +457,12 @@ class Testsuite(TestsuiteCore):
         :return: the test name
         :rtype: basestring
         """
-        result = os.path.dirname(
-            test_case_file).replace('\\', '/').rstrip('/').replace('/', '__')
+        result = (
+            os.path.dirname(test_case_file)
+            .replace("\\", "/")
+            .rstrip("/")
+            .replace("/", "__")
+        )
         return result
 
     def get_test_list(self, sublist):
@@ -454,30 +481,31 @@ class Testsuite(TestsuiteCore):
         :rtype: list[str]
         """
         # First retrive the list of test.yaml files
-        result = [os.path.relpath(p, self.test_dir).replace('\\', '/')
-                  for p in find(self.test_dir, 'test.yaml')]
+        result = [
+            os.path.relpath(p, self.test_dir).replace("\\", "/")
+            for p in find(self.test_dir, "test.yaml")
+        ]
         if sublist:
-            logging.info('filter: %s' % sublist)
+            logging.info("filter: %s" % sublist)
             filtered_result = []
             path_selectors = []
             for s in sublist:
                 subdir = os.path.relpath(os.path.abspath(s), self.test_dir)
-                if s.endswith('/') or s.endswith('\\'):
-                    subdir += '/'
+                if s.endswith("/") or s.endswith("\\"):
+                    subdir += "/"
                 path_selectors.append(subdir)
 
             for p in result:
                 for s in path_selectors:
                     # Either we have a match or the selected path is the
                     # tests root dir or a parent.
-                    if s == '.' or s == './' or s.startswith('..') or \
-                            re.match(s, p):
+                    if s == "." or s == "./" or s.startswith("..") or re.match(s, p):
                         filtered_result.append(p)
                         continue
 
             result = filtered_result
 
-        logging.info('Found %s tests', len(result))
+        logging.info("Found %s tests", len(result))
         logging.debug("tests:\n  " + "\n  ".join(result))
         return result
 
