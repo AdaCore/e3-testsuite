@@ -418,10 +418,13 @@ class TestsuiteCore(object):
         # Display test count for each status, but only for status that have
         # at least one test. Sort them by status value, to get consistent
         # order.
+        def sort_key(couple):
+            status, _ = couple
+            return status.value
         stats = sorted(((status, count)
                         for status, count in self.test_status_counters.items()
                         if count),
-                       key=lambda (status, _): status.value)
+                       key=sort_key)
         for status, count in stats:
             lines.append('  {}{: <12}{} {}'.format(
                 status.color(self), status.name, self.Style.RESET_ALL, count))
