@@ -396,6 +396,9 @@ class TestsuiteCore(object):
 
         if "driver" in test_env:
             driver = test_env["driver"]
+        elif not self.default_driver:
+            logger.error("missing driver for {}".format(test_case_file))
+            return False
         else:
             driver = self.default_driver
 
@@ -539,8 +542,11 @@ class Testsuite(TestsuiteCore):
         any ``driver`` key. Note that you have access to the current test.yaml
         location using the attribute ``self.test_case_file``.
 
+        If the result is None, consider that "driver" is a mandatory key in
+        test.yaml files.
+
         :return: the driver to be used by default
-        :rtype: str
+        :rtype: str|None
         """
         return None
 
