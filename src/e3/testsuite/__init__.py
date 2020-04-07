@@ -328,6 +328,9 @@ class TestsuiteCore(object):
         self.total_test = len(self.test_list)
         self.run_test = 0
 
+        # Status code for the result (0: success, anything else: failure)
+        result = 0
+
         self.scheduler = Scheduler(
             job_provider=self.job_factory,
             collect=self.collect_result,
@@ -335,7 +338,8 @@ class TestsuiteCore(object):
         )
         actions = DAG()
         for test in self.test_list:
-            self.parse_test(actions, test)
+            if not self.parse_test(actions, test):
+                result = 1
 
         with open(os.path.join(self.output_dir, "tests.dot"), "w") as fd:
             fd.write(actions.as_dot())
@@ -347,7 +351,7 @@ class TestsuiteCore(object):
 
         # Clean everything
         self.tear_down()
-        return 0
+        return result
 
     def parse_test(self, actions, test_case_file):
         """Register a test.
@@ -356,20 +360,28 @@ class TestsuiteCore(object):
         :type actions: e3.collection.dag.DAG
         :param test_case_file: filename containing the testcase
         :type test_case_file: str
-        """
-        # Load testcase file
-        test_env = load_with_config(
-            os.path.join(self.test_dir, test_case_file), Env().to_dict()
-        )
 
-        # Ensure that the test_env act like a dictionary
-        if not isinstance(test_env, collections.abc.Mapping):
-            test_env = {
-                "test_name": self.test_name(test_case_file),
-                "test_yaml_wrong_content": test_env,
-            }
-            logger.error("abort test because of invalid test.yaml")
-            return
+        :return: Whether the test was successfully registered.
+        :rtype: bool
+        """
+        test_name = self.test_name(test_case_file)
+
+        # Load testcase file
+        try:
+            test_env = load_with_config(
+                os.path.join(self.test_dir, test_case_file), Env().to_dict()
+            )
+        except e3.yaml.YamlError as exc:
+            logger.error("invalid syntax for {}".format(test_case_file))
+            return False
+
+        # Ensure that the test_env act like a dictionary. We still accept None
+        # as it's a shortcut for "just use default driver" configuration files.
+        if test_env is None:
+            test_env = {}
+        elif not isinstance(test_env, collections.abc.Mapping):
+            logger.error("invalid format for {}".format(test_case_file))
+            return False
 
         # Add to the test environment the directory in which the test.yaml is
         # stored
@@ -377,7 +389,7 @@ class TestsuiteCore(object):
             self.env.test_dir, os.path.dirname(test_case_file)
         )
         test_env["test_case_file"] = test_case_file
-        test_env["test_name"] = self.test_name(test_case_file)
+        test_env["test_name"] = test_name
         test_env["working_dir"] = os.path.join(
             self.env.working_dir, test_env["test_name"]
         )
@@ -392,7 +404,7 @@ class TestsuiteCore(object):
             self.DRIVERS[driver], TestDriver
         ):
             logger.error("cannot find driver for %s" % test_case_file)
-            return
+            return False
 
         try:
             instance = self.DRIVERS[driver](self.env, test_env)
@@ -405,7 +417,9 @@ class TestsuiteCore(object):
             error_msg += "Traceback:\n"
             error_msg += "\n".join(traceback.format_tb(sys.exc_info()[2]))
             logger.error(error_msg)
-            return
+            return False
+
+        return True
 
     def dump_testsuite_result(self):
         """Log a summary of test results.
