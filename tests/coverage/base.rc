@@ -14,4 +14,4 @@ exclude_lines =
 
 
 [html]
-title = e3 coverage report
+title = e3-testsuite coverage report
