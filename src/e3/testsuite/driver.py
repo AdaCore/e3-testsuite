@@ -80,7 +80,7 @@ class TestDriver(object, metaclass=abc.ABCMeta):
         :param dag: the DAG to amend
         :type dag: e3.collection.dag.DAG
         """
-        pass
+        raise NotImplementedError
 
 
 class BasicTestDriver(TestDriver, metaclass=abc.ABCMeta):
@@ -113,9 +113,9 @@ class BasicTestDriver(TestDriver, metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def run(self, prev):
         """Execute a test."""
-        pass
+        raise NotImplementedError
 
     @abc.abstractmethod
     def analyze(self, prev):
         """Compute the test result."""
-        pass
+        raise NotImplementedError
