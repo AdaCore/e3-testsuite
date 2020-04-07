@@ -36,11 +36,14 @@ class TestStatus(Enum):
         }[self.name]
 
 
-class Log(object):
+class Log(yaml.YAMLObject):
     """Object to hold long text logs.
 
     We ensure that when dump to yaml the result will be human readable.
     """
+
+    yaml_loader = yaml.SafeLoader
+    yaml_tag = '!e3.testsuite.result.Log'
 
     def __init__(self, content):
         """Initialize log instance.
@@ -71,8 +74,11 @@ def log_representer(dumper, data):
 yaml.add_representer(Log, log_representer)
 
 
-class TestResult(object):
+class TestResult(yaml.YAMLObject):
     """Represent a result for a given test."""
+
+    yaml_loader = yaml.SafeLoader
+    yaml_tag = '!e3.testsuite.result.TestResult'
 
     def __init__(self, name, env=None, status=None, msg=""):
         """Initialize a test result.
@@ -116,3 +122,17 @@ class TestResult(object):
 
     def __str__(self):
         return "%-24s %-12s %s" % (self.test_name, self.status, self.msg)
+
+
+# We cannot use yaml.YAMLObject metaclass magic for TestStatus as it derives
+# from Enum, which already has a metaclass. So use an alternative YAML API to
+# make it serializable.
+def test_status_constructor(self, node):
+    # Get the numeric value corresponding to the test status, then build a
+    # TestStatus instance from it.
+    num = int(node.value[0].value)
+    status = TestStatus(num)
+    yield status
+
+
+yaml.SafeLoader.add_constructor(None, test_status_constructor)
