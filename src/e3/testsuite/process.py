@@ -1,3 +1,11 @@
+"""Helpers for test drivers to spawn subprocesses.
+
+Not only these lack documentation, these helpers as they are today are very
+incomplete. For instance, it is not possible to disable relocated builds in
+"gprbuild". So consider these as experimental and likely to break in the
+future: use at your own risk.
+"""
+
 import os
 
 from e3.fs import mkdir
