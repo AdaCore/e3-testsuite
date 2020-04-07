@@ -389,3 +389,31 @@ def test_result_str(caplog):
     """Test that calling TestResult.set_status twice is rejected."""
     r = Result("foobar", msg="<message>")
     assert str(r) == "foobar                   TestStatus.UNRESOLVED <message>"
+
+
+def test_comment_file():
+    """Test that the comment file is written as expected."""
+
+    class MyDriver(BasicDriver):
+        def run(self, prev):
+            pass
+
+        def analyze(self, prev):
+            self.result.set_status(Status.PASS)
+            self.push_result()
+
+    class Mysuite(Suite):
+        TEST_SUBDIR = "simple-tests"
+        DRIVERS = {"default": MyDriver}
+        default_driver = "default"
+
+        def write_comment_file(self, f):
+            f.write(" ".join(sorted(
+                "{}:{}".format(status.name, counter)
+                for status, counter in self.test_status_counters.items()
+                if counter)))
+
+    suite = run_testsuite(Mysuite)
+    with open(os.path.join("out", "new", "comment")) as f:
+        content = f.read()
+    assert content == "PASS:2"

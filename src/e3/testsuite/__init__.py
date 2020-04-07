@@ -449,6 +449,10 @@ class TestsuiteCore(object):
             lines.append('  <no test result>')
         logger.info('\n'.join(lines))
 
+        # Dump the comment file
+        with open(os.path.join(self.output_dir, "comment"), "w") as f:
+            self.write_comment_file(f)
+
     def collect_result(self, job):
         """Run internal function.
 
