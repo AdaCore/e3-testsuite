@@ -38,7 +38,7 @@ def dump_xunit_report(ts, filename):
     # Now create a <testcase> element for each test
     for test_name in sorted(ts.results):
         with open(ts.test_result_filename(test_name), "rb") as f:
-            result = yaml.load(f)
+            result = yaml.safe_load(f)
 
         # The only class involved in testcases (that we know of in this
         # testsuite framework) is the TestDriver subclass, but this is not
