@@ -11,7 +11,7 @@ from e3.testsuite.report.xunit import dump_xunit_report
 from e3.testsuite.result import TestResult, TestStatus
 from e3.yaml import load_with_config
 
-import collections
+import collections.abc
 import traceback
 import logging
 import os
@@ -363,7 +363,7 @@ class TestsuiteCore(object):
         )
 
         # Ensure that the test_env act like a dictionary
-        if not isinstance(test_env, collections.Mapping):
+        if not isinstance(test_env, collections.abc.Mapping):
             test_env = {
                 "test_name": self.test_name(test_case_file),
                 "test_yaml_wrong_content": test_env,
