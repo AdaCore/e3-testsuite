@@ -303,8 +303,8 @@ class TestsuiteCore(object):
             # If the temp dir is supposed to be randomized, we need to create a
             # subdirectory, so check that the parent directory exists first.
             if not os.path.isdir(self.main.args.temp_dir):
-                logging.critical("temp dir '%s' does not exist",
-                                 self.main.args.temp_dir)
+                logger.critical("temp dir '%s' does not exist",
+                                self.main.args.temp_dir)
                 return 1
 
             self.working_dir = tempfile.mkdtemp(
@@ -444,7 +444,7 @@ class TestsuiteCore(object):
                 status.color(self), status.name, self.Style.RESET_ALL, count))
         if not stats:
             lines.append('  <no test result>')
-        logging.info('\n'.join(lines))
+        logger.info('\n'.join(lines))
 
     def collect_result(self, job):
         """Run internal function.
@@ -474,7 +474,7 @@ class TestsuiteCore(object):
                                       TestStatus.XPASS)
             ):
                 log_line += '\n' + str(result.log) + self.Style.RESET_ALL
-            logging.info(log_line)
+            logger.info(log_line)
 
             def indented_tb(tb):
                 return "".join("  {}".format(line) for line in tb)
@@ -589,7 +589,7 @@ class Testsuite(TestsuiteCore):
             for p in find(self.test_dir, "test.yaml")
         ]
         if sublist:
-            logging.info("filter: %s" % sublist)
+            logger.info("filter: %s" % sublist)
             filtered_result = []
             path_selectors = []
             for s in sublist:
@@ -608,8 +608,8 @@ class Testsuite(TestsuiteCore):
 
             result = filtered_result
 
-        logging.info("Found %s tests", len(result))
-        logging.debug("tests:\n  " + "\n  ".join(result))
+        logger.info("Found %s tests", len(result))
+        logger.debug("tests:\n  " + "\n  ".join(result))
         return result
 
     def set_up(self):
