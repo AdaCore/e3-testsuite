@@ -1,0 +1,5 @@
+Linux         CMD linux.cmd
+Linux,PowerPC CMD linuxppc.cmd
+ALL           CMD default.cmd
+AIX           CMD aix.cmd
+!Linux        XFAIL
