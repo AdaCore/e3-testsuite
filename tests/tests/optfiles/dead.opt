@@ -1,0 +1,6 @@
+ALL             DEAD
+linux           XFAIL
+darwin          XFAIL Indeed!
+windows,powerpc DEAD  Not worth testing
+windows         CMD   windows.cmd
+aix,powerpc     CMD   aix-ppc.cmd
