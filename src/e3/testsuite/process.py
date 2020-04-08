@@ -51,7 +51,8 @@ def gprbuild(driver, project_file=None, cwd=None, gcov=False):
     if cwd is None:
         cwd = driver.test_env["working_dir"]
     mkdir(cwd)
-    gprbuild_cmd = ["gprbuild", "--relocate-build-tree", "-p", "-P", project_file]
+    gprbuild_cmd = ["gprbuild", "--relocate-build-tree", "-p",
+                    "-P", project_file]
     if gcov:
         gprbuild_cmd += ["-largs", "-lgcov"]
     check_call(driver, gprbuild_cmd, cwd=cwd)

@@ -186,7 +186,8 @@ class TestsuiteCore(object):
             default="./out",
             help="select output dir",
         )
-        parser.add_argument("-t", "--temp-dir", metavar="DIR", default=Env().tmp_dir)
+        parser.add_argument("-t", "--temp-dir", metavar="DIR",
+                            default=Env().tmp_dir)
         parser.add_argument(
             "-d", "--dev-temp",
             nargs="?", default=None, const="tmp",
@@ -371,7 +372,7 @@ class TestsuiteCore(object):
             test_env = load_with_config(
                 os.path.join(self.test_dir, test_case_file), Env().to_dict()
             )
-        except e3.yaml.YamlError as exc:
+        except e3.yaml.YamlError:
             logger.error("invalid syntax for {}".format(test_case_file))
             return False
 
@@ -516,9 +517,8 @@ class TestsuiteCore(object):
         if self.main.args.dump_environ:
             with open(os.path.join(self.output_dir, "environ.sh"), "w") as f:
                 for var_name in sorted(os.environ):
-                    f.write(
-                        "export %s=%s\n" % (var_name, quote_arg(os.environ[var_name]))
-                    )
+                    f.write("export {}={}\n".format(
+                        var_name, quote_arg(os.environ[var_name])))
 
 
 class Testsuite(TestsuiteCore):
@@ -610,9 +610,14 @@ class Testsuite(TestsuiteCore):
 
             for p in result:
                 for s in path_selectors:
-                    # Either we have a match or the selected path is the
-                    # tests root dir or a parent.
-                    if s == "." or s == "./" or s.startswith("..") or re.match(s, p):
+                    # Either we have a match or the selected path is the tests
+                    # root dir or a parent.
+                    if (
+                        s == "." or
+                        s == "./" or
+                        s.startswith("..") or
+                        re.match(s, p)
+                    ):
                         filtered_result.append(p)
                         continue
 

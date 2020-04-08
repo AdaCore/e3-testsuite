@@ -33,7 +33,9 @@ def dump_xunit_report(ts, filename):
 
     # Markup to create inside <testcase> elements for each category of test
     # in XUnit.
-    counter_to_markup = {"failures": "failure", "skipped": "skipped", "errors": "error"}
+    counter_to_markup = {"failures": "failure",
+                         "skipped": "skipped",
+                         "errors": "error"}
 
     # Now create a <testcase> element for each test
     for test_name in sorted(ts.results):
