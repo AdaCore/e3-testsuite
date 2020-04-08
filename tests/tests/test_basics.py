@@ -77,9 +77,7 @@ def test_basic():
 
     # Do a first testsuite run, checking the results
     suite = run_testsuite(Mysuite)
-    assert len(suite.results) == 2
-    for v in list(suite.results.values()):
-        assert v == Status.PASS
+    assert suite.results == {"test1": Status.PASS, "test2": Status.PASS}
     check_results_dir(new=result1)
 
     # Then do a second one. We expect the previous "new" directory to move to
@@ -136,8 +134,8 @@ def test_no_testcase(caplog):
         default_driver = "default"
 
     suite = run_testsuite(Mysuite)
-    assert len(suite.results) == 0
     logs = testsuite_logs(caplog)
+    assert suite.results == {}
     assert any("<no test result>" in message for message in logs)
 
 
@@ -167,9 +165,7 @@ def test_abort():
             return "default"
 
     suite = run_testsuite(Mysuite)
-    assert len(suite.results) == 2
-    for v in list(suite.results.values()):
-        assert v == Status.PASS
+    assert suite.results == {"test1": Status.PASS, "test2": Status.PASS}
 
 
 def test_exception_in_driver():
@@ -198,9 +194,21 @@ def test_exception_in_driver():
             return "default"
 
     suite = run_testsuite(Mysuite)
-    assert suite.test_counter == 4
-    assert suite.test_status_counters[Status.PASS] == 2
-    assert suite.test_status_counters[Status.ERROR] == 2
+
+    results = dict(suite.results)
+
+    # Expect PASS for both tests
+    assert results.pop("test1") == Status.PASS
+    assert results.pop("test2") == Status.PASS
+
+    # Expect two extra ERROR results for errors in MyDriver.run. Their names
+    # depend on a counter we don't control, hence the involved checking code.
+    assert len(results) == 2
+
+    keys = sorted(results)
+    assert keys[0].startswith("test1__except")
+    assert keys[1].startswith("test2__except")
+    assert set(results.values()) == {Status.ERROR}
 
 
 def test_not_existing_temp_dir(caplog):
@@ -249,8 +257,7 @@ def test_dev_mode():
     suite = run_testsuite(Mysuite, ["--dev-temp=tmp"])
 
     # Check testsuite report
-    assert suite.test_counter == 2
-    assert suite.test_status_counters[Status.PASS] == 2
+    assert suite.results == {"test1": Status.PASS, "test2": Status.PASS}
 
     # Check the presence and content of working directories
     for test in ["test1", "test2"]:
@@ -279,8 +286,7 @@ def test_invalid_yaml(caplog):
     # The testsuite is supposed to run to completion (valid tests have run),
     # but it ends with an error status code.
     suite = run_testsuite(Mysuite, expect_failure=True)
-    assert suite.test_counter == 1
-    assert suite.test_status_counters[Status.PASS] == 1
+    assert suite.results == {"valid": Status.PASS}
 
     logs = testsuite_logs(caplog)
     assert "invalid syntax for invalid_syntax/test.yaml" in logs
@@ -304,8 +310,8 @@ def test_missing_driver(caplog):
         DRIVERS = {"my_driver": MyDriver}
 
     suite = run_testsuite(Mysuite, expect_failure=True)
-    assert suite.test_counter == 0
     logs = testsuite_logs(caplog)
+    assert suite.results == {}
     assert "missing driver for valid/test.yaml" in logs
 
 
