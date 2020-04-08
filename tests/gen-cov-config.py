@@ -15,7 +15,8 @@ def main(coverage_rc, omit_list_filename=None):
 
     config = ConfigParser()
     base_conf, target_conf = (
-        os.path.join(test_dir, "coverage", "%s.rc" % name) for name in ("base", os_name)
+        os.path.join(test_dir, "coverage", "%s.rc" % name)
+        for name in ("base", os_name)
     )
 
     with open(coverage_rc, "w") as dest:
@@ -59,7 +60,8 @@ def main(coverage_rc, omit_list_filename=None):
 if __name__ == "__main__":
     parser = ArgumentParser(description="Generate a coverage config file")
     parser.add_argument(
-        "coverage_rc_filename", help="The name of the coverage configuration file."
+        "coverage_rc_filename",
+        help="The name of the coverage configuration file.",
     )
     parser.add_argument(
         "--omit-from-file",

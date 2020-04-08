@@ -68,7 +68,8 @@ class TestDriver(object, metaclass=abc.ABCMeta):
         if fun is None:
             fun = getattr(self, name)
 
-        dag.add_vertex(self.test_name + "." + name, (self, fun), predecessors=after)
+        dag.add_vertex(self.test_name + "." + name, (self, fun),
+                       predecessors=after)
 
     @abc.abstractmethod
     def add_test(self, dag):

@@ -68,7 +68,8 @@ class Log(yaml.YAMLObject):
 
 # Enforce representation of Log objects when dumped to yaml
 def log_representer(dumper, data):
-    return dumper.represent_scalar("tag:yaml.org,2002:str", data.log, style="|")
+    return dumper.represent_scalar("tag:yaml.org,2002:str", data.log,
+                                   style="|")
 
 
 yaml.add_representer(Log, log_representer)

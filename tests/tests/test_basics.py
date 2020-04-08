@@ -262,6 +262,7 @@ def test_dev_mode():
 
 def test_invalid_yaml(caplog):
     """Check that invalid test.yaml files are properly reported."""
+
     class MyDriver(BasicDriver):
         def run(self, prev):
             pass
@@ -289,6 +290,7 @@ def test_invalid_yaml(caplog):
 
 def test_missing_driver(caplog):
     """Check that missing drivers in test.yaml files are properly reported."""
+
     class MyDriver(BasicDriver):
         def run(self, prev):
             pass
@@ -343,7 +345,7 @@ def test_show_error_output(caplog):
         DRIVERS = {"default": MyDriver}
         default_driver = "default"
 
-    suite = run_testsuite(Mysuite, ["--show-error-output"])
+    run_testsuite(Mysuite, ["--show-error-output"])
     logs = testsuite_logs(caplog)
     assert any("Work is being done" in message for message in logs)
 
@@ -370,7 +372,7 @@ def test_push_twice():
             return "default"
 
     try:
-        suite = run_testsuite(Mysuite, args=["simple-tests/test1"])
+        run_testsuite(Mysuite, args=["simple-tests/test1"])
     except AssertionError as exc:
         assert "cannot push twice" in str(exc)
 
@@ -408,12 +410,38 @@ def test_comment_file():
         default_driver = "default"
 
         def write_comment_file(self, f):
-            f.write(" ".join(sorted(
+            lines = sorted(
                 "{}:{}".format(status.name, counter)
                 for status, counter in self.test_status_counters.items()
-                if counter)))
+                if counter
+            )
+            f.write(" ".join(lines))
 
-    suite = run_testsuite(Mysuite)
+    run_testsuite(Mysuite)
     with open(os.path.join("out", "new", "comment")) as f:
         content = f.read()
     assert content == "PASS:2"
+
+
+def test_path_builders():
+    """Check that path building methods in TestDriver work as expected."""
+
+    class MyDriver(BasicDriver):
+        def run(self, prev):
+            assert self.working_dir("foo.txt") == os.path.join(
+                self.test_env["working_dir"], "foo.txt"
+            )
+            assert self.test_dir("foo.txt") == os.path.join(
+                self.test_env["test_dir"], "foo.txt"
+            )
+
+        def analyze(self, prev):
+            self.result.set_status(Status.PASS)
+            self.push_result()
+
+    class Mysuite(Suite):
+        TEST_SUBDIR = "simple-tests"
+        DRIVERS = {"default": MyDriver}
+        default_driver = "default"
+
+    run_testsuite(Mysuite)
