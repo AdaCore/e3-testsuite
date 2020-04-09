@@ -109,14 +109,18 @@ def binary_repr(binary):
     :rtype: str
     """
 
-    def needs_escape(b):
-        return b != 0x10 and (b < 32 or b >= 127)
+    def escape(b):
+        if sys.version_info.major == 2:  # py2-only
+            b = ord(b)
+        if b == ord("\\"):
+            return "\\\\"
+        elif b == ord("\n") or (b >= ord(" ") and b <= ord("~")):
+            return chr(b)
+        else:
+            return "\\x{:>02x}".format(b)
 
-    return "".join(
-        "".join(
-            "\\x{:>02x}".format(b) if needs_escape(b) else chr(b)
-            for b in binary
-        )
+    return "\n".join(
+        "".join(escape(b) for b in line)
         for line in binary.split(b"\n")
     )
 

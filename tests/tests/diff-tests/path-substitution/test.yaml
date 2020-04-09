@@ -1,0 +1,4 @@
+driver: diff-script-driver
+process_args: [-cwd]
+path_substitutions:
+    - [".", "[cwd]"]

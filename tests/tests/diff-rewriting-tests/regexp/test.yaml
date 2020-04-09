@@ -1,0 +1,3 @@
+driver: diff-script-driver
+baseline_regexp: True
+process_args: [-phella, -pworld]

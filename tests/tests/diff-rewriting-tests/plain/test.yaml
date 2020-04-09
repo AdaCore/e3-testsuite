@@ -1,0 +1,2 @@
+driver: diff-script-driver
+process_args: [-phelloo, -pworld, -p!]
