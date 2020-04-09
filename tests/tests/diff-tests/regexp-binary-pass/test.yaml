@@ -1,0 +1,4 @@
+driver: diff-script-driver
+encoding: binary
+baseline_regexp: True
+process_args: [-b]
