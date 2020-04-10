@@ -160,4 +160,6 @@ def test_classic():
         "invalid-control": Status.ERROR,
         "dummy": Status.PASS,
         "with-output": Status.FAIL,
+        "binary-output": Status.FAIL,
+        "invalid-utf8-output": Status.ERROR,
     }

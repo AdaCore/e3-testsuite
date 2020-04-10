@@ -1,0 +1,4 @@
+driver: script-driver
+encoding: binary
+process:
+    args: [-b]

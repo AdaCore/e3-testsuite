@@ -1,5 +1,7 @@
-import logging
+import binascii
 from enum import Enum
+import logging
+import sys
 
 import yaml
 
@@ -37,13 +39,27 @@ class TestStatus(Enum):
 
 
 class Log(yaml.YAMLObject):
-    """Object to hold long text logs.
+    """Object to hold long text or binary logs.
 
     We ensure that when dump to yaml the result will be human readable.
     """
 
     yaml_loader = yaml.SafeLoader
     yaml_tag = '!e3.testsuite.result.Log'
+
+    @classmethod
+    def create_empty_text(cls):
+        # Create a Python2 unicode object or a Python3 str object. Disable the
+        # flake8 diagnostic: yes, unicode() is undefined with Python3.
+        if sys.version_info.major == 2:  # py2-only
+            return Log(unicode())  # noqa: F821
+        else:
+            return Log("")
+
+    @classmethod
+    def create_empty_binary(cls):
+        # Create a Python2 str object or a Python3 bytes object
+        return Log(b"")
 
     def __init__(self, content):
         """Initialize log instance.
@@ -52,6 +68,23 @@ class Log(yaml.YAMLObject):
         :type content: str
         """
         self.log = content
+
+    @property
+    def is_binary(self):
+        """Return whether this log contains binary data.
+
+        :rtype: bool
+        """
+        binary_type = (str if sys.version_info.major == 2 else bytes)
+        return isinstance(self.log, binary_type)
+
+    @property
+    def is_text(self):
+        """Return whether this log contains text data.
+
+        :rtype: bool
+        """
+        return not self.is_binary
 
     def __iadd__(self, content):
         """Add additional content to the log.
@@ -63,13 +96,40 @@ class Log(yaml.YAMLObject):
         return self
 
     def __str__(self):
-        return self.log
+        return self.log if self.is_text else binary_repr(self.log)
+
+
+def binary_repr(binary):
+    """Return a human readable representation for the given bytes string.
+
+    This just decodes ASCII printable bytes and newlines to the corresponding
+    strings and represents other bytes with the "\\xXX" escapes.
+
+    :param bytes binary: Bytes string to represent.
+    :rtype: str
+    """
+
+    def needs_escape(b):
+        return b != 0x10 and (b < 32 or b >= 127)
+
+    return "".join(
+        "".join(
+            "\\x{:>02x}".format(b) if needs_escape(b) else chr(b)
+            for b in binary
+        )
+        for line in binary.split(b"\n")
+    )
 
 
 # Enforce representation of Log objects when dumped to yaml
 def log_representer(dumper, data):
-    return dumper.represent_scalar("tag:yaml.org,2002:str", data.log,
-                                   style="|")
+    return (
+        dumper.represent_scalar("tag:yaml.org,2002:str", data.log, style="|")
+        if data.is_text else
+        dumper.represent_scalar(
+            "tag:yaml.org,2002:binary",
+            binascii.b2a_base64(data.log).decode('ascii'), style="|")
+    )
 
 
 yaml.add_representer(Log, log_representer)

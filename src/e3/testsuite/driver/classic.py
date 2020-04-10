@@ -1,5 +1,6 @@
 from enum import Enum
 import subprocess
+import sys
 
 from e3.fs import sync_tree
 from e3.os.process import get_rlimit, quote_arg
@@ -165,12 +166,22 @@ class ClassicTestDriver(TestDriver):
         return self.test_env.get("timeout", 5 * 60)
 
     @property
+    def default_encoding(self):
+        """Return the default encoding to decode process outputs.
+
+        If "binary", consider that process outputs are binary, so do not try to
+        decode them to text.
+        """
+        return self.test_env.get("encoding", "utf-8")
+
+    @property
     def control_condition_env(self):
         """Return the environment to evaluate control conditions."""
         return {}
 
     def shell(self, args, cwd=None, env=None, catch_error=True,
-              analyze_output=True, timeout=None, parse_shebang=False):
+              analyze_output=True, timeout=None, parse_shebang=False,
+              encoding=None):
         """Run a subprocess.
 
         :param str args: Arguments for the subprocess to run.
@@ -184,6 +195,11 @@ class ClassicTestDriver(TestDriver):
         :param None|int timeout: Timeout (in seconds) for the subprocess. Use
             ``self.default_timeout`` if left to None.
         :param bool parse_shebang: See e3.os.process.Run's constructor.
+        :param str|None encoding: Encoding to use when decoding the subprocess'
+            output stream. If None, use the default enocding for this test
+            (``self.default_encoding``, from the ``encoding`` entry in
+            test.yaml). If "binary", leave the output undecoded as a bytes
+            string.
         :return e3.os.process.Run: The process object.
         """
         # By default, run the subprocess in the test working directory
@@ -218,7 +234,16 @@ class ClassicTestDriver(TestDriver):
             stderr=subprocess.STDOUT
         )
         stdout, _ = subp.communicate()
-        stdout = stdout.decode("utf-8")
+        encoding = encoding or self.default_encoding
+        if encoding != "binary":
+            try:
+                stdout = stdout.decode(encoding)
+            except UnicodeDecodeError as exc:
+                raise TestAbortWithError(
+                    "cannot decode process output ({}: {})".format(
+                        type(exc).__name__, exc
+                    )
+                )
 
         p = ProcessResult()
         p.out = stdout
@@ -226,9 +251,12 @@ class ClassicTestDriver(TestDriver):
 
         self.result.log += "Status code: {}\n".format(p.status)
         process_info["status"] = p.status
-        self.result.log += "Output:\n"
-        self.result.log += stdout
         process_info["output"] = Log(stdout)
+        self.result.log += "Output:\n"
+        if sys.version_info.major == 2:  # py2-only
+            self.result.log += process_info["output"].__str__()
+        else:
+            self.result.log += str(process_info["output"])
 
         # If requested, use its output for analysis
         if analyze_output:
@@ -339,6 +367,18 @@ class ClassicTestDriver(TestDriver):
         if self.copy_test_directory:
             sync_tree(self.test_env["test_dir"], self.test_env["working_dir"],
                       delete=True)
+
+        # No matter the version of Python, by default we need to deal with
+        # Unicode logs.
+        if sys.version_info.major == 2:  # py2-only
+            self.result.out = Log.create_empty_text()
+            self.result.log = Log.create_empty_text()
+
+        # If the requested encoding is "binary", this actually means we will
+        # handle binary data (i.e. no specific encoding). Create a binary log
+        # accordingly.
+        if self.default_encoding == "binary":
+            self.result.out = Log.create_empty_binary()
 
         # Execute the subclass' "run" method and handle convenience test
         # aborting exception.
