@@ -4,8 +4,11 @@ import sys
 
 from e3.fs import sync_tree
 from e3.os.process import get_rlimit, quote_arg
+from e3.testsuite import DummyColors
 from e3.testsuite.driver import TestDriver
 from e3.testsuite.result import Log, TestStatus
+
+from colorama import Fore, Style
 
 
 class TestSkip(Exception):
@@ -210,9 +213,23 @@ class ClassicTestDriver(TestDriver):
             timeout = self.default_process_timeout
 
         # Run the subprocess and log it
-        self.result.log += "Running: {} (cwd={})\n".format(
-            " ".join(quote_arg(a) for a in args),
-            cwd)
+        def format_header(label, value):
+            return "{}{}{}: {}{}\n".format(
+                self.Style.RESET_ALL + self.Style.BRIGHT,
+                label,
+                self.Style.RESET_ALL,
+                self.Style.DIM,
+                value,
+            )
+        self.result.log += format_header(
+            "Running",
+            "{} (cwd={}{}{})".format(
+                " ".join(quote_arg(a) for a in args),
+                self.Style.RESET_ALL,
+                cwd,
+                self.Style.DIM
+            )
+        )
 
         process_info = {"cmd": args,
                         "cwd": cwd}
@@ -249,14 +266,15 @@ class ClassicTestDriver(TestDriver):
         p.out = stdout
         p.status = subp.returncode
 
-        self.result.log += "Status code: {}\n".format(p.status)
+        self.result.log += format_header("Status code", p.status)
         process_info["status"] = p.status
         process_info["output"] = Log(stdout)
-        self.result.log += "Output:\n"
+
         if sys.version_info.major == 2:  # py2-only
-            self.result.log += process_info["output"].__str__()
+            logged_output = process_info["output"].__str__()
         else:
-            self.result.log += str(process_info["output"])
+            logged_output = str(process_info["output"])
+        self.result.log += format_header("Output", "\n" + logged_output)
 
         # If requested, use its output for analysis
         if analyze_output:
@@ -350,6 +368,14 @@ class ClassicTestDriver(TestDriver):
         pass
 
     def run_wrapper(self, prev):
+        # Make colors available for output if enabled testsuite-wide
+        if self.env.enable_colors:  # interactive-only
+            self.Fore = Fore
+            self.Style = Style
+        else:
+            self.Fore = DummyColors()
+            self.Style = DummyColors()
+
         # Interpret the "control" test configuration
         try:
             self.test_control = TestControl.interpret(

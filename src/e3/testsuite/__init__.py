@@ -266,15 +266,18 @@ class TestsuiteCore(object):
         # disable colors.
         self.Fore = Fore
         self.Style = Style
+        enable_colors = True
         if (
             self.main.args.log_file or
             not isatty(sys.stdout) or
             not isatty(sys.stderr)
         ):
+            enable_colors = False
             self.Fore = DummyColors()
             self.Style = DummyColors()
 
         self.env = BaseEnv.from_env()
+        self.env.enable_colors = enable_colors
         self.env.root_dir = self.root_dir
         self.env.test_dir = self.test_dir
 
