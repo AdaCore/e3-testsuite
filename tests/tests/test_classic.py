@@ -30,7 +30,7 @@ def test_control_interpret():
     def expect_result(test_env, condition_env={}, env={}):
         driver = MockDriver(test_env, env)
         control = classic.TestControl.interpret(driver, condition_env)
-        return control.kind, control.message
+        return control.skip, control.xfail, control.message
 
     def expect_error(test_env, condition_env={}, env={}):
         driver = MockDriver(test_env, env)
@@ -41,13 +41,11 @@ def test_control_interpret():
         else:
             assert False, "exception expected"
 
-    TCK = classic.TestControlKind
-
     # No control entry: no test control
-    assert expect_result({}) == (TCK.NONE, "")
+    assert expect_result({}) == (False, False, None)
 
     # Empty control list: no test control
-    assert expect_result({"control": []}) == (TCK.NONE, "")
+    assert expect_result({"control": []}) == (False, False, None)
 
     # Invalid control object: error
     assert expect_error({"control": None}) == "list expected at the top level"
@@ -80,23 +78,23 @@ def test_control_interpret():
                 ["SKIP", "True", "entry 4"],
             ]
         }
-    ) == (TCK.XFAIL, "entry 2")
+    ) == (False, True, "entry 2")
 
     # Use variables from test_env
     assert expect_result(
         {"control": [["SKIP", "foobar"]]}, condition_env={"foobar": True}
-    ) == (TCK.SKIP, "")
+    ) == (True, False, None)
     assert expect_result(
         {"control": [["SKIP", "foobar"]]}, condition_env={"foobar": False}
-    ) == (TCK.NONE, "")
+    ) == (False, False, None)
 
     # Use variables from env
     assert expect_result(
         {"control": [["SKIP", "env.foobar"]]}, env={"foobar": True}
-    ) == (TCK.SKIP, "")
+    ) == (True, False, None)
     assert expect_result(
         {"control": [["SKIP", "env.foobar"]]}, env={"foobar": False}
-    ) == (TCK.NONE, "")
+    ) == (False, False, None)
 
 
 class ScriptDriver(classic.ClassicTestDriver):
