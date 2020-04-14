@@ -51,8 +51,19 @@ class TestControlKind(Enum):
 
 class TestControl(object):
     """Association of a TestControlKind instance and a message."""
-    def __init__(self, kind, message=None):
-        self.kind = kind
+
+    def __init__(self, message=None, skip=False, xfail=False):
+        """Initialize a TestControl instance.
+
+        :param None|str message: Optional message to convey with the test
+            status.
+        :param bool skip: Whether to skip the test execution.
+        :param bool xfail: Whether we expect the test to fail. If the test
+            should be skipped, and xfailed, we consider it failed even though
+            it did not run.
+        """
+        self.skip = skip
+        self.xfail = xfail
         self.message = message
 
     @classmethod
@@ -68,7 +79,7 @@ class TestControl(object):
         """
         # Read the configuration from the test environment's "control" key, if
         # present.
-        default = cls(TestControlKind.NONE, "")
+        default = cls()
         try:
             control = driver.test_env["control"]
         except KeyError:
@@ -123,7 +134,7 @@ class TestControl(object):
                 error("invalid condition ({}): {}"
                       .format(type(exc).__name__, exc))
 
-            message = entry[2] if len(entry) > 2 else ""
+            message = entry[2] if len(entry) > 2 else None
 
             entries.append((kind, cond, message))
 
@@ -131,7 +142,12 @@ class TestControl(object):
         # fallback to "default".
         for kind, cond, message in entries:
             if cond:
-                return TestControl(kind, message)
+                skip, xfail = {
+                    TestControlKind.NONE: (False, False),
+                    TestControlKind.SKIP: (True, False),
+                    TestControlKind.XFAIL: (False, True),
+                }[kind]
+                return TestControl(message, skip, xfail)
         return default
 
 
@@ -292,17 +308,14 @@ class ClassicTestDriver(TestDriver):
         """
         Consider that the test passed and set status according to test control.
         """
-        kind = self.test_control.kind
+        # Given that we skip execution right after the test control evaluation,
+        # there should be no way to call push_success in this case.
+        assert not self.test_control.skip
 
-        # Given that we skip execution right after the test control evaluation
-        # (assuming it returns SKIP), there should be no way to call
-        # push_failure in this case.
-        assert kind != TestControlKind.SKIP
-
-        if kind == TestControlKind.NONE:
-            self.result.set_status(TestStatus.PASS)
-        elif kind == TestControlKind.XFAIL:
+        if self.test_control.xfail:
             self.result.set_status(TestStatus.XPASS)
+        else:
+            self.result.set_status(TestStatus.PASS)
         self.push_result()
 
     def push_skip(self, message):
@@ -330,17 +343,12 @@ class ClassicTestDriver(TestDriver):
 
         :param str message: Test failure description.
         """
-        kind = self.test_control.kind
-
-        # See similar assertion in push_success
-        assert kind != TestControlKind.SKIP
-
-        if kind == TestControlKind.NONE:
-            status = TestStatus.FAIL
-        elif kind == TestControlKind.XFAIL:
+        if self.test_control.xfail:
             status = TestStatus.XFAIL
             if self.test_control.message:
                 message = "{} ({})".format(message, self.test_control.message)
+        else:
+            status = TestStatus.FAIL
         self.result.set_status(status, message)
         self.push_result()
 
@@ -384,9 +392,15 @@ class ClassicTestDriver(TestDriver):
             return self.push_error(
                 "Error while interpreting control: {}".format(exc))
 
-        # If test control tells us to skip the test, stop right here
-        if self.test_control.kind == TestControlKind.SKIP:
-            return self.push_skip(self.test_control.message)
+        # If test control tells us to skip the test, stop right here. Note that
+        # if we have both skip and xfail, we are supposed not to execute the
+        # test but still consider it as an expected failure (not just
+        # "skipped").
+        if self.test_control.skip:
+            if self.test_control.xfail:
+                return self.push_failure(self.test_control.message)
+            else:
+                return self.push_skip(self.test_control.message)
 
         # If requested, prepare the test working directory to initially be a
         # copy of the test directory.
