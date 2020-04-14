@@ -6,6 +6,7 @@ import os.path
 import sys
 
 from e3.testsuite import Testsuite as Suite
+import e3.testsuite.control as crtl
 import e3.testsuite.driver.classic as classic
 from e3.testsuite.result import TestStatus as Status
 
@@ -29,13 +30,13 @@ def test_control_interpret():
 
     def expect_result(test_env, condition_env={}, env={}):
         driver = MockDriver(test_env, env)
-        control = classic.TestControl.interpret(driver, condition_env)
+        control = crtl.TestControl.interpret(driver, condition_env)
         return control.skip, control.xfail, control.message
 
     def expect_error(test_env, condition_env={}, env={}):
         driver = MockDriver(test_env, env)
         try:
-            classic.TestControl.interpret(driver, condition_env)
+            crtl.TestControl.interpret(driver, condition_env)
         except ValueError as exc:
             return str(exc)
         else:
