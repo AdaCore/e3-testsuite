@@ -30,13 +30,13 @@ def test_control_interpret():
 
     def expect_result(test_env, condition_env={}, env={}):
         driver = MockDriver(test_env, env)
-        control = crtl.TestControl.interpret(driver, condition_env)
+        control = crtl.YAMLTestControlCreator(condition_env).create(driver)
         return control.skip, control.xfail, control.message
 
     def expect_error(test_env, condition_env={}, env={}):
         driver = MockDriver(test_env, env)
         try:
-            crtl.TestControl.interpret(driver, condition_env)
+            crtl.YAMLTestControlCreator(condition_env).create(driver)
         except ValueError as exc:
             return str(exc)
         else:

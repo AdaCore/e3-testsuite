@@ -35,27 +35,43 @@ class TestControl(object):
         self.xfail = xfail
         self.message = message
 
-    @classmethod
-    def interpret(cls, driver, condition_env={}):
-        """Interpret the test "control" configuration in ``test_env``.
+
+class TestControlCreator(object):
+    """Abstract class to create test controls."""
+
+    def create(self, driver):
+        """Create a TestControl instance for the given test driver.
 
         Raise a ValueError exception if the configuration is invalid.
 
         :param TestDriver driver: Test driver for which we must parse the
             "control" configuration.
-        :param dict condition_env: Environment to pass to condition evaluation
-            in control entries.
         """
+        raise NotImplementedError
+
+
+class YAMLTestControlCreator(TestControlCreator):
+    """Create test controls from "test.yaml"'s "control" entries."""
+
+    def __init__(self, condition_env=None):
+        """Initialize a YAMLTestControlCreator instance.
+
+        :param None|dict condition_env: Environment to pass to condition
+            evaluation in control entries. If None, use an empty dictionary.
+        """
+        self.condition_env = {} if condition_env is None else condition_env
+
+    def create(self, driver):
         # Read the configuration from the test environment's "control" key, if
         # present.
-        default = cls()
+        default = TestControl()
         try:
             control = driver.test_env["control"]
         except KeyError:
             return default
 
         # Variables available to entry conditions
-        condition_env = dict(condition_env)
+        condition_env = dict(self.condition_env)
         condition_env["env"] = driver.env
 
         # First validate the whole control structure, and only then interpret

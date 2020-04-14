@@ -4,7 +4,7 @@ import sys
 from e3.fs import sync_tree
 from e3.os.process import get_rlimit, quote_arg
 from e3.testsuite import DummyColors
-from e3.testsuite.control import TestControl
+from e3.testsuite.control import YAMLTestControlCreator
 from e3.testsuite.driver import TestDriver
 from e3.testsuite.result import Log, TestStatus
 
@@ -75,9 +75,17 @@ class ClassicTestDriver(TestDriver):
         return self.test_env.get("encoding", "utf-8")
 
     @property
-    def control_condition_env(self):
-        """Return the environment to evaluate control conditions."""
-        return {}
+    def test_control_creator(self):
+        """Return a test control creator for this teste.
+
+        By default, this returns a YAMLTestControlCreator instance tied to this
+        driver with an empty condition environment. Subclasses are free to
+        override this to suit their needs: for instance returning a
+        OptfileCreater to process "test.opt" files.
+
+        :rtype: e3.testsuite.control.TestControlCreator
+        """
+        return YAMLTestControlCreator({})
 
     def shell(self, args, cwd=None, env=None, catch_error=True,
               analyze_output=True, timeout=None, parse_shebang=False,
@@ -265,10 +273,9 @@ class ClassicTestDriver(TestDriver):
             self.Fore = DummyColors()
             self.Style = DummyColors()
 
-        # Interpret the "control" test configuration
+        # Create a test control for this test...
         try:
-            self.test_control = TestControl.interpret(
-                self, condition_env=self.control_condition_env)
+            self.test_control = self.test_control_creator.create(self)
         except ValueError as exc:
             return self.push_error(
                 "Error while interpreting control: {}".format(exc))
