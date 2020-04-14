@@ -1,4 +1,7 @@
 from enum import Enum
+import os.path
+
+from e3.testsuite import logger
 
 
 class TestControlKind(Enum):
@@ -62,6 +65,16 @@ class YAMLTestControlCreator(TestControlCreator):
         self.condition_env = {} if condition_env is None else condition_env
 
     def create(self, driver):
+        # If there is a "test.opt" file while the YAML "control" entry
+        # mechanism is in use, it probably means someone mistakenly wrote a
+        # test.opt file that will not be interpreted: be helpful and warn about
+        # it.
+        if os.path.exists(driver.test_dir("test.opt")):
+            logger.warning(
+                '{}: "test.opt" file found whereas only "control" entries are'
+                ' considered'.format(driver.test_env["test_name"])
+            )
+
         # Read the configuration from the test environment's "control" key, if
         # present.
         default = TestControl()

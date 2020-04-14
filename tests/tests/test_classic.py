@@ -10,7 +10,7 @@ import e3.testsuite.control as crtl
 import e3.testsuite.driver.classic as classic
 from e3.testsuite.result import TestStatus as Status
 
-from .test_basics import run_testsuite
+from .test_basics import run_testsuite, testsuite_logs
 
 
 def test_control_interpret():
@@ -27,6 +27,9 @@ def test_control_interpret():
             self.env = MockEnv()
             for key, value in env.items():
                 setattr(self.env, key, value)
+
+        def test_dir(self, *args):
+            return os.path.join("/nosuchdir", *args)
 
     def expect_result(test_env, condition_env={}, env={}):
         driver = MockDriver(test_env, env)
@@ -139,7 +142,7 @@ class DummyDriver(classic.ClassicTestDriver):
         pass
 
 
-def test_classic():
+def test_classic(caplog):
     """Check that ClassicTestDriver works as expected."""
 
     class Mysuite(Suite):
@@ -161,4 +164,11 @@ def test_classic():
         "with-output": Status.FAIL,
         "binary-output": Status.FAIL,
         "invalid-utf8-output": Status.ERROR,
+        "suspicious-test-opt": Status.PASS,
     }
+
+    log = (
+        'suspicious-test-opt: "test.opt" file found whereas only "control"'
+        " entries are considered"
+    )
+    assert log in testsuite_logs(caplog)
