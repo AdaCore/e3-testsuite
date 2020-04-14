@@ -11,7 +11,8 @@ exclude_lines =
     defensive code
     # + <os>-only and <os>: no cover
     # + py2-only or py3-only
+    raise NotImplementedError
 
 
 [html]
-title = e3 coverage report
+title = e3-testsuite coverage report
