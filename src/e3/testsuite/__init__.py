@@ -1,17 +1,14 @@
 from e3.collection.dag import DAG
 from e3.env import Env, BaseEnv
-from e3.fs import find, rm, mkdir, mv
-import e3.log
+from e3.fs import rm, mkdir, mv
 from e3.job import Job
 from e3.job.scheduler import Scheduler
 from e3.main import Main
 from e3.os.process import quote_arg
-from e3.testsuite.driver import TestDriver
 from e3.testsuite.report.xunit import dump_xunit_report
 from e3.testsuite.result import TestResult, TestStatus
-from e3.yaml import load_with_config
+from e3.testsuite.testcase_finder import ProbingError, YAMLTestFinder
 
-import collections.abc
 import traceback
 import logging
 import os
@@ -326,14 +323,12 @@ class TestsuiteCore(object):
         self.set_up()
 
         # Retrieve the list of test
+        self.has_error = False
         self.test_list = self.get_test_list(self.main.args.sublist)
 
         # Launch the mainloop
         self.total_test = len(self.test_list)
         self.run_test = 0
-
-        # Status code for the result (0: success, anything else: failure)
-        result = 0
 
         self.scheduler = Scheduler(
             job_provider=self.job_factory,
@@ -341,9 +336,9 @@ class TestsuiteCore(object):
             tokens=self.main.args.jobs,
         )
         actions = DAG()
-        for test in self.test_list:
-            if not self.parse_test(actions, test):
-                result = 1
+        for parsed_test in self.test_list:
+            if not self.add_test(actions, parsed_test):
+                self.has_error = True
 
         with open(os.path.join(self.output_dir, "tests.dot"), "w") as fd:
             fd.write(actions.as_dot())
@@ -355,73 +350,110 @@ class TestsuiteCore(object):
 
         # Clean everything
         self.tear_down()
+        return 1 if self.has_error else 0
+
+    def get_test_list(self, sublist):
+        """Retrieve the list of tests.
+
+        :param list[str] sublist: A list of tests scenarios or patterns.
+        :rtype: list[str]
+        """
+        # Use a mapping: absolute test directory -> ParsedTest when building
+        # the result, as several patterns in "sublist" may yield the same
+        # testcase.
+        result = {}
+        test_finders = self.test_finders
+
+        def helper(pattern):
+            # If the given pattern is a directory, do not go through the whole
+            # tests subdirectory.
+            if os.path.isdir(pattern):
+                root = pattern
+                pattern = None
+            else:
+                root = self.test_dir
+                try:
+                    pattern = re.compile(pattern)
+                except re.error as exc:
+                    self.has_error = True
+                    logger.error(
+                        "Invalid test pattern, skipping: {} ({})".format(
+                            pattern, exc
+                        )
+                    )
+                    return
+
+            # For each directory in the requested subdir, ask our test finders
+            # to probe for a testcase. Register matches.
+            for dirpath, dirnames, filenames in os.walk(root):
+                # If the directory name does not match the given pattern, skip
+                # it.
+                if pattern is not None and not pattern.search(dirpath):
+                    continue
+
+                # The first test finder that has a match "wins"
+                for tf in test_finders:
+                    try:
+                        test = tf.probe(self, dirpath, dirnames, filenames)
+                    except ProbingError as exc:
+                        self.has_error = True
+                        logger.error(str(exc))
+                        break
+                    if test is not None:
+                        result[test.test_dir] = test
+                        break
+
+        # If specific tests are requested, only look for them. Otherwise, just
+        # look in the tests subdirectory.
+        if sublist:
+            for s in sublist:
+                helper(s)
+        else:
+            helper(self.test_dir)
+
+        result = list(result.values())
+        logger.info("Found {} tests".format(len(result)))
+        logger.debug("tests:\n  " + "\n  ".join(t.test_dir for t in result))
         return result
 
-    def parse_test(self, actions, test_case_file):
+    def add_test(self, actions, parsed_test):
         """Register a test.
 
-        :param actions: the dag of actions for the testsuite
-        :type actions: e3.collection.dag.DAG
-        :param test_case_file: filename containing the testcase
-        :type test_case_file: str
+        :param e3.collection.dag.DAG actions: The dag of actions for the
+            testsuite.
+        :param e3.testsuite.testcase_finder.ParsedTest test_case_file: Test to
+            instantiate.
 
         :return: Whether the test was successfully registered.
         :rtype: bool
         """
-        test_name = self.test_name(test_case_file)
+        test_name = parsed_test.test_name
 
-        # Load testcase file
-        try:
-            test_env = load_with_config(
-                os.path.join(self.test_dir, test_case_file), Env().to_dict()
-            )
-        except e3.yaml.YamlError:
-            logger.error("invalid syntax for {}".format(test_case_file))
-            return False
-
-        # Ensure that the test_env act like a dictionary. We still accept None
-        # as it's a shortcut for "just use default driver" configuration files.
-        if test_env is None:
-            test_env = {}
-        elif not isinstance(test_env, collections.abc.Mapping):
-            logger.error("invalid format for {}".format(test_case_file))
-            return False
-
-        # Add to the test environment the directory in which the test.yaml is
-        # stored
-        test_env["test_dir"] = os.path.join(
-            self.env.test_dir, os.path.dirname(test_case_file)
-        )
-        test_env["test_case_file"] = test_case_file
+        # Complete the test environment
+        test_env = dict(parsed_test.test_env)
+        test_env["test_dir"] = parsed_test.test_dir
         test_env["test_name"] = test_name
-        test_env["working_dir"] = os.path.join(
-            self.env.working_dir, test_env["test_name"]
-        )
+        test_env["working_dir"] = os.path.join(self.env.working_dir, test_name)
 
-        if "driver" in test_env:
-            driver = test_env["driver"]
-        elif not self.default_driver:
-            logger.error("missing driver for {}".format(test_case_file))
-            return False
-        else:
-            driver = self.default_driver
+        # Fetch the test driver to use
+        driver = parsed_test.driver_cls
+        if not driver:
+            if self.default_driver:
+                driver = self.DRIVERS[self.default_driver]
+            else:
+                logger.error("missing driver for test '{}'".format(test_name))
+                return False
 
-        logger.debug("set driver to %s" % driver)
-        if driver not in self.DRIVERS or not issubclass(
-            self.DRIVERS[driver], TestDriver
-        ):
-            logger.error("cannot find driver for %s" % test_case_file)
-            return False
-
+        # Finally run the driver instantiation
         try:
-            instance = self.DRIVERS[driver](self.env, test_env)
+            instance = driver(self.env, test_env)
             instance.Fore = self.Fore
             instance.Style = self.Style
             instance.add_test(actions)
 
         except Exception as e:
             error_msg = str(e)
-            error_msg += "Traceback:\n"
+            error_msg += "\nTraceback:\n"
             error_msg += "\n".join(traceback.format_tb(sys.exc_info()[2]))
             logger.error(error_msg)
             return False
@@ -557,78 +589,38 @@ class Testsuite(TestsuiteCore):
         """
         return None
 
-    def test_name(self, test_case_file):
+    def test_name(self, test_dir):
         """Compute the test name given a testcase spec.
 
-        This function can be overriden. By default it uses the name of the
-        directory in which the test.yaml is stored
+        This function can be overridden. By default it uses the name of the
+        test directory.
 
-        Note that the test name should be valid filename (not dir seprators,
+        Note that the test name should be a valid filename (not dir seprators,
         or special characters such as ``:``, ...).
 
-        :param test_case_file: path to test.yaml file (relative to test subdir
-        :type test_case_file: str | unicode
-        :param variant: the test variant or None
-        :type variant: str | None
-        :return: the test name
-        :rtype: basestring
+        :param str test_dir: Directory that contains the testcase.
+        :rtype: str
         """
-        result = (
-            os.path.dirname(test_case_file)
-            .replace("\\", "/")
-            .rstrip("/")
-            .replace("/", "__")
-        )
-        return result
+        # Start with a relative directory name from the tests subdirectory
+        result = os.path.relpath(test_dir, self.test_dir)
 
-    def get_test_list(self, sublist):
-        """Retrieve the list of tests.
+        # We want to support running tests outside of the test directory, so
+        # strip leading "..".
+        pattern = os.path.pardir + os.path.sep
+        while result.startswith(pattern):
+            result = result[len(pattern):]
 
-        The default method looks for all test.yaml files in the test
-        directory. If a test.yaml has a variants field, the test is expanded
-        in several test, each test being associated with a given variant.
+        # Run some name canonicalization and replace directory separators with
+        # double underscores.
+        return result.replace("\\", "/").rstrip("/").replace("/", "__")
 
-        This function may be overriden. At this stage the self.global_env
-        (after update by the set_up method) is available.
+    @property
+    def test_finders(self):
+        """Return test finders to probe tests directories.
 
-        :param sublist: a list of tests scenarios or patterns
-        :type sublist: list[str]
-        :return: the list of selected test
-        :rtype: list[str]
+        :rtype: list[e3.testsuite.testcase_finder.TestFinder]
         """
-        # First retrive the list of test.yaml files
-        result = [
-            os.path.relpath(p, self.test_dir).replace("\\", "/")
-            for p in find(self.test_dir, "test.yaml")
-        ]
-        if sublist:
-            logger.info("filter: %s" % sublist)
-            filtered_result = []
-            path_selectors = []
-            for s in sublist:
-                subdir = os.path.relpath(os.path.abspath(s), self.test_dir)
-                if s.endswith("/") or s.endswith("\\"):
-                    subdir += "/"
-                path_selectors.append(subdir)
-
-            for p in result:
-                for s in path_selectors:
-                    # Either we have a match or the selected path is the tests
-                    # root dir or a parent.
-                    if (
-                        s == "." or
-                        s == "./" or
-                        s.startswith("..") or
-                        re.match(s, p)
-                    ):
-                        filtered_result.append(p)
-                        continue
-
-            result = filtered_result
-
-        logger.info("Found %s tests", len(result))
-        logger.debug("tests:\n  " + "\n  ".join(result))
-        return result
+        return [YAMLTestFinder()]
 
     def set_up(self):
         """Execute operations before launching the testsuite.
