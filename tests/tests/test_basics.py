@@ -93,6 +93,55 @@ def test_basic():
     check_results_dir(new=result3, old=result2)
 
 
+def test_outer_testcase():
+    """Check that we can run tests from another directory."""
+
+    class MyDriver(BasicDriver):
+        def run(self, prev):
+            pass
+
+        def analyze(self, prev):
+            self.result.set_status(Status.PASS)
+            self.push_result()
+
+    class Mysuite(Suite):
+        TEST_SUBDIR = "empty-tests"
+        DRIVERS = {"default": MyDriver}
+        default_driver = "default"
+
+    outer_test_dir = os.path.join(
+        os.path.abspath(os.path.dirname(__file__)), "simple-tests"
+    )
+    suite = run_testsuite(Mysuite, args=[outer_test_dir])
+    assert suite.results == {
+        "simple-tests__test1": Status.PASS,
+        "simple-tests__test2": Status.PASS,
+    }
+
+
+def test_invalid_filter_pattern(caplog):
+    """Check the proper detection of invalid tests on the command line."""
+
+    class MyDriver(BasicDriver):
+        def run(self, prev):
+            pass
+
+        def analyze(self, prev):
+            self.result.set_status(Status.PASS)
+            self.push_result()
+
+    class Mysuite(Suite):
+        TEST_SUBDIR = "simple-tests"
+        DRIVERS = {"default": MyDriver}
+        default_driver = "default"
+
+    run_testsuite(Mysuite, args=["("], expect_failure=True)
+    assert any(
+        message.startswith("Invalid test pattern, skipping: ")
+        for message in testsuite_logs(caplog)
+    )
+
+
 def test_dump_environ():
     """
     Check that the --dump-environ argument works (at least does not crash).
@@ -289,9 +338,9 @@ def test_invalid_yaml(caplog):
     assert suite.results == {"valid": Status.PASS}
 
     logs = testsuite_logs(caplog)
-    assert "invalid syntax for invalid_syntax/test.yaml" in logs
-    assert "invalid format for invalid_structure/test.yaml" in logs
-    assert "cannot find driver for invalid_driver/test.yaml" in logs
+    assert "invalid syntax for test.yaml in 'invalid_syntax'" in logs
+    assert "invalid format for test.yaml in 'invalid_structure'" in logs
+    assert "cannot find driver for test 'invalid_driver'" in logs
 
 
 def test_missing_driver(caplog):
@@ -312,7 +361,7 @@ def test_missing_driver(caplog):
     suite = run_testsuite(Mysuite, expect_failure=True)
     logs = testsuite_logs(caplog)
     assert suite.results == {}
-    assert "missing driver for valid/test.yaml" in logs
+    assert "missing driver for test 'valid'" in logs
 
 
 def test_invalid_driver(caplog):
