@@ -99,6 +99,21 @@ class ReplacePath(RefiningChain):
         ])
 
 
+class PatternSubstitute(OutputRefiner):
+    """Replace patterns in outputs."""
+
+    def __init__(self, pattern, replacement=""):
+        """
+        :param str pattern: Pattern (regular expression) to replace.
+        :param str replacement: Replacement to use for the substitution.
+        """
+        self.regexp = re.compile(pattern)
+        self.replacement = replacement
+
+    def refine(self, output):
+        return self.regexp.sub(self.replacement, output)
+
+
 class DiffTestDriver(ClassicTestDriver):
     """Test driver to compute test output against a baseline."""
 

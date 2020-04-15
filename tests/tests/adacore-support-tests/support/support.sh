@@ -1,0 +1,1 @@
+export TEXT="Hello, world!"
