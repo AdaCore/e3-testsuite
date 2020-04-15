@@ -1,5 +1,6 @@
 import collections.abc
 import os.path
+import re
 
 from e3.env import Env
 import e3.yaml
@@ -96,3 +97,24 @@ class YAMLTestFinder(TestFinder):
 
         test_env["test_case_file"] = yaml_file
         return ParsedTest(test_name, driver_cls, test_env, dirpath)
+
+
+class AdaCoreLegacyTestFinder(TestFinder):
+    """Look for testcases in directories whose name matches a Ticket Number."""
+
+    TN_RE = re.compile("[0-9A-Z]{2}[0-9]{2}-[A-Z0-9]{3}")
+
+    def __init__(self, driver_cls):
+        """
+        :param e3.testsuite.driver.TestDriver driver_cls: TestDriver subclass
+            to use for all tests that are found.
+        """
+        self.driver_cls = driver_cls
+
+    def probe(self, testsuite, dirpath, dirnames, filenames):
+        # There is a testcase iff the test directory name is a valid TN
+        dirname = os.path.basename(dirpath)
+        if not self.TN_RE.match(dirname):
+            return None
+
+        return ParsedTest(dirname, self.driver_cls, {}, dirpath)

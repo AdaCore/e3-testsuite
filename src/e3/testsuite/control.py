@@ -2,6 +2,7 @@ from enum import Enum
 import os.path
 
 from e3.testsuite import logger
+from e3.testsuite.optfileparser import OptFileParse
 
 
 class TestControlKind(Enum):
@@ -147,3 +148,114 @@ class YAMLTestControlCreator(TestControlCreator):
                 }[kind]
                 return TestControl(message, skip, xfail)
         return default
+
+
+class OptfileTestControlCreator(TestControlCreator):
+    """Create test controls based on "test.opt" files."""
+
+    def default_script(self, driver):
+        """Return the default test script filename.
+
+        :param TestDriver driver: Test driver for which we must parse the
+            "control" configuration.
+        """
+        # Use "test.cmd" by default. If it does not exist while there is a
+        # "test.py" file, use that instead.
+        if (
+            not os.path.isfile(driver.test_dir("test.cmd"))
+            and os.path.isfile(driver.test_dir("test.py"))
+        ):
+            return "test.py"
+        return "test.cmd"
+
+    def default_opt_results(self, driver):
+        """Return the default options. test.opt files can override these.
+
+        By default, a test is not DEAD, SKIP, nor XFAIL. Its execution timeout
+        is 780 seconds. Test script is "test.cmd" and its output is compared
+        against "test.out".
+
+        :param TestDriver driver: Test driver for which we must parse the
+            "control" configuration.
+        """
+        return {
+            "RLIMIT": "780",
+            "DEAD": None,
+            "XFAIL": None,
+            "SKIP": None,
+            "OUT": "test.out",
+            "CMD": self.default_script(driver),
+            "FILESIZE_LIMIT": None,
+            "TIMING": None,
+            "NOTE": None,
+        }
+
+    def __init__(self, system_tags, opt_filename="test.opt"):
+        """Initialize a OptfileTestControlCreator instance.
+
+        :param str|list[str] system_tags: Tags to forward to OptFileParse().
+        :param str opt_filename: Name of the file to parse, relative to the
+            test directory.
+        """
+        self.opt_filename = opt_filename
+        self.system_tags = system_tags
+
+    def create(self, driver):
+        # If there is a "control" entry in the testcase's test.yaml file while
+        # the optfile mechanism is in use, it probably means someone mistakenly
+        # wrote a "control" entry that will not be interpreted: be helpful and
+        # warn about it.
+        if "control" in driver.test_env:
+            logger.warning(
+                '{}: "control" entry found in test.yaml whereas only test.opt'
+                ' files are considered'.format(driver.test_env["test_name"])
+            )
+
+        # If it exists, parse the "test.opt" file in the test directory.
+        # Create a dummy optfile otherwise.
+        filename = driver.test_dir(self.opt_filename)
+        optfile = (OptFileParse(self.system_tags, filename)
+                   if os.path.exists(filename)
+                   else OptFileParse(self.system_tags, []))
+
+        # Create a TestControl depending on the contents of the optfile
+        message = None
+        skip = False
+        xfail = False
+        opt_results = optfile.get_values(self.default_opt_results(driver))
+        if opt_results["DEAD"] is not None:
+            message = opt_results["DEAD"]
+            skip = True
+        elif opt_results["SKIP"] is not None:
+            message = opt_results["SKIP"]
+            skip = True
+            xfail = True
+        elif opt_results["XFAIL"] is not None:
+            message = opt_results["XFAIL"]
+            xfail = True
+        result = TestControl(message, skip, xfail)
+
+        # Store results in the TestControl instance, so that "driver" has
+        # access to it.
+        result.opt_results = opt_results
+
+        return result
+
+
+class AdaCoreLegacyTestControlCreator(OptfileTestControlCreator):
+    """
+    Create test controls for legacy AdaCore testsuites, for "test.opt" files.
+    """
+
+    def default_script(self, driver):
+        # Return the filename for the first script file that exists. The lookup
+        # order depends on the host platform.
+        lookup_order = (
+            ["test.cmd", "test.sh", "test.py"]
+            if driver.env.host.os.name == "windows"
+            else ["test.sh", "test.cmd", "test.py"]
+        )
+        for script in lookup_order:
+            if os.path.isfile(driver.test_dir(script)):
+                return script
+        return "test.cmd"
