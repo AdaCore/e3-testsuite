@@ -417,7 +417,7 @@ class TestsuiteCore(object):
         return result
 
     def add_test(self, actions, parsed_test):
-        """Register a test.
+        """Register a test to run.
 
         :param e3.collection.dag.DAG actions: The dag of actions for the
             testsuite.
@@ -564,18 +564,26 @@ class Testsuite(TestsuiteCore):
     """
 
     CROSS_SUPPORT = False
-    # set CROSS_SUPPORT to true if the driver should accept --target, --build
-    # --host switches
+    """
+    Whether this testsuite supports --target/--build/--host cmdline arguments.
+    """
 
     TEST_SUBDIR = "."
-    # Subdir in which the tests are actually stored
+    """
+    Name of the directory that contains testcases.
+
+    This name is relative to the testsuite root directory, as passed to the
+    Testsuite constructor.
+    """
 
     DRIVERS = {}
-    # Dictionary that map a name to a class that inherit from TestDriver
+    """
+    Map from test driver names to TestDriver subclasses.
+    """
 
     @property
     def default_driver(self):
-        """Return the default driver to be used.
+        """Return the default driver for testcases.
 
         The return value is used only if the test.yaml file does not contain
         any ``driver`` key. Note that you have access to the current test.yaml
@@ -593,10 +601,8 @@ class Testsuite(TestsuiteCore):
         """Compute the test name given a testcase spec.
 
         This function can be overridden. By default it uses the name of the
-        test directory.
-
-        Note that the test name should be a valid filename (not dir seprators,
-        or special characters such as ``:``, ...).
+        test directory. Note that the test name should be a valid filename (not
+        dir seprators, or special characters such as ``:``, ...).
 
         :param str test_dir: Directory that contains the testcase.
         :rtype: str
@@ -622,17 +628,27 @@ class Testsuite(TestsuiteCore):
         """
         return [YAMLTestFinder()]
 
+    def add_options(self):
+        """Add testsuite specific switches.
+
+        We can add your own switches by calling self.main.add_option
+        function
+        """
+        pass
+
     def set_up(self):
-        """Execute operations before launching the testsuite.
+        """Execute operations before running the testsuite.
 
-        At this stage arguments have been read. The next step will be
-        get_test_list.
+        Before running this, command-line arguments were parsed. After this
+        returns, the testsuite will look for testcases.
 
-        A few things can be done at this stage:
+        By default, this does nothing. Overriding this method allows testsuites
+        to prepare the execution of the testsuite depending on their needs. For
+        instance:
 
-        * set some environment variables
-        * adjust self.global_env (dictionary passed to all tests)
-        * take into account testsuite specific options
+        * process testsuite-specific options;
+        * initialize environment variables;
+        * adjust self.env (object forwarded to test drivers).
         """
         return self.tear_up()
 
@@ -645,26 +661,17 @@ class Testsuite(TestsuiteCore):
     def tear_down(self):
         """Execute operation when finalizing the testsuite.
 
-        By default clean the working directory in which the tests
-        were run
+        By default, this cleans the working (temporary) directory in which the
+        tests were run.
         """
         if self.main.args.enable_cleanup:
             rm(self.working_dir, True)
 
-    def add_options(self):
-        """Add testsuite specific switches.
-
-        We can add your own switches by calling self.main.add_option
-        function
-        """
-        pass
-
     def write_comment_file(self, comment_file):
         """Write the comment file's content.
 
-        :param comment_file: File descriptor for the comment file.
-            Overriding methods should only call its "write" method
-            (or print to it).
-        :type comment_file: file
+        :param file comment_file: File descriptor for the comment file.
+            Overriding methods should only call its "write" method (or print to
+            it).
         """
         pass
