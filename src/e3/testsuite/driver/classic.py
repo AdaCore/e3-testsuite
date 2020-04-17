@@ -57,11 +57,17 @@ class ClassicTestDriver(TestDriver):
     * have support for automatic XFAIL/UNSUPPORTED test results.
     """
 
-    copy_test_directory = True
-    """
-    Whether to copy the test directory to the working directory before running
-    the testcase.
-    """
+    @property
+    def copy_test_directory(self):
+        """
+        Return whether to automatically copy test directory to working dir.
+
+        If this returns True, the working directory is automatically
+        synchronized to the test directory before running the testcase:
+
+        :rtype: bool
+        """
+        return True
 
     def run(self):
         """Run the testcase.

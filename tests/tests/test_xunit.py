@@ -24,8 +24,8 @@ def test_basic():
             self.push_result()
 
     class Mysuite(Suite):
-        TEST_SUBDIR = "simple-tests"
-        DRIVERS = {"default": MyDriver}
+        tests_subdir = "simple-tests"
+        test_driver_map = {"default": MyDriver}
         default_driver = "default"
 
     xunit_file = "xunit.xml"

@@ -165,25 +165,33 @@ class DiffTestDriver(ClassicTestDriver):
             )
         return (filename, baseline, is_regexp)
 
-    output_refiners = []
-    """
-    List of refiners for test baselines/outputs.
+    @property
+    def output_refiners(self):
+        """
+        List of refiners for test baselines/outputs.
 
-    :type: list[OutputRefiner]
-    """
+        :rtype: list[OutputRefiner]
+        """
+        return []
 
-    diff_ignore_white_chars = False
-    """
-    Whether the comparison between test output and baseline must ignore
-    whitespaces (leading and trailing spaces, tabs and carriage returns on
-    lines, and empty lines). Note that if we don't ignore them, we still
-    canonicalize line separators (CRLF are replaced by LF before the
-    comparison).
+    @property
+    def diff_ignore_white_chars(self):
+        """
+        Whether to ignore white characters in diff computations.
 
-    Note that at some point, this mechanism should be unified with the
-    ``output_refiners`` machinery. However, this relies on e3.diff's
-    ignore_white_chars feature, which is not trivial to reimplement.
-    """
+        This returns whether the comparison between test output and baseline
+        must ignore whitespaces (leading and trailing spaces, tabs and carriage
+        returns on lines, and empty lines). Note that if we don't ignore them,
+        we still canonicalize line separators (CRLF are replaced by LF before
+        the comparison).
+
+        Note that at some point, this mechanism should be unified with the
+        ``output_refiners`` machinery. However, this relies on e3.diff's
+        ignore_white_chars feature, which is not trivial to reimplement.
+
+        :rtype: bool
+        """
+        return False
 
     def compute_diff(self, baseline_file, baseline, actual,
                      failure_message="unexpected output",

@@ -39,8 +39,8 @@ def test_diff():
     """Check that DiffTestDriver works as expected."""
 
     class Mysuite(Suite):
-        TEST_SUBDIR = "diff-tests"
-        DRIVERS = {"diff-script-driver": DiffScriptDriver}
+        tests_subdir = "diff-tests"
+        test_driver_map = {"diff-script-driver": DiffScriptDriver}
 
     suite = run_testsuite(Mysuite, args=["-E"])
     assert suite.results == {
@@ -68,8 +68,8 @@ def test_diff_rewriting():
         shutil.copytree(tests_source, tests_copy)
 
         class Mysuite(Suite):
-            TEST_SUBDIR = tests_copy
-            DRIVERS = {"diff-script-driver": DiffScriptDriver}
+            tests_subdir = tests_copy
+            test_driver_map = {"diff-script-driver": DiffScriptDriver}
 
             def add_options(self):
                 self.main.argument_parser.add_argument(

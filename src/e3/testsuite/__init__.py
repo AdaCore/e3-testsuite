@@ -115,7 +115,7 @@ class TestsuiteCore(object):
         :type root_dir: str | unicode
         """
         self.root_dir = os.path.abspath(root_dir)
-        self.test_dir = os.path.join(self.root_dir, self.TEST_SUBDIR)
+        self.test_dir = os.path.join(self.root_dir, self.tests_subdir)
         self.consecutive_failures = 0
         self.return_values = {}
         self.results = {}
@@ -172,7 +172,7 @@ class TestsuiteCore(object):
         :param args: command line arguments. If None use sys.argv
         :type args: list[str] | None
         """
-        self.main = Main(platform_args=self.CROSS_SUPPORT)
+        self.main = Main(platform_args=self.enable_cross_support)
 
         # Add common options
         parser = self.main.argument_parser
@@ -439,7 +439,7 @@ class TestsuiteCore(object):
         driver = parsed_test.driver_cls
         if not driver:
             if self.default_driver:
-                driver = self.DRIVERS[self.default_driver]
+                driver = self.test_driver_map[self.default_driver]
             else:
                 logger.error("missing driver for test '{}'".format(test_name))
                 return False
@@ -563,23 +563,40 @@ class Testsuite(TestsuiteCore):
     inherit from this class.
     """
 
-    CROSS_SUPPORT = False
-    """
-    Whether this testsuite supports --target/--build/--host cmdline arguments.
-    """
+    @property
+    def enable_cross_support(self):
+        """
+        Return whether this testsuite has support for cross toolchains.
 
-    TEST_SUBDIR = "."
-    """
-    Name of the directory that contains testcases.
+        If cross support is enabled, the testsuite will have
+        --target/--build/--host command-line arguments.
 
-    This name is relative to the testsuite root directory, as passed to the
-    Testsuite constructor.
-    """
+        :rtype: bool
+        """
+        return False
 
-    DRIVERS = {}
-    """
-    Map from test driver names to TestDriver subclasses.
-    """
+    @property
+    def tests_subdir(self):
+        """
+        Return the subdirectory in which tests are looked for.
+
+        The returned directory name is considered relative to the root
+        testsuite directory (self.root_dir).
+
+        :rtype: str
+        """
+        return "."
+
+    @property
+    def test_driver_map(self):
+        """Return a map from test driver names to TestDriver subclasses.
+
+        Test finders will be able to use this map to fetch the test drivers
+        referenced in testcases.
+
+        :rtype: dict[str, e3.testsuite.driver.TestDriver]
+        """
+        return {}
 
     @property
     def default_driver(self):

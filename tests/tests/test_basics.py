@@ -65,9 +65,8 @@ def test_basic():
             self.push_result()
 
     class Mysuite(Suite):
-        CROSS_SUPPORT = True
-        TEST_SUBDIR = "simple-tests"
-        DRIVERS = {"default": MyDriver}
+        tests_subdir = "simple-tests"
+        test_driver_map = {"default": MyDriver}
 
         @property
         def default_driver(self):
@@ -107,8 +106,8 @@ def test_outer_testcase():
             self.push_result()
 
     class Mysuite(Suite):
-        TEST_SUBDIR = "empty-tests"
-        DRIVERS = {"default": MyDriver}
+        tests_subdir = "empty-tests"
+        test_driver_map = {"default": MyDriver}
         default_driver = "default"
 
     outer_test_dir = os.path.join(
@@ -133,8 +132,8 @@ def test_invalid_filter_pattern(caplog):
             self.push_result()
 
     class Mysuite(Suite):
-        TEST_SUBDIR = "simple-tests"
-        DRIVERS = {"default": MyDriver}
+        tests_subdir = "simple-tests"
+        test_driver_map = {"default": MyDriver}
         default_driver = "default"
 
     run_testsuite(Mysuite, args=["("], expect_failure=True)
@@ -158,8 +157,8 @@ def test_dump_environ():
             self.push_result()
 
     class Mysuite(Suite):
-        TEST_SUBDIR = "simple-tests"
-        DRIVERS = {"default": MyDriver}
+        tests_subdir = "simple-tests"
+        test_driver_map = {"default": MyDriver}
         default_driver = "default"
 
     run_testsuite(Mysuite, args=["--dump-environ"])
@@ -177,9 +176,8 @@ def test_no_testcase(caplog):
             self.push_result()
 
     class Mysuite(Suite):
-        CROSS_SUPPORT = True
-        TEST_SUBDIR = "no-test"
-        DRIVERS = {"default": MyDriver}
+        tests_subdir = "no-test"
+        test_driver_map = {"default": MyDriver}
         default_driver = "default"
 
     suite = run_testsuite(Mysuite)
@@ -205,9 +203,8 @@ def test_abort():
             self.push_result()
 
     class Mysuite(Suite):
-        CROSS_SUPPORT = True
-        TEST_SUBDIR = "simple-tests"
-        DRIVERS = {"default": MyDriver}
+        tests_subdir = "simple-tests"
+        test_driver_map = {"default": MyDriver}
 
         @property
         def default_driver(self):
@@ -234,9 +231,8 @@ def test_exception_in_driver():
             self.push_result()
 
     class Mysuite(Suite):
-        CROSS_SUPPORT = True
-        TEST_SUBDIR = "simple-tests"
-        DRIVERS = {"default": MyDriver}
+        tests_subdir = "simple-tests"
+        test_driver_map = {"default": MyDriver}
 
         @property
         def default_driver(self):
@@ -272,8 +268,8 @@ def test_not_existing_temp_dir(caplog):
             self.push_result()
 
     class Mysuite(Suite):
-        TEST_SUBDIR = "simple-tests"
-        DRIVERS = {"default": MyDriver}
+        tests_subdir = "simple-tests"
+        test_driver_map = {"default": MyDriver}
         default_driver = "default"
 
     # Check that the testsuite aborted and that we have the expected error
@@ -299,8 +295,8 @@ def test_dev_mode():
             self.push_result()
 
     class Mysuite(Suite):
-        TEST_SUBDIR = "simple-tests"
-        DRIVERS = {"default": MyDriver}
+        tests_subdir = "simple-tests"
+        test_driver_map = {"default": MyDriver}
         default_driver = "default"
 
     suite = run_testsuite(Mysuite, ["--dev-temp=tmp"])
@@ -328,8 +324,8 @@ def test_invalid_yaml(caplog):
             self.push_result()
 
     class Mysuite(Suite):
-        TEST_SUBDIR = "invalid-yaml-tests"
-        DRIVERS = {"default": MyDriver}
+        tests_subdir = "invalid-yaml-tests"
+        test_driver_map = {"default": MyDriver}
         default_driver = "default"
 
     # The testsuite is supposed to run to completion (valid tests have run),
@@ -355,8 +351,8 @@ def test_missing_driver(caplog):
             self.push_result()
 
     class Mysuite(Suite):
-        TEST_SUBDIR = "invalid-yaml-tests"
-        DRIVERS = {"my_driver": MyDriver}
+        tests_subdir = "invalid-yaml-tests"
+        test_driver_map = {"my_driver": MyDriver}
 
     suite = run_testsuite(Mysuite, expect_failure=True)
     logs = testsuite_logs(caplog)
@@ -372,8 +368,8 @@ def test_invalid_driver(caplog):
             raise NotImplementedError
 
     class Mysuite(Suite):
-        TEST_SUBDIR = "simple-tests"
-        DRIVERS = {"default": MyDriver}
+        tests_subdir = "simple-tests"
+        test_driver_map = {"default": MyDriver}
         default_driver = "default"
 
     run_testsuite(Mysuite, expect_failure=True)
@@ -396,8 +392,8 @@ def test_show_error_output(caplog):
             self.push_result()
 
     class Mysuite(Suite):
-        TEST_SUBDIR = "simple-tests"
-        DRIVERS = {"default": MyDriver}
+        tests_subdir = "simple-tests"
+        test_driver_map = {"default": MyDriver}
         default_driver = "default"
 
     run_testsuite(Mysuite, ["--show-error-output"])
@@ -418,9 +414,8 @@ def test_push_twice():
             self.push_result()
 
     class Mysuite(Suite):
-        CROSS_SUPPORT = True
-        TEST_SUBDIR = "simple-tests"
-        DRIVERS = {"default": MyDriver}
+        tests_subdir = "simple-tests"
+        test_driver_map = {"default": MyDriver}
 
         @property
         def default_driver(self):
@@ -460,8 +455,8 @@ def test_comment_file():
             self.push_result()
 
     class Mysuite(Suite):
-        TEST_SUBDIR = "simple-tests"
-        DRIVERS = {"default": MyDriver}
+        tests_subdir = "simple-tests"
+        test_driver_map = {"default": MyDriver}
         default_driver = "default"
 
         def write_comment_file(self, f):
@@ -495,8 +490,8 @@ def test_path_builders():
             self.push_result()
 
     class Mysuite(Suite):
-        TEST_SUBDIR = "simple-tests"
-        DRIVERS = {"default": MyDriver}
+        tests_subdir = "simple-tests"
+        test_driver_map = {"default": MyDriver}
         default_driver = "default"
 
     run_testsuite(Mysuite)
