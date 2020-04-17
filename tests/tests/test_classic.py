@@ -145,8 +145,11 @@ def test_classic(caplog):
     """Check that ClassicTestDriver works as expected."""
 
     class Mysuite(Suite):
-        TEST_SUBDIR = "classic-tests"
-        DRIVERS = {"script-driver": ScriptDriver, "dummy-driver": DummyDriver}
+        tests_subdir = "classic-tests"
+        test_driver_map = {
+            "script-driver": ScriptDriver,
+            "dummy-driver": DummyDriver,
+        }
 
     suite = run_testsuite(Mysuite)
     assert suite.results == {

@@ -83,9 +83,7 @@ class AdaCoreLegacyTestDriver(DiffTestDriver):
         self.test_environ = dict(self.env.test_environ)
         self.argv = self.get_script_command_line()
 
-    # List of patterns/replacements substitutions to apply to scripts in order
-    # to convert them from "cmd" syntax to Bourne shell.
-    cmd_substitutions = [
+    default_substitutions = [
         # Remove ".exe" suffix for output files. This will for instance turn
         # "gcc -o main.exe main.adb" into "gcc -o main main.adb".
         (re.compile(r"-o(.*).exe"), r"-o \1"),
@@ -102,6 +100,19 @@ class AdaCoreLegacyTestDriver(DiffTestDriver):
         # "set FOO = BAR" -> 'FOO="BAR"; export FOO'.
         (re.compile(r"set *([^ =]+) *= *([^ ]*)"), r'\1="\2"; export \1'),
     ]
+
+    @property
+    def cmd_substitutions(self):
+        """
+        List of substitutions to apply to scripts.
+
+        This returns a list of patterns/replacements couples for substitutions
+        to apply to scripts in order to convert them from "cmd" syntax to
+        Bourne shell.
+
+        :rtype: list[(re.regexp, str)]
+        """
+        return list(self.default_substitutions)
 
     def get_script_command_line(self):
         """Return the command line to run the test script.

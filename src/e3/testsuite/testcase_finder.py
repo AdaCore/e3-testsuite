@@ -90,7 +90,7 @@ class YAMLTestFinder(TestFinder):
             driver_cls = None
         else:
             try:
-                driver_cls = testsuite.DRIVERS[driver_name]
+                driver_cls = testsuite.test_driver_map[driver_name]
             except KeyError:
                 raise ProbingError(
                     "cannot find driver for test '{}'".format(test_name)

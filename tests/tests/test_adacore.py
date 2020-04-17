@@ -15,7 +15,7 @@ def test_adacore():
     """Check that AdaCore legacy support works as expected."""
 
     class Mysuite1(Suite):
-        TEST_SUBDIR = "adacore-tests"
+        tests_subdir = "adacore-tests"
 
         def set_up(self):
             super(Mysuite1, self).set_up()
@@ -43,7 +43,7 @@ def test_adacore():
     }
 
     class Mysuite2(Suite):
-        TEST_SUBDIR = "adacore-support-tests"
+        tests_subdir = "adacore-support-tests"
 
         def set_up(self):
             super(Mysuite2, self).set_up()
@@ -72,8 +72,8 @@ def test_optfile(caplog):
         test_control_creator = control.OptfileTestControlCreator(["foo"])
 
     class Mysuite(Suite):
-        TEST_SUBDIR = "adacore-tests"
-        DRIVERS = {"adacore": Mydriver}
+        tests_subdir = "adacore-tests"
+        test_driver_map = {"adacore": Mydriver}
         default_driver = "adacore"
 
         def set_up(self):
