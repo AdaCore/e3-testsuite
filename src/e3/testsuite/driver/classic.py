@@ -121,8 +121,8 @@ class ClassicTestDriver(TestDriver):
         :param None|dict[str, str] env: Environment to pass to the subprocess.
         :param bool catch_error: If True, consider that an error status code
             leads to a test failure. In that case, abort the testcase.
-        :param bool analyze_output: If True, add the subprocess output to
-            ``self.result.out``.
+        :param bool analyze_output: If True, add the subprocess output to the
+            ``self.output`` log.
         :param None|int timeout: Timeout (in seconds) for the subprocess. Use
             ``self.default_timeout`` if left to None.
         :param bool parse_shebang: See e3.os.process.Run's constructor.
@@ -204,7 +204,7 @@ class ClassicTestDriver(TestDriver):
 
         # If requested, use its output for analysis
         if analyze_output:
-            self.result.out += stdout
+            self.output += stdout
 
         if catch_error and p.status != 0:
             raise TestAbortWithFailure("non-zero status code")
@@ -319,7 +319,7 @@ class ClassicTestDriver(TestDriver):
         # If the requested encoding is "binary", this actually means we will
         # handle binary data (i.e. no specific encoding). Create a binary log
         # accordingly.
-        self.result.out = (
+        self.output = (
             Log(b"") if self.default_encoding == "binary" else Log("")
         )
 

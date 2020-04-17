@@ -262,8 +262,9 @@ class DiffTestDriver(ClassicTestDriver):
             message = "{} (baseline updated)".format(message)
 
         # Send the appropriate logging
-        self.result.log += message + "\n"
-        self.result.log += "\n".join(diff_lines) + "\n"
+        self.result.expected = Log(baseline)
+        self.result.out = Log(actual)
+        self.result.diff = Log("\n".join(diff_lines))
 
         return [message]
 
@@ -317,12 +318,6 @@ class DiffTestDriver(ClassicTestDriver):
         """
         filename, baseline, is_regexp = self.baseline
         if is_regexp:
-            return self.compute_regexp_match(baseline, self.result.out.log)
+            return self.compute_regexp_match(baseline, self.output.log)
         else:
-            return self.compute_diff(filename, baseline, self.result.out.log)
-
-    def analyze(self):
-        # Clear the output log before computing diffs, so that we present only
-        # diffs to users.
-        self.result.log = Log("")
-        super(DiffTestDriver, self).analyze()
+            return self.compute_diff(filename, baseline, self.output.log)

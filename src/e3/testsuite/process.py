@@ -35,7 +35,6 @@ def check_call(driver, cmd, test_name=None, result=None, **kwargs):
             "run_args": kwargs,
         }
     )
-    result.out += process.out
 
     # Append the status code and process output to the log to ease post-mortem
     # investigation.
