@@ -22,7 +22,7 @@ class DiffScriptDriver(diff.DiffTestDriver):
     @property
     def output_refiners(self):
         path_substitutions = self.test_env.get("path_substitutions", [])
-        return [
+        return super(DiffScriptDriver, self).output_refiners + [
             diff.ReplacePath(self.working_dir(path), replacement)
             for path, replacement in path_substitutions
         ]
@@ -47,6 +47,9 @@ def test_diff():
         "plain-pass": Status.PASS,
         "plain-fail": Status.FAIL,
         "binary": Status.PASS,
+        # Check that binary diffs are based on equally escaped outputs: the
+        # b"\\xe9" process output is different from the b"\xe9" baseline.
+        "binary-2": Status.FAIL,
         "regexp-pass": Status.PASS,
         "regexp-fail": Status.FAIL,
         "regexp-binary-pass": Status.PASS,
