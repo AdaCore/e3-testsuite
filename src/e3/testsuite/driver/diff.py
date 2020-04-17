@@ -104,6 +104,8 @@ class PatternSubstitute(OutputRefiner):
 
     def __init__(self, pattern, replacement=""):
         """
+        Initialize a PatternSubstitute instance.
+
         :param str pattern: Pattern (regular expression) to replace.
         :param str replacement: Replacement to use for the substitution.
         """
@@ -186,7 +188,7 @@ class DiffTestDriver(ClassicTestDriver):
     def compute_diff(self, baseline_file, baseline, actual,
                      failure_message="unexpected output",
                      ignore_white_chars=None):
-        """Helper to compute the diff between expected and actual input.
+        """Compute the diff between expected and actual outputs.
 
         Return an empty list if there is no diff, and return a list that
         contains an error message based on ``failure_message`` otherwise.
@@ -251,8 +253,8 @@ class DiffTestDriver(ClassicTestDriver):
 
         # If requested, rewrite the test baseline with the new one
         if (
-            baseline_file is not None and
-            getattr(self.env, "rewrite_baselines", False)
+            baseline_file is not None
+            and getattr(self.env, "rewrite_baselines", False)
         ):
             with open(baseline_file, "w") as f:
                 for line in actual:
@@ -269,7 +271,7 @@ class DiffTestDriver(ClassicTestDriver):
         self, regexp, actual,
         failure_message="output does not match expected pattern"
     ):
-        """Helper to compute whether some output matches a regexp.
+        """Compute whether the actual output matches a regexp.
 
         Return an empty list if the acutal content matches, and return a list
         that contains an error message based on ``failure_message`` otherwise.

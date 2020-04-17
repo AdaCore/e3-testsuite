@@ -28,6 +28,7 @@ class ParsedTest(object):
 
 class ProbingError(Exception):
     """Exception raised in TestFinder.probe when a test is misformatted."""
+
     pass
 
 
@@ -106,6 +107,8 @@ class AdaCoreLegacyTestFinder(TestFinder):
 
     def __init__(self, driver_cls):
         """
+        Initialize an AdaCoreLegacyTestFinder instance.
+
         :param e3.testsuite.driver.TestDriver driver_cls: TestDriver subclass
             to use for all tests that are found.
         """

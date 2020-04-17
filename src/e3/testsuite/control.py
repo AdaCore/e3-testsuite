@@ -114,9 +114,9 @@ class YAMLTestControlCreator(TestControlCreator):
                 raise ValueError("entry #{}: {}".format(i, message))
 
             if (
-                not isinstance(entry, list) or
-                not len(entry) in (2, 3) or
-                any(not isinstance(s, str) for s in entry)
+                not isinstance(entry, list)
+                or not len(entry) in (2, 3)
+                or any(not isinstance(s, str) for s in entry)
             ):
                 error("list of 2 or 3 strings expected")
 
@@ -243,9 +243,7 @@ class OptfileTestControlCreator(TestControlCreator):
 
 
 class AdaCoreLegacyTestControlCreator(OptfileTestControlCreator):
-    """
-    Create test controls for legacy AdaCore testsuites, for "test.opt" files.
-    """
+    """Create test controls for "test.opt"-based legacy AdaCore testsuites."""
 
     def default_script(self, driver):
         # Return the filename for the first script file that exists. The lookup

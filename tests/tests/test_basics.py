@@ -1,6 +1,8 @@
 """
-Tests for the code e3.testsuite framework: Testsuite, TestDriver and
-BasicTestDriver classes.
+Tests for the code e3.testsuite framework.
+
+This checks the behavior of the Testsuite, TestDriver and BasicTestDriver
+classes.
 """
 
 import glob
@@ -16,7 +18,7 @@ from e3.testsuite.result import TestResult as Result, TestStatus as Status
 
 
 def run_testsuite(cls, args=[], expect_failure=False):
-    """Helper to instantiate a Testsuite subclass and run it."""
+    """Instantiate a Testsuite subclass and run it."""
     suite = cls(os.path.dirname(__file__))
     status = suite.testsuite_main(args)
     if expect_failure:
@@ -32,7 +34,7 @@ def testsuite_logs(caplog):
 
 
 def check_results_dir(new={}, old={}):
-    """Helper to check the content of a testsuite results directory.
+    """Check the content of a testsuite results directory.
 
     ``new`` must be a dictionnary that maps test names to expected test
     statuses for the "new" results subdirectory. ``old`` is the same, but for
@@ -143,9 +145,7 @@ def test_invalid_filter_pattern(caplog):
 
 
 def test_dump_environ():
-    """
-    Check that the --dump-environ argument works (at least does not crash).
-    """
+    """Check that --dump-environ works (at least does not crash)."""
 
     class MyDriver(BasicDriver):
         return_status = Status.PASS
@@ -166,7 +166,7 @@ def test_dump_environ():
 
 
 def test_no_testcase(caplog):
-    """Testsuite run with no testcase"""
+    """Testsuite run with no testcase."""
 
     class MyDriver(BasicDriver):
         def run(self, prev):

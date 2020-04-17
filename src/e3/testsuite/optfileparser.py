@@ -16,6 +16,7 @@ OPTLINE_REGEXPS = re.compile(r"^([^\s]+)(\s+([a-zA-Z0-9_-]+)(\s+(.*))?)?$")
 
 class BadFormattingError(Exception):
     """Raised when an input line is not correctly formatted."""
+
     pass
 
 
@@ -190,9 +191,13 @@ class OptFileParse(object):
             if self.__is_overidable(cmd):
                 self.__matches[cmd] = (tags, arg, self.__is_all(tags))
 
-                if not self.__is_dead_cmd(cmd) and \
-                        (self.__note is None or
-                         self.__matches[cmd][OVERIDABLE]):
+                if (
+                    not self.__is_dead_cmd(cmd)
+                    and (
+                        self.__note is None
+                        or self.__matches[cmd][OVERIDABLE]
+                    )
+                ):
                     self.__note = self.__matches[cmd]
 
         elif cmd == "required" and not self.__match(tags):

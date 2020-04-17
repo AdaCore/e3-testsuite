@@ -13,22 +13,34 @@ from colorama import Fore, Style
 
 class TestSkip(Exception):
     """
-    Convenience exception to abort a testcase, considering it must be skipped
-    (TestStatus.UNSUPPORTED).
+    Convenience exception to abort a testcase.
+
+    When this exception is raised during test initialization or execution,
+    consider that this testcase must be skipped (TestStatus.UNSUPPORTED).
     """
+
     pass
 
 
 class TestAbortWithError(Exception):
     """
-    Convenience exception to abort a testcase, considering something went wrong
-    (TestStatus.ERROR).
+    Convenience exception to abort a testcase.
+
+    When this exception is raised during test initialization or execution,
+    consider that something went wrong (TestStatus.ERROR).
     """
+
     pass
 
 
 class TestAbortWithFailure(Exception):
-    """Convenience exception to abort a testcase, considering it failed."""
+    """Convenience exception to abort a testcase, considering it failed.
+
+    When this exception is raised during test initialization or execution,
+    consider that it failed (TestStatus.FAIL or TestStatus.XFAIL, depending on
+    test control).
+    """
+
     pass
 
 
@@ -52,14 +64,20 @@ class ClassicTestDriver(TestDriver):
     """
 
     def run(self):
-        """Subclasses must override this."""
+        """Run the testcase.
+
+        Subclasses must override this.
+        """
         raise NotImplementedError
 
     @property
     def default_process_timeout(self):
         """
-        Return the default timeout (number of seconds) for processes spawn in
-        the ``shell`` method.
+        Return the default timeout for processes spawn in the ``shell`` method.
+
+        The result is a number of seconds.
+
+        :rtype: int
         """
         # Return the timeout defined in test.yaml, if present, otherwise return
         # our true default: 5 minutes.
@@ -194,9 +212,7 @@ class ClassicTestDriver(TestDriver):
         self.add_fragment(dag, "run_wrapper")
 
     def push_success(self):
-        """
-        Consider that the test passed and set status according to test control.
-        """
+        """Set status to consider that the test passed."""
         # Given that we skip execution right after the test control evaluation,
         # there should be no way to call push_success in this case.
         assert not self.test_control.skip
@@ -218,8 +234,7 @@ class ClassicTestDriver(TestDriver):
 
     def push_error(self, message):
         """
-        Consider that something went wrong while processing this test, set
-        status accordingly.
+        Set status to consider that something went wrong during test execution.
 
         :param str message: Message to explain what went wrong.
         """
@@ -242,7 +257,8 @@ class ClassicTestDriver(TestDriver):
         self.push_result()
 
     def set_up(self):
-        """
+        """Run initialization operations before a test runs.
+
         Subclasses can override this to prepare testcase execution.
 
         Having a callback separate from "run" is useful when dealing with
@@ -257,8 +273,9 @@ class ClassicTestDriver(TestDriver):
         pass
 
     def tear_down(self):
-        """
-        Subclasses can override this to run clean ups after testcase execution.
+        """Run finalization operations after a test has run.
+
+        Subclasses can override this to run clean-ups after testcase execution.
 
         See set_up's docstring for the rationale.
         """

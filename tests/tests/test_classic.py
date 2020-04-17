@@ -15,7 +15,6 @@ from .test_basics import run_testsuite, testsuite_logs
 
 def test_control_interpret():
     """Check that TestControl.interpret works as expected."""
-
     # Mock data structures so that we don't have to create full testsuite runs
 
     class MockEnv:
