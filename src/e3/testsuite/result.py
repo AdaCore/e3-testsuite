@@ -41,6 +41,26 @@ class TestStatus(Enum):
         }[self.name]
 
 
+class FailureReason(Enum):
+    """Reason for a test failure."""
+
+    # A process crash was detected. What is a "crash" is not clearly specified:
+    # it could be for instance that a "GCC internal compiler error" message is
+    # present in the test output.
+    CRASH = 0
+
+    # A process was stopped because it timed out
+    TIMEOUT = 1
+
+    # Output is not as expected
+    DIFF = 2
+
+    # The tested software triggered an invalid memory access pattern. For
+    # instance, Valgrind found a conditional jump that depends on uninitialized
+    # data.
+    MEMCHECK = 3
+
+
 class Log(yaml.YAMLObject):
     """Object to hold long text or binary logs.
 
@@ -111,20 +131,6 @@ def binary_repr(binary):
     )
 
 
-# Enforce representation of Log objects when dumped to yaml
-def _log_representer(dumper, data):
-    return (
-        dumper.represent_scalar("tag:yaml.org,2002:str", data.log, style="|")
-        if data.is_text else
-        dumper.represent_scalar(
-            "tag:yaml.org,2002:binary",
-            binascii.b2a_base64(data.log).decode('ascii'), style="|")
-    )
-
-
-yaml.add_representer(Log, _log_representer)
-
-
 class TestResult(yaml.YAMLObject):
     """Represent a result for a given test."""
 
@@ -134,27 +140,73 @@ class TestResult(yaml.YAMLObject):
     def __init__(self, name, env=None, status=None, msg=""):
         """Initialize a test result.
 
-        :param name: the test name
-        :type name: str
-        :param env: the test environment. Usually a dict that contains
-            relevant test information (output, ...). The object should
-            be serializable to YAML format.
-        :type env: T
-        :param status: the test status. If None status is set to UNRESOLVED
-        :type status: TestStatus | None
-        :param msg: a short message associated with the test result
-        :type msg: str
+        :param str name: Name of the test that this result describes.
+        :param dict env: Test environment. Usually a dict that contains
+            relevant test information (output, ...). The object should be
+            serializable to YAML format.
+        :param TestStatus|None status: Test status. If None status is set to
+            UNRESOLVED.
+        :param str msg: Short message associated with the test result.
         """
         self.test_name = name
         self.env = env
-        if status is None:
-            self.status = TestStatus.UNRESOLVED
-        else:
-            self.status = status
+
+        # Use the set_status method to change these once initialization is done
+        self.status = TestStatus.UNRESOLVED if status is None else status
         self.msg = msg
-        self.out = Log("")
+
+        # Free-form text, for debugging purposes. Test drivers are invited to
+        # write content that will be useful if things go wrong during the test
+        # execution. This is what gets printed on the standard output when the
+        # test fails and the "--show-error-output" testsuite switch is present.
         self.log = Log("")
+
+        # List of free-form information (but still serializable to YAML)
+        # describing the subprocesses that the test driver spawned while runnig
+        # the testcase.
+        #
+        # Note that both e3.testsuite.process.check_call and
+        # e3.testsuite.driver.classic.ClassicTestDriver.shell fill this
+        # automatically with command-line arguments, exit code, etc.
         self.processes = []
+
+        # When the test failed, optional set of reasons for the failure. This
+        # information is used only in advanced viewers, which may highlight
+        # specifically some failure reasons. For instance, highlight crashes,
+        # that may be more important to investigate that mere unexpected
+        # outputs.
+        self.failure_reasons = set()
+
+        # Drivers that compare expected and actual output to validate a
+        # testcase should initialize these with Log instances to hold the
+        # expected test output (self.expected) and the actual test output
+        # (self.out). It is assumed that the test fails when there is at least
+        # one difference between both.
+        #
+        # Note that several drivers refine expected/actual outputs before
+        # running the comparison (see for instance the
+        # e3.testsuite.driver.diff.OutputRefiner mechanism). These logs are
+        # supposed to contain the outputs actually passed to the diff
+        # computation function, i.e. *after* refining, so that whatever attemps
+        # to re-compute the diff (report production, for instance) get the same
+        # result.
+        #
+        # If, for some reason, it is not possible to store expected and actual
+        # outputs, self.diff can be assigned a Log instance holding the diff
+        # itself. For instance, the output of the `diff -u` command.
+        self.expected = None
+        self.out = None
+        self.diff = None
+
+        # Optional decimal number of seconds (float). Test drivers can use this
+        # field to track performance (most likely the time it took to run the
+        # test). Advanced results viewer can then plot the evolution of time
+        # over software evolution.
+        self.time = None
+
+        # Key/value string mapping, for unspecified use. The only restriction
+        # is that no string can contain a newline character.
+        self.info = {}
 
     def set_status(self, status, msg=""):
         """Update the test status.
@@ -175,15 +227,58 @@ class TestResult(yaml.YAMLObject):
         return "%-24s %-12s %s" % (self.test_name, self.status, self.msg)
 
 
+# Enforce representation of Log objects when dumped to yaml
+def _log_representer(dumper, data):
+    return (
+        dumper.represent_scalar("tag:yaml.org,2002:str", data.log, style="|")
+        if data.is_text else
+        dumper.represent_scalar(
+            "tag:yaml.org,2002:binary",
+            binascii.b2a_base64(data.log).decode('ascii'), style="|")
+    )
+
+
+yaml.add_representer(Log, _log_representer)
+
+
+_test_status_tag = "!e3.testsuite.result.TestStatus"
+_failure_reason_tag = "!e3.testsuite.result.FailureReason"
+
+
 # We cannot use yaml.YAMLObject metaclass magic for TestStatus as it derives
 # from Enum, which already has a metaclass. So use an alternative YAML API to
-# make it serializable.
-def test_status_constructor(self, node):
+# make it serializable. Likewise for FailureReason.
+def _test_status_constructor(self, node):
     # Get the numeric value corresponding to the test status, then build a
     # TestStatus instance from it.
-    num = int(node.value[0].value)
+    num = int(node.value[0])
     status = TestStatus(num)
     yield status
 
 
-yaml.SafeLoader.add_constructor(None, test_status_constructor)
+def _test_status_representer(dumper, data):
+    return dumper.represent_scalar(
+        _test_status_tag, str(data.value), style="|"
+    )
+
+
+def _failure_reason_constructor(self, node):
+    # Get the numeric value corresponding to the test status, then build a
+    # TestStatus instance from it.
+    num = int(node.value[0])
+    status = FailureReason(num)
+    yield status
+
+
+def _failure_reason_representer(dumper, data):
+    return dumper.represent_scalar(
+        _failure_reason_tag, str(data.value), style="|"
+    )
+
+
+yaml.SafeLoader.add_constructor(_test_status_tag, _test_status_constructor)
+yaml.add_representer(TestStatus, _test_status_representer)
+yaml.SafeLoader.add_constructor(
+    _failure_reason_tag, _failure_reason_constructor
+)
+yaml.add_representer(FailureReason, _failure_reason_representer)

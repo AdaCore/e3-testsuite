@@ -502,7 +502,8 @@ class TestsuiteCore(object):
         while job.test_instance.result_queue:
             result, tb = job.test_instance.result_queue.pop()
 
-            # Log the test result. If requested, include test log
+            # Log the test result. If error output is requested and the test
+            # failed unexpectedly, show the detailed logs.
             log_line = '{}{: <12}{} {}{}{}'.format(
                 result.status.color(self),
                 result.status.name,
@@ -519,7 +520,13 @@ class TestsuiteCore(object):
                 and result.status not in (TestStatus.PASS, TestStatus.XFAIL,
                                           TestStatus.XPASS)
             ):
-                log_line += '\n' + str(result.log) + self.Style.RESET_ALL
+                def format_log(log):
+                    return "\n" + str(log) + self.Style.RESET_ALL
+
+                if result.diff:
+                    log_line += format_log(result.diff)
+                else:
+                    log_line += format_log(result.log)
             logger.info(log_line)
 
             def indented_tb(tb):
