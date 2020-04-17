@@ -1,3 +1,5 @@
+"""Generic testsuite framework."""
+
 from e3.collection.dag import DAG
 from e3.env import Env, BaseEnv
 from e3.fs import rm, mkdir, mv
@@ -41,10 +43,8 @@ def isatty(stream):
 
 
 class DummyColors(object):
-    """
-    Stub object to replace colorama's Fore/Style classes when colors are
-    disabled.
-    """
+    """Stub to replace colorama's Fore/Style when colors are disabled."""
+
     def __getattr__(self, name):
         return ''
 
@@ -265,9 +265,9 @@ class TestsuiteCore(object):
         self.Style = Style
         enable_colors = True
         if (
-            self.main.args.log_file or
-            not isatty(sys.stdout) or
-            not isatty(sys.stderr)
+            self.main.args.log_file
+            or not isatty(sys.stdout)
+            or not isatty(sys.stderr)
         ):
             enable_colors = False
             self.Fore = DummyColors()
@@ -512,9 +512,9 @@ class TestsuiteCore(object):
                 log_line += ': {}{}{}'.format(self.Style.DIM, result.msg,
                                               self.Style.RESET_ALL)
             if (
-                self.main.args.show_error_output and
-                result.status not in (TestStatus.PASS, TestStatus.XFAIL,
-                                      TestStatus.XPASS)
+                self.main.args.show_error_output
+                and result.status not in (TestStatus.PASS, TestStatus.XFAIL,
+                                          TestStatus.XPASS)
             ):
                 log_line += '\n' + str(result.log) + self.Style.RESET_ALL
             logger.info(log_line)
@@ -653,9 +653,7 @@ class Testsuite(TestsuiteCore):
         return self.tear_up()
 
     def tear_up(self):
-        """
-        For backwards compatibility, alternative name for the "set_up" method.
-        """
+        """For backwards compatibility, alternative for the "set_up" method."""
         pass
 
     def tear_down(self):

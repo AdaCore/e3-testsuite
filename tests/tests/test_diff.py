@@ -57,9 +57,7 @@ def test_diff():
 
 
 def test_diff_rewriting():
-    """
-    Check that DiffTestDriver's baseline rewriting feature works as expected.
-    """
+    """Check that DiffTestDriver's rewriting feature works as expected."""
     # This testcase involves the rewriting of testcase files, so work on a
     # temporary copy.
     with tempfile.TemporaryDirectory(prefix="test_diff_rewriting") as temp_dir:

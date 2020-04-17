@@ -1,6 +1,4 @@
-"""
-Tests for the XUnit report feature.
-"""
+"""Tests for the XUnit report feature."""
 
 import xml.etree.ElementTree as ET
 

@@ -73,17 +73,11 @@ class TestDriver(object, metaclass=abc.ABCMeta):
                        predecessors=after)
 
     def working_dir(self, *args):
-        """
-        Return the working directory, plus any path elements joined to it if
-        passed in *args.
-        """
+        """Build a filename in the test working directory."""
         return os.path.join(self.test_env['working_dir'], *args)
 
     def test_dir(self, *args):
-        """
-        Return the testcase directory, plus any path elements joined to it if
-        passed in *args.
-        """
+        """Build a filename in the testcase directory."""
         return os.path.join(self.test_env['test_dir'], *args)
 
     @abc.abstractmethod

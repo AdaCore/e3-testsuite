@@ -1,3 +1,5 @@
+"""Data structures for testcase execution results."""
+
 import binascii
 from enum import Enum
 import logging
@@ -7,6 +9,8 @@ import yaml
 
 
 class TestStatus(Enum):
+    """Testcase execution status."""
+
     PASS = 0
     FAIL = 1
     UNSUPPORTED = 2
@@ -17,9 +21,9 @@ class TestStatus(Enum):
     UNTESTED = 7
 
     def color(self, testsuite):
-        """
-        Return the ANSI color code for this test status, or an empty string if
-        colors are disabled.
+        """Return the ANSI color code for this test status.
+
+        This returns an empty string if colors are disabled.
 
         :param testsuite: TestsuiteCore instance.
         :rtype: str
@@ -49,6 +53,12 @@ class Log(yaml.YAMLObject):
 
     @classmethod
     def create_empty_text(cls):
+        """Create a Log instance that holds text.
+
+        Text is str in Python3, unicode in Python2.
+
+        :rtype: Log
+        """
         # Create a Python2 unicode object or a Python3 str object. Disable the
         # flake8 diagnostic: yes, unicode() is undefined with Python3.
         if sys.version_info.major == 2:  # py2-only
@@ -58,6 +68,12 @@ class Log(yaml.YAMLObject):
 
     @classmethod
     def create_empty_binary(cls):
+        """Create a Log instance that holds binary data.
+
+        Binary data is bytes in Python3, str in Python2.
+
+        :rtype: Log
+        """
         # Create a Python2 str object or a Python3 bytes object
         return Log(b"")
 
@@ -100,10 +116,10 @@ class Log(yaml.YAMLObject):
 
 
 def binary_repr(binary):
-    """Return a human readable representation for the given bytes string.
+    r"""Return a human readable representation for the given bytes string.
 
     This just decodes ASCII printable bytes and newlines to the corresponding
-    strings and represents other bytes with the "\\xXX" escapes.
+    strings and represents other bytes with the "\xXX" escapes.
 
     :param bytes binary: Bytes string to represent.
     :rtype: str
@@ -126,7 +142,7 @@ def binary_repr(binary):
 
 
 # Enforce representation of Log objects when dumped to yaml
-def log_representer(dumper, data):
+def _log_representer(dumper, data):
     return (
         dumper.represent_scalar("tag:yaml.org,2002:str", data.log, style="|")
         if data.is_text else
@@ -136,7 +152,7 @@ def log_representer(dumper, data):
     )
 
 
-yaml.add_representer(Log, log_representer)
+yaml.add_representer(Log, _log_representer)
 
 
 class TestResult(yaml.YAMLObject):
