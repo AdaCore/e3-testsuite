@@ -17,11 +17,16 @@ from e3.testsuite.result import Log, TestStatus
 def check_call(driver, cmd, test_name=None, result=None, **kwargs):
     if "cwd" not in kwargs and "working_dir" in driver.test_env:
         kwargs["cwd"] = driver.test_env["working_dir"]
-    process = Run(cmd, **kwargs)
     if result is None:
         result = driver.result
     if test_name is None:
         test_name = driver.test_name
+    try:
+        process = Run(cmd, **kwargs)
+    except UnicodeDecodeError as exc:
+        result.set_status(TestStatus.ERROR, str(exc))
+        driver.push_result(result)
+        raise
     result.processes.append(
         {
             "output": Log(process.out),
