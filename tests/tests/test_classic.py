@@ -107,8 +107,15 @@ class ScriptDriver(classic.ClassicTestDriver):
         os.path.join(os.path.dirname(__file__), "classic-tests", "script.py")
     )
 
+    @property
+    def copy_test_directory(self):
+        return self.test_env.get("copy_test_directory", True)
+
     def set_up(self):
         super(ScriptDriver, self).set_up()
+        if not self.copy_test_directory:
+            os.mkdir(self.working_dir())
+
         self.failures = []
 
         try:
@@ -123,8 +130,11 @@ class ScriptDriver(classic.ClassicTestDriver):
             raise classic.TestSkip("forcing skip")
 
         config = self.process_config
+        args = list(config["args"])
+        if config.get("read"):
+            args.append("-read={}".format(self.test_dir(config["read"])))
         p = self.shell(
-            [sys.executable, self.helper_script] + config["args"],
+            [sys.executable, self.helper_script] + args,
             catch_error=config.get("catch_error", True),
         )
         if p.out:
@@ -151,7 +161,15 @@ def test_classic(caplog):
             "dummy-driver": DummyDriver,
         }
 
-    suite = run_testsuite(Mysuite)
+    # Look for tests using a relative path to check that test directories are
+    # properly converted to absolute paths (see abs-test-dir).
+    tests_subdir = os.path.relpath(
+        os.path.join(
+            os.path.abspath(os.path.dirname(__file__)), Mysuite.tests_subdir
+        ),
+    )
+
+    suite = run_testsuite(Mysuite, args=[tests_subdir])
     assert suite.results == {
         "simple": Status.PASS,
         "catch-error-pass": Status.PASS,
@@ -167,6 +185,7 @@ def test_classic(caplog):
         "binary-output": Status.FAIL,
         "invalid-utf8-output": Status.ERROR,
         "suspicious-test-opt": Status.PASS,
+        "abs-test-dir": Status.PASS,
     }
 
     log = (
