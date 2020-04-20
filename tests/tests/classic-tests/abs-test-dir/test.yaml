@@ -1,0 +1,5 @@
+driver: script-driver
+copy_test_directory: False
+process:
+    args: []
+    read: input.txt

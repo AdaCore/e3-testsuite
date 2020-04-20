@@ -391,7 +391,10 @@ class TestsuiteCore(object):
                 if pattern is not None and not pattern.search(dirpath):
                     continue
 
-                # The first test finder that has a match "wins"
+                # The first test finder that has a match "wins". When
+                # handling test data, we want to deal only with absolute paths,
+                # so get the absolute name now.
+                dirpath = os.path.abspath(dirpath)
                 for tf in test_finders:
                     try:
                         test = tf.probe(self, dirpath, dirnames, filenames)
