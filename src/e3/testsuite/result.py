@@ -3,7 +3,6 @@
 import binascii
 from enum import Enum
 import logging
-import sys
 
 import yaml
 
@@ -51,32 +50,6 @@ class Log(yaml.YAMLObject):
     yaml_loader = yaml.SafeLoader
     yaml_tag = '!e3.testsuite.result.Log'
 
-    @classmethod
-    def create_empty_text(cls):
-        """Create a Log instance that holds text.
-
-        Text is str in Python3, unicode in Python2.
-
-        :rtype: Log
-        """
-        # Create a Python2 unicode object or a Python3 str object. Disable the
-        # flake8 diagnostic: yes, unicode() is undefined with Python3.
-        if sys.version_info.major == 2:  # py2-only
-            return Log(unicode())  # noqa: F821
-        else:
-            return Log("")
-
-    @classmethod
-    def create_empty_binary(cls):
-        """Create a Log instance that holds binary data.
-
-        Binary data is bytes in Python3, str in Python2.
-
-        :rtype: Log
-        """
-        # Create a Python2 str object or a Python3 bytes object
-        return Log(b"")
-
     def __init__(self, content):
         """Initialize log instance.
 
@@ -91,8 +64,7 @@ class Log(yaml.YAMLObject):
 
         :rtype: bool
         """
-        binary_type = (str if sys.version_info.major == 2 else bytes)
-        return isinstance(self.log, binary_type)
+        return isinstance(self.log, bytes)
 
     @property
     def is_text(self):
@@ -126,8 +98,6 @@ def binary_repr(binary):
     """
 
     def escape(b):
-        if sys.version_info.major == 2:  # py2-only
-            b = ord(b)
         if b == ord("\\"):
             return "\\\\"
         elif b == ord("\n") or (b >= ord(" ") and b <= ord("~")):

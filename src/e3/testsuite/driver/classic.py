@@ -1,5 +1,4 @@
 import subprocess
-import sys
 
 from e3.fs import sync_tree
 from e3.os.process import get_rlimit, quote_arg
@@ -199,11 +198,9 @@ class ClassicTestDriver(TestDriver):
         process_info["status"] = p.status
         process_info["output"] = Log(stdout)
 
-        if sys.version_info.major == 2:  # py2-only
-            logged_output = process_info["output"].__str__()
-        else:
-            logged_output = str(process_info["output"])
-        self.result.log += format_header("Output", "\n" + logged_output)
+        self.result.log += format_header(
+            "Output", "\n" + str(process_info["output"])
+        )
 
         # If requested, use its output for analysis
         if analyze_output:
@@ -319,17 +316,12 @@ class ClassicTestDriver(TestDriver):
             sync_tree(self.test_env["test_dir"], self.test_env["working_dir"],
                       delete=True)
 
-        # No matter the version of Python, by default we need to deal with
-        # Unicode logs.
-        if sys.version_info.major == 2:  # py2-only
-            self.result.out = Log.create_empty_text()
-            self.result.log = Log.create_empty_text()
-
         # If the requested encoding is "binary", this actually means we will
         # handle binary data (i.e. no specific encoding). Create a binary log
         # accordingly.
-        if self.default_encoding == "binary":
-            self.result.out = Log.create_empty_binary()
+        self.result.out = (
+            Log(b"") if self.default_encoding == "binary" else Log("")
+        )
 
         # Execute the subclass' "run" method and handle convenience test
         # aborting exception.
