@@ -4,6 +4,7 @@ from e3.fs import find, rm, mkdir, mv
 from e3.yaml import load_with_config
 from e3.main import Main
 from e3.testsuite.driver import TestDriver
+from e3.testsuite.report.gaia import dump_gaia_report
 from e3.testsuite.result import TestResult, TestStatus
 from e3.testsuite.report.xunit import dump_xunit_report
 from e3.job.scheduler import Scheduler
@@ -210,6 +211,11 @@ class TestsuiteCore(object):
         parser.add_argument('sublist', metavar='tests', nargs='*',
                             default=[],
                             help='test')
+        parser.add_argument(
+            "--gaia-output", action="store_true",
+            help="Output a GAIA-compatible testsuite report next to the YAML"
+            " report."
+        )
         # Add user defined options
         self.add_options()
 
@@ -274,6 +280,8 @@ class TestsuiteCore(object):
         self.dump_testsuite_result()
         if self.main.args.xunit_output:
             dump_xunit_report(self, self.main.args.xunit_output)
+        if self.main.args.gaia_output:
+            dump_gaia_report(self, self.output_dir)
 
         # Clean everything
         self.tear_down()
