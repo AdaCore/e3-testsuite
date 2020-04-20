@@ -1,6 +1,5 @@
 import os
 import re
-import sys
 
 from e3.diff import diff
 from e3.os.fs import unixpath
@@ -155,8 +154,6 @@ class DiffTestDriver(ClassicTestDriver):
         try:
             with open(filename, mode) as f:
                 baseline = f.read()
-            if not is_binary and sys.version_info.major == 2:  # py2-only
-                baseline = baseline.decode(self.default_encoding)
         except Exception as exc:
             raise TestAbortWithError(
                 "cannot read baseline file ({}: {})".format(
@@ -225,11 +222,6 @@ class DiffTestDriver(ClassicTestDriver):
         if self.default_encoding == "binary":
             actual = binary_repr(actual)
             baseline = binary_repr(baseline)
-
-        # Except in Python2: e3.diff supports only bytes string
-        if sys.version_info.major == 2:  # py2-only
-            actual = actual.encode("utf-8")
-            baseline = baseline.encode("utf-8")
 
         # Get the two texts to compare as list of lines, with trailing
         # characters preserved (splitlines(keepends=True)).
@@ -332,5 +324,5 @@ class DiffTestDriver(ClassicTestDriver):
     def analyze(self):
         # Clear the output log before computing diffs, so that we present only
         # diffs to users.
-        self.result.log = Log.create_empty_text()
+        self.result.log = Log("")
         super(DiffTestDriver, self).analyze()
