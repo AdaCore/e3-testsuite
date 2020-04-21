@@ -33,7 +33,7 @@ def test_adacore():
         # test.opt's SKIP yields a XFAIL without trying to execute the test
         "T415-996": Status.XFAIL,
         # test.opt says DEAD when there is a "foo" discriminant
-        "T415-997": Status.UNSUPPORTED,
+        "T415-997": Status.SKIP,
         # Regular test execution and failing diff comparison (test.out absent)
         "T415-998": Status.FAIL,
         # Regular test execution and successful diff comparison

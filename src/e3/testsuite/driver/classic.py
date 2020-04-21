@@ -15,7 +15,7 @@ class TestSkip(Exception):
     Convenience exception to abort a testcase.
 
     When this exception is raised during test initialization or execution,
-    consider that this testcase must be skipped (TestStatus.UNSUPPORTED).
+    consider that this testcase must be skipped (TestStatus.SKIP).
     """
 
     pass
@@ -53,7 +53,7 @@ class ClassicTestDriver(TestDriver):
     * intercept subprocess failures and turn them into appropriate test
       statuses;
     * gather subprocess outputs to ``self.result.out``;
-    * have support for automatic XFAIL/UNSUPPORTED test results.
+    * have support for automatic XFAIL/SKIP test results.
     """
 
     @property
@@ -232,7 +232,7 @@ class ClassicTestDriver(TestDriver):
 
         :param str message: Label to explain the skipping.
         """
-        self.result.set_status(TestStatus.UNSUPPORTED, message)
+        self.result.set_status(TestStatus.SKIP, message)
         self.push_result()
 
     def push_error(self, message):

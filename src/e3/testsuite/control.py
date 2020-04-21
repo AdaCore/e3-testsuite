@@ -12,7 +12,7 @@ class TestControlKind(Enum):
     """Run the test the regular way."""
 
     SKIP = 1
-    """Do not run the testcase, setting it UNSUPPORTED."""
+    """Do not run the testcase, setting it SKIP."""
 
     XFAIL = 2
     """

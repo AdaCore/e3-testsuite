@@ -74,7 +74,7 @@ def test_basic():
 
     result1 = {"test1": Status.PASS, "test2": Status.PASS}
     result2 = {"test1": Status.FAIL, "test2": Status.FAIL}
-    result3 = {"test1": Status.UNSUPPORTED, "test2": Status.UNSUPPORTED}
+    result3 = {"test1": Status.SKIP, "test2": Status.SKIP}
 
     # Do a first testsuite run, checking the results
     suite = run_testsuite(Mysuite)
@@ -89,7 +89,7 @@ def test_basic():
 
     # Do a third run. We expect the "old" directory to just disappear, and the
     # "new" one to take its place.
-    MyDriver.return_status = Status.UNSUPPORTED
+    MyDriver.return_status = Status.SKIP
     suite = run_testsuite(Mysuite)
     check_results_dir(new=result3, old=result2)
 
@@ -440,7 +440,7 @@ def test_result_set_status_twice(caplog):
 def test_result_str(caplog):
     """Test that calling TestResult.set_status twice is rejected."""
     r = Result("foobar", msg="<message>")
-    assert str(r) == "foobar                   TestStatus.UNRESOLVED <message>"
+    assert str(r) == "foobar                   TestStatus.ERROR <message>"
 
 
 def test_comment_file():

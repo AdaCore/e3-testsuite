@@ -1,7 +1,7 @@
 """Data structures for testcase execution results."""
 
 import binascii
-from enum import Enum
+from enum import Enum, auto
 import logging
 
 import yaml
@@ -10,14 +10,49 @@ import yaml
 class TestStatus(Enum):
     """Testcase execution status."""
 
-    PASS = 0
-    FAIL = 1
-    UNSUPPORTED = 2
-    XFAIL = 3
-    XPASS = 4
-    ERROR = 5
-    UNRESOLVED = 6
-    UNTESTED = 7
+    # The test has run to completion and has succeeded
+    PASS = auto()
+
+    # The test has run enough for the testsuite to consider that it failed
+    FAIL = auto()
+
+    # The test has run enough for the testsuite to consider that it failed, and
+    # that this failure was expected.
+    XFAIL = auto()
+
+    # The test has run to completion and has succeeded whereas a failure was
+    # expected.
+    XPASS = auto()
+
+    # The test has run to completion, but it could not self-verify the test
+    # objective (i.e. determine whether it succeeded). This test requires an
+    # additional verification action by a human or some external oracle.
+    VERIFY = auto()
+
+    # The test was not executed (it has been skipped). This is appropriate when
+    # the test does not make sense in the current configuration (for instance
+    # it must run on Windows, and the current OS is GNU/Linux).
+    #
+    # This is equivalent to DejaGnu's UNSUPPORTED, or UNTESTED test outputs.
+    SKIP = auto()
+
+    # The test has run and managed to automatically determine it can't work on
+    # a given configuration (for instance, a test scenario requires two
+    # distinct interrupt priorities, but only one is supported on the current
+    # target).
+    #
+    # The different with SKIP is that here, the test has started when it
+    # determined that it would not work. The definition of when a test actually
+    # starts is left to the test driver.
+    NOT_APPLICABLE = auto()
+
+    # The test could not run to completion because it is misformatted or due to
+    # an unknown error. This is very different from FAIL, because here the
+    # problem comes more likely from the testcase or the test framework rather
+    # than the tested software.
+    #
+    # This is equivalent to DejaGnu's UNRESOLVED test output.
+    ERROR = auto()
 
     def color(self, testsuite):
         """Return the ANSI color code for this test status.
@@ -32,12 +67,12 @@ class TestStatus(Enum):
         return {
             'PASS': Fore.GREEN,
             'FAIL': Fore.RED,
-            'UNSUPPORTED': Style.DIM,
             'XFAIL': Fore.CYAN,
             'XPASS': Fore.YELLOW,
+            'VERIFY': Fore.YELLOW,
+            'SKIP': Style.DIM,
+            'NOT_APPLICABLE': Style.DIM,
             'ERROR': Fore.RED + Style.BRIGHT,
-            'UNRESOLVED': Style.DIM,
-            'UNTESTED': Style.DIM,
         }[self.name]
 
 
@@ -145,14 +180,14 @@ class TestResult(yaml.YAMLObject):
             relevant test information (output, ...). The object should be
             serializable to YAML format.
         :param TestStatus|None status: Test status. If None status is set to
-            UNRESOLVED.
+            ERROR.
         :param str msg: Short message associated with the test result.
         """
         self.test_name = name
         self.env = env
 
         # Use the set_status method to change these once initialization is done
-        self.status = TestStatus.UNRESOLVED if status is None else status
+        self.status = TestStatus.ERROR if status is None else status
         self.msg = msg
 
         # Free-form text, for debugging purposes. Test drivers are invited to
@@ -212,12 +247,12 @@ class TestResult(yaml.YAMLObject):
         """Update the test status.
 
         :param status: new status. Note that only test results with status
-            set to UNRESOLVED can be changed.
+            set to ERROR can be changed.
         :type status: TestStatus
         :param msg: short message associated with the test result
         :type msg: str
         """
-        if self.status != TestStatus.UNRESOLVED:
+        if self.status != TestStatus.ERROR:
             logging.error("cannot set test %s status twice", self.test_name)
             return
         self.status = status

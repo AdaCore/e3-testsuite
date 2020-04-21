@@ -23,12 +23,12 @@ def dump_xunit_report(ts, filename):
     status_to_counter = {
         TestStatus.PASS: None,
         TestStatus.FAIL: "failures",
-        TestStatus.UNSUPPORTED: "skipped",
         TestStatus.XFAIL: "failures",
         TestStatus.XPASS: None,
+        TestStatus.VERIFY: None,
+        TestStatus.SKIP: "skipped",
+        TestStatus.NOT_APPLICABLE: "skipped",
         TestStatus.ERROR: "errors",
-        TestStatus.UNRESOLVED: "errors",
-        TestStatus.UNTESTED: "skipped",
     }
 
     # Markup to create inside <testcase> elements for each category of test
