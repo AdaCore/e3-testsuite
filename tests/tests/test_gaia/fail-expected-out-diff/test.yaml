@@ -1,0 +1,4 @@
+status: FAIL
+expected: "expected\noutput"
+out: "actual\noutput"
+diff: "-expected\n+actual\n output"

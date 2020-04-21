@@ -1,0 +1,2 @@
+status: XFAIL
+out: "Output of failing test in expected way"

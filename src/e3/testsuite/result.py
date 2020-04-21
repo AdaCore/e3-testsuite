@@ -82,18 +82,18 @@ class FailureReason(Enum):
     # A process crash was detected. What is a "crash" is not clearly specified:
     # it could be for instance that a "GCC internal compiler error" message is
     # present in the test output.
-    CRASH = 0
+    CRASH = auto()
 
     # A process was stopped because it timed out
-    TIMEOUT = 1
-
-    # Output is not as expected
-    DIFF = 2
+    TIMEOUT = auto()
 
     # The tested software triggered an invalid memory access pattern. For
     # instance, Valgrind found a conditional jump that depends on uninitialized
     # data.
-    MEMCHECK = 3
+    MEMCHECK = auto()
+
+    # Output is not as expected
+    DIFF = auto()
 
 
 class Log(yaml.YAMLObject):

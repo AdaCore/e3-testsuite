@@ -7,6 +7,7 @@ from e3.job import Job
 from e3.job.scheduler import Scheduler
 from e3.main import Main
 from e3.os.process import quote_arg
+from e3.testsuite.report.gaia import dump_gaia_report
 from e3.testsuite.report.xunit import dump_xunit_report
 from e3.testsuite.result import TestResult, TestStatus
 from e3.testsuite.testcase_finder import ProbingError, YAMLTestFinder
@@ -251,6 +252,11 @@ class TestsuiteCore(object):
             " continuous build systems such as Jenkins.",
         )
         parser.add_argument(
+            "--gaia-output", action="store_true",
+            help="Output a GAIA-compatible testsuite report next to the YAML"
+            " report."
+        )
+        parser.add_argument(
             "sublist", metavar="tests", nargs="*", default=[], help="test"
         )
         # Add user defined options
@@ -347,6 +353,8 @@ class TestsuiteCore(object):
         self.dump_testsuite_result()
         if self.main.args.xunit_output:
             dump_xunit_report(self, self.main.args.xunit_output)
+        if self.main.args.gaia_output:
+            dump_gaia_report(self, self.output_dir)
 
         # Clean everything
         self.tear_down()
