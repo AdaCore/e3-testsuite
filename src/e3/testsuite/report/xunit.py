@@ -1,3 +1,5 @@
+"""Helpers to generate testsuite reports using the XUnit XML format."""
+
 import xml.etree.ElementTree as etree
 
 import yaml
@@ -7,7 +9,7 @@ from e3.testsuite.result import TestStatus
 
 def dump_xunit_report(ts, filename):
     """
-    Dump a testsuite report to `filname` in the standard XUnit XML format.
+    Dump a testsuite report to `filename` in the standard XUnit XML format.
 
     :param TestsuiteCore ts: Testsuite instance, which have run its testcases,
         for which to generate the report.
