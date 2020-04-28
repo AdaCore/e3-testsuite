@@ -19,7 +19,7 @@ from e3.testsuite.result import TestResult as Result, TestStatus as Status
 
 def run_testsuite(cls, args=[], expect_failure=False):
     """Instantiate a Testsuite subclass and run it."""
-    suite = cls(os.path.dirname(__file__))
+    suite = cls()
     status = suite.testsuite_main(args)
     if expect_failure:
         assert status != 0
