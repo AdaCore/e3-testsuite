@@ -81,9 +81,8 @@ class TestFragment(Job):
         except TestAbort:
             pass
         except Exception as e:
-            # In case of exception generate a test result. The name is based
-            # on the test name with an additional random part to avoid
-            # conflicts
+            # In case of exception generate a test result. The name is based on
+            # the test name with an additional random part to avoid conflicts.
             logger.exception("got exception in test: %s", e)
             test = self.test_instance
             test.push_result(
@@ -144,8 +143,8 @@ class TestsuiteCore(object):
 
         See e3.job.scheduler
         """
-        # we assume that data[0] is the test instance and data[1] the method
-        # to call
+        # We assume that data[0] is the test instance and data[1] the method
+        # to call.
 
         # When passing return values from predecessors, remove current test
         # name from the keys to ease referencing by user (the short fragment
@@ -284,15 +283,14 @@ class TestsuiteCore(object):
         self.env.root_dir = self.root_dir
         self.env.test_dir = self.test_dir
 
-        # At this stage compute commonly used paths
-        # Keep the working dir as short as possible, to avoid the risk
-        # of having a path that's too long (a problem often seen on
-        # Windows, or when using WRS tools that have their own max path
-        # limitations).
-        # Note that we do make sure that working_dir is an absolute
-        # path, as we are likely to be changing directories when
-        # running each test. A relative path would no longer work
-        # under those circumstances.
+        # At this stage compute commonly used paths Keep the working dir as
+        # short as possible, to avoid the risk of having a path that's too long
+        # (a problem often seen on Windows, or when using WRS tools that have
+        # their own max path limitations).
+        #
+        # Note that we do make sure that working_dir is an absolute path, as we
+        # are likely to be changing directories when running each test. A
+        # relative path would no longer work under those circumstances.
         d = os.path.abspath(self.main.args.output_dir)
         self.output_dir = os.path.join(d, "new")
         self.old_output_dir = os.path.join(d, "old")
@@ -399,9 +397,9 @@ class TestsuiteCore(object):
                 if pattern is not None and not pattern.search(dirpath):
                     continue
 
-                # The first test finder that has a match "wins". When
-                # handling test data, we want to deal only with absolute paths,
-                # so get the absolute name now.
+                # The first test finder that has a match "wins". When handling
+                # test data, we want to deal only with absolute paths, so get
+                # the absolute name now.
                 dirpath = os.path.abspath(dirpath)
                 for tf in test_finders:
                     try:
