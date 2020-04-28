@@ -284,7 +284,11 @@ class ClassicTestDriver(TestDriver):
         """
         pass
 
-    def run_wrapper(self, prev):
+    def run_wrapper(self, prev, slot):
+        # Make the slot (unique identifier for active jobs at a specific time)
+        # available to the overridable methods.
+        self.slot = slot
+
         # Make colors available for output if enabled testsuite-wide
         if self.env.enable_colors:  # interactive-only
             self.Fore = Fore

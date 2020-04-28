@@ -13,10 +13,10 @@ def test_basic():
     """Check that requesting a XUnit testsuite report works."""
 
     class MyDriver(BasicDriver):
-        def run(self, prev):
+        def run(self, prev, slot):
             self.result.log += "Work is being done..."
 
-        def analyze(self, prev):
+        def analyze(self, prev, slot):
             if self.test_env["test_name"] == "test1":
                 self.result.set_status(Status.PASS, "all good")
             else:

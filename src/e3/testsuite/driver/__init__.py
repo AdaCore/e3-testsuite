@@ -108,24 +108,24 @@ class BasicTestDriver(TestDriver, metaclass=abc.ABCMeta):
         self.add_fragment(dag, "analyze", after=["run"])
         self.add_fragment(dag, "tear_down", after=["analyze"])
 
-    def set_up(self, prev):
+    def set_up(self, prev, slot):
         """Execute operations before executing a test."""
-        return self.tear_up(prev)
+        return self.tear_up(prev, slot)
 
-    def tear_up(self, prev):
+    def tear_up(self, prev, slot):
         """Backwards-compatible name for the "set_up" method."""
         pass
 
-    def tear_down(self, prev):
+    def tear_down(self, prev, slot):
         """Execute operations once a test is finished."""
         pass
 
     @abc.abstractmethod
-    def run(self, prev):
+    def run(self, prev, slot):
         """Execute a test."""
         raise NotImplementedError
 
     @abc.abstractmethod
-    def analyze(self, prev):
+    def analyze(self, prev, slot):
         """Compute the test result."""
         raise NotImplementedError

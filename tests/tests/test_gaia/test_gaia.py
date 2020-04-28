@@ -11,10 +11,10 @@ def test_gaia():
     class MyDriver(BasicDriver):
         """Dummy driver, push a result built from the test environment."""
 
-        def run(self, prev):
+        def run(self, prev, slot):
             pass
 
-        def analyze(self, prev):
+        def analyze(self, prev, slot):
             status = Status[self.test_env["status"]]
             message = self.test_env.get("message", None)
             self.result.set_status(status, message)
