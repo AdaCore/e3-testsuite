@@ -1,5 +1,14 @@
 """Generic testsuite framework."""
 
+import inspect
+import logging
+import os
+import re
+import sys
+import tempfile
+import traceback
+import yaml
+
 from e3.collection.dag import DAG
 from e3.env import Env, BaseEnv
 from e3.fs import rm, mkdir, mv
@@ -11,14 +20,6 @@ from e3.testsuite.report.gaia import dump_gaia_report
 from e3.testsuite.report.xunit import dump_xunit_report
 from e3.testsuite.result import TestResult, TestStatus
 from e3.testsuite.testcase_finder import ProbingError, YAMLTestFinder
-
-import traceback
-import logging
-import os
-import yaml
-import sys
-import re
-import tempfile
 
 from colorama import Fore, Style
 
@@ -105,15 +106,18 @@ class TestsuiteCore(object):
     variables.
     """
 
-    def __init__(self, root_dir, testsuite_name="Untitled testsute"):
+    def __init__(self, root_dir=None, testsuite_name="Untitled testsute"):
         """Testsuite constructor.
 
-        :param root_dir: root dir of the testsuite. Usually the directory in
-            which testsuite.py and runtest.py are located
+        :param root_dir: Root directory for the testsuite. If left to None, use
+            the directory containing the Python module that created self's
+            class.
         :param str testsuite_name: Name for this testsuite. It can be used to
             provide a title in some report formats.
         :type root_dir: str | unicode
         """
+        if root_dir is None:
+            root_dir = os.path.dirname(inspect.getfile(type(self)))
         self.root_dir = os.path.abspath(root_dir)
         self.test_dir = os.path.join(self.root_dir, self.tests_subdir)
         self.consecutive_failures = 0
