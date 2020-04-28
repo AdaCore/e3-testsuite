@@ -57,10 +57,10 @@ def test_basic():
     class MyDriver(BasicDriver):
         return_status = Status.PASS
 
-        def run(self, prev):
+        def run(self, prev, slot):
             pass
 
-        def analyze(self, prev):
+        def analyze(self, prev, slot):
             self.result.set_status(self.return_status)
             self.push_result()
 
@@ -98,10 +98,10 @@ def test_outer_testcase():
     """Check that we can run tests from another directory."""
 
     class MyDriver(BasicDriver):
-        def run(self, prev):
+        def run(self, prev, slot):
             pass
 
-        def analyze(self, prev):
+        def analyze(self, prev, slot):
             self.result.set_status(Status.PASS)
             self.push_result()
 
@@ -124,10 +124,10 @@ def test_invalid_filter_pattern(caplog):
     """Check the proper detection of invalid tests on the command line."""
 
     class MyDriver(BasicDriver):
-        def run(self, prev):
+        def run(self, prev, slot):
             pass
 
-        def analyze(self, prev):
+        def analyze(self, prev, slot):
             self.result.set_status(Status.PASS)
             self.push_result()
 
@@ -149,10 +149,10 @@ def test_dump_environ():
     class MyDriver(BasicDriver):
         return_status = Status.PASS
 
-        def run(self, prev):
+        def run(self, prev, slot):
             pass
 
-        def analyze(self, prev):
+        def analyze(self, prev, slot):
             self.result.set_status(self.return_status)
             self.push_result()
 
@@ -168,10 +168,10 @@ def test_no_testcase(caplog):
     """Testsuite run with no testcase."""
 
     class MyDriver(BasicDriver):
-        def run(self, prev):
+        def run(self, prev, slot):
             pass
 
-        def analyze(self, prev):
+        def analyze(self, prev, slot):
             self.result.set_status(Status.PASS, "ok!")
             self.push_result()
 
@@ -190,11 +190,11 @@ def test_abort():
     """Check for if TestAbort work."""
 
     class MyDriver(BasicDriver):
-        def run(self, prev):
+        def run(self, prev, slot):
             raise E3TestAbort
             return "INVALID"
 
-        def analyze(self, prev):
+        def analyze(self, prev, slot):
             if prev["run"] is None:
                 self.result.set_status(Status.PASS, "ok!")
             else:
@@ -218,10 +218,10 @@ def test_exception_in_driver():
     """Check handling of exception in test driver."""
 
     class MyDriver(BasicDriver):
-        def run(self, prev):
+        def run(self, prev, slot):
             raise AttributeError("expected exception")
 
-        def analyze(self, prev):
+        def analyze(self, prev, slot):
             prev_value = prev["run"]
             logging.debug(prev_value)
             if isinstance(prev_value, Exception):
@@ -260,10 +260,10 @@ def test_not_existing_temp_dir(caplog):
     """Check the detection of missing requested temporary directory."""
 
     class MyDriver(BasicDriver):
-        def run(self, prev):
+        def run(self, prev, slot):
             return True
 
-        def analyze(self, prev):
+        def analyze(self, prev, slot):
             self.result.set_status(Status.PASS)
             self.push_result()
 
@@ -283,14 +283,14 @@ def test_dev_mode():
     """Check the dev mode (--dev-temp) works as expected."""
 
     class MyDriver(BasicDriver):
-        def run(self, prev):
+        def run(self, prev, slot):
             os.mkdir(self.test_env["working_dir"])
             path = os.path.join(self.test_env["working_dir"], "foo.txt")
             with open(path, "w") as f:
                 f.write(self.test_env["test_name"])
             return True
 
-        def analyze(self, prev):
+        def analyze(self, prev, slot):
             self.result.set_status(Status.PASS)
             self.push_result()
 
@@ -316,10 +316,10 @@ def test_invalid_yaml(caplog):
     """Check that invalid test.yaml files are properly reported."""
 
     class MyDriver(BasicDriver):
-        def run(self, prev):
+        def run(self, prev, slot):
             pass
 
-        def analyze(self, prev):
+        def analyze(self, prev, slot):
             self.result.set_status(Status.PASS, "all good")
             self.push_result()
 
@@ -343,10 +343,10 @@ def test_missing_driver(caplog):
     """Check that missing drivers in test.yaml files are properly reported."""
 
     class MyDriver(BasicDriver):
-        def run(self, prev):
+        def run(self, prev, slot):
             pass
 
-        def analyze(self, prev):
+        def analyze(self, prev, slot):
             self.result.set_status(Status.PASS, "all good")
             self.push_result()
 
@@ -381,10 +381,10 @@ def test_show_error_output(caplog):
     """Check that --show-error-output works as expected."""
 
     class MyDriver(BasicDriver):
-        def run(self, prev):
+        def run(self, prev, slot):
             self.result.log += "Work is being done..."
 
-        def analyze(self, prev):
+        def analyze(self, prev, slot):
             if self.test_env["test_name"] == "test1":
                 self.result.set_status(Status.PASS, "all good")
             else:
@@ -405,10 +405,10 @@ def test_push_twice():
     """Test error detection when pushing results twice in a driver."""
 
     class MyDriver(BasicDriver):
-        def run(self, prev):
+        def run(self, prev, slot):
             pass
 
-        def analyze(self, prev):
+        def analyze(self, prev, slot):
             self.result.set_status(Status.PASS, "ok!")
             self.push_result()
             self.push_result()
@@ -447,10 +447,10 @@ def test_comment_file():
     """Test that the comment file is written as expected."""
 
     class MyDriver(BasicDriver):
-        def run(self, prev):
+        def run(self, prev, slot):
             pass
 
-        def analyze(self, prev):
+        def analyze(self, prev, slot):
             self.result.set_status(Status.PASS)
             self.push_result()
 
@@ -477,7 +477,7 @@ def test_path_builders():
     """Check that path building methods in TestDriver work as expected."""
 
     class MyDriver(BasicDriver):
-        def run(self, prev):
+        def run(self, prev, slot):
             assert self.working_dir("foo.txt") == os.path.join(
                 self.test_env["working_dir"], "foo.txt"
             )
@@ -485,7 +485,7 @@ def test_path_builders():
                 self.test_env["test_dir"], "foo.txt"
             )
 
-        def analyze(self, prev):
+        def analyze(self, prev, slot):
             self.result.set_status(Status.PASS)
             self.push_result()
 

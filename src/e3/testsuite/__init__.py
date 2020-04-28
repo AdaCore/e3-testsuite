@@ -77,7 +77,7 @@ class TestFragment(Job):
         """Run the test fragment."""
         self.return_value = None
         try:
-            self.return_value = self.data(self.previous_values)
+            self.return_value = self.data(self.previous_values, self.slot)
         except TestAbort:
             pass
         except Exception as e:
