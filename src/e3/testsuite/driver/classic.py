@@ -175,8 +175,8 @@ class ClassicTestDriver(TestDriver):
         # streams, whereas testsuite sometimes need to deal with binary data
         # (or unknown encodings, which is equivalent).
         subp = subprocess.Popen(
-            args, cwd=cwd, env=env, stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT
+            args, cwd=cwd, env=env, stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE, stderr=subprocess.STDOUT
         )
         stdout, _ = subp.communicate()
         encoding = encoding or self.default_encoding
