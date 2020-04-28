@@ -43,6 +43,19 @@ class TestAbortWithFailure(Exception):
     pass
 
 
+class ProcessResult:
+    """Record results from a subprocess."""
+
+    def __init__(self, status, out):
+        """ProcessResult constructor.
+
+        :param int status: Process exit code.
+        :param bytes|str out: Captured process output stream.
+        """
+        self.status = status
+        self.out = out
+
+
 class ClassicTestDriver(TestDriver):
     """Enhanced test driver base class for common behaviors.
 
@@ -111,8 +124,7 @@ class ClassicTestDriver(TestDriver):
         return YAMLTestControlCreator({})
 
     def shell(self, args, cwd=None, env=None, catch_error=True,
-              analyze_output=True, timeout=None, parse_shebang=False,
-              encoding=None):
+              analyze_output=True, timeout=None, encoding=None):
         """Run a subprocess.
 
         :param str args: Arguments for the subprocess to run.
@@ -125,13 +137,12 @@ class ClassicTestDriver(TestDriver):
             ``self.output`` log.
         :param None|int timeout: Timeout (in seconds) for the subprocess. Use
             ``self.default_timeout`` if left to None.
-        :param bool parse_shebang: See e3.os.process.Run's constructor.
         :param str|None encoding: Encoding to use when decoding the subprocess'
             output stream. If None, use the default enocding for this test
             (``self.default_encoding``, from the ``encoding`` entry in
             test.yaml). If "binary", leave the output undecoded as a bytes
             string.
-        :return e3.os.process.Run: The process object.
+        :rtype: ProcessResult
         """
         # By default, run the subprocess in the test working directory
         if cwd is None:
@@ -163,9 +174,6 @@ class ClassicTestDriver(TestDriver):
                         "cwd": cwd}
         self.result.processes.append(process_info)
 
-        class ProcessResult:
-            pass
-
         # Python2's subprocess module does not handle timeout, so re-implement
         # e3.os.process's rlimit-based implementation of timeouts.
         if timeout is not None:
@@ -190,9 +198,7 @@ class ClassicTestDriver(TestDriver):
                     )
                 )
 
-        p = ProcessResult()
-        p.out = stdout
-        p.status = subp.returncode
+        p = ProcessResult(subp.returncode, stdout)
 
         self.result.log += format_header("Status code", p.status)
         process_info["status"] = p.status
