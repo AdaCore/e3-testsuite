@@ -14,11 +14,19 @@ class TestDriver(object, metaclass=abc.ABCMeta):
     def __init__(self, env, test_env):
         """Initialize a TestDriver instance.
 
-        :param env: the testsuite environment
-        :type env: dict
-        :param test_env: the test env dictionary. One entry called
-            test_name is at least expected.
-        :type test_env: dict
+        :param dict env: The testsuite environment. This mirrors the
+            ``Testsuite.env`` attribute.
+        :param dict test_env: The testcase environment. By the time it is
+            passed to this constructor, a TestFinder subclass has populated it,
+            and the testsuite added the following entries:
+
+            * ``test_dir``: The absolute name of the directory that contains
+              the testcase.
+            * ``test_name``: The name that the testsuite assigned to this
+              testcase.
+            * ``working_dir``: The absolute name of the temporary directory
+              that this test driver is free to create (if needed) in order to
+              run the testcase.
         """
         self.env = env
         self.test_env = test_env
@@ -53,15 +61,14 @@ class TestDriver(object, metaclass=abc.ABCMeta):
         introduce dependencies to other tests. For more complex operation
         use directly add_vertex method from the dag. See add_test method
 
-        :param dag: a DAG containing test fragments
-        :type dag: e3.collection.dag.DAG
-        :param name: name of the fragment
-        :type name: str
-        :param fun: a callable that takes no parameters. If None looks
-            for a method inside this class called ``name``.
-        :type fun: (, ) -> None | None
-        :param after: list of fragment names that should be executed before
-        :type after: list[str] | None
+        :param e3.collections.dag.DAG dag: DAG containing test fragments.
+        :param str name: Name of the fragment.
+        :param fun: Callable that takes one positional argument: a mapping from
+            fragment names to return values for already executed fragments. If
+            None looks for a method inside this class called ``name``.
+        :type fun: (dict[str, Any]) -> None | None
+        :param list[str]|None after: List of fragment names that should be
+            executed before this one.
         """
         if after is not None:
             after = [self.test_name + "." + k for k in after]
