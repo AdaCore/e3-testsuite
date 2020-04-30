@@ -112,7 +112,7 @@ class ClassicTestDriver(TestDriver):
 
     @property
     def test_control_creator(self):
-        """Return a test control creator for this teste.
+        """Return a test control creator for this test.
 
         By default, this returns a YAMLTestControlCreator instance tied to this
         driver with an empty condition environment. Subclasses are free to

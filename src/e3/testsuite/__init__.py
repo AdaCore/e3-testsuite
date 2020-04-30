@@ -31,6 +31,8 @@ class TooManyErrors(Exception):
 
 
 class TestAbort(Exception):
+    """Raise this to abort silently the execution of a test fragment."""
+
     pass
 
 
