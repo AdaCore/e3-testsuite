@@ -26,10 +26,6 @@ from colorama import Fore, Style
 logger = logging.getLogger("testsuite")
 
 
-class TooManyErrors(Exception):
-    pass
-
-
 class TestAbort(Exception):
     """Raise this to abort silently the execution of a test fragment."""
 
