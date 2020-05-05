@@ -305,7 +305,7 @@ class DiffTestDriver(ClassicTestDriver):
         return [failure_message]
 
     def compute_failures(self):
-        """Return a failure if ``self.result.out`` does not match the baseline.
+        """Return a failure if ``self.output.log`` does not match the baseline.
 
         This computes a diff with the content of the baseline file, unless
         there is a "baseline_regexp" entry in the test environment that
