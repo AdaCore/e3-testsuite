@@ -74,10 +74,8 @@ def test_diff_rewriting():
             tests_subdir = tests_copy
             test_driver_map = {"diff-script-driver": DiffScriptDriver}
 
-            def add_options(self):
-                self.main.argument_parser.add_argument(
-                    "--rewrite", "-r", action="store_true"
-                )
+            def add_options(self, parser):
+                parser.add_argument("--rewrite", "-r", action="store_true")
 
             def set_up(self):
                 super(Mysuite, self).set_up()
