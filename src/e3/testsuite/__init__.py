@@ -261,7 +261,7 @@ class TestsuiteCore(object):
             "sublist", metavar="tests", nargs="*", default=[], help="test"
         )
         # Add user defined options
-        self.add_options()
+        self.add_options(parser)
 
         # parse options
         self.main.parse_args(args)
@@ -663,11 +663,15 @@ class Testsuite(TestsuiteCore):
         """
         return [YAMLTestFinder()]
 
-    def add_options(self):
+    def add_options(self, parser):
         """Add testsuite specific switches.
 
-        We can add your own switches by calling self.main.add_option
-        function
+        Subclasses can override this method to add their own testsuite
+        command-line options.
+
+        :param argparse.ArgumentParser parser: Parser for command-line
+            arguments. See <https://docs.python.org/3/library/argparse.html>
+            for usage.
         """
         pass
 
