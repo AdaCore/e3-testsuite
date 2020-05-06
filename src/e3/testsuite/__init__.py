@@ -685,10 +685,6 @@ class Testsuite(TestsuiteCore):
         * initialize environment variables;
         * adjust self.env (object forwarded to test drivers).
         """
-        return self.tear_up()
-
-    def tear_up(self):
-        """For backwards compatibility, alternative for the "set_up" method."""
         pass
 
     def tear_down(self):
