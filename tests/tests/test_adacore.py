@@ -69,7 +69,7 @@ def test_optfile(caplog):
     """Check that OptfileTestControlCreator works as expected."""
 
     class Mydriver(ACDriver):
-        test_control_creator = control.OptfileTestControlCreator(["foo"])
+        test_control_creator = control.AdaCoreLegacyTestControlCreator(["foo"])
 
     class Mysuite(Suite):
         tests_subdir = "adacore-tests"

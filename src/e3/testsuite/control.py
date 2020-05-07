@@ -150,8 +150,8 @@ class YAMLTestControlCreator(TestControlCreator):
         return default
 
 
-class OptfileTestControlCreator(TestControlCreator):
-    """Create test controls based on "test.opt" files."""
+class AdaCoreLegacyTestControlCreator(TestControlCreator):
+    """Create test controls for "test.opt"-based legacy AdaCore testsuites."""
 
     def default_script(self, driver):
         """Return the default test script filename.
@@ -240,20 +240,3 @@ class OptfileTestControlCreator(TestControlCreator):
         result.opt_results = opt_results
 
         return result
-
-
-class AdaCoreLegacyTestControlCreator(OptfileTestControlCreator):
-    """Create test controls for "test.opt"-based legacy AdaCore testsuites."""
-
-    def default_script(self, driver):
-        # Return the filename for the first script file that exists. The lookup
-        # order depends on the host platform.
-        lookup_order = (
-            ["test.cmd", "test.sh", "test.py"]
-            if driver.env.host.os.name == "windows"
-            else ["test.sh", "test.cmd", "test.py"]
-        )
-        for script in lookup_order:
-            if os.path.isfile(driver.test_dir(script)):
-                return script
-        return "test.cmd"
