@@ -102,3 +102,6 @@ ENV/
 
 # Automatically generated
 .coveragerc
+
+# Sphinx build directory
+doc/_build
