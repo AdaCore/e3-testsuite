@@ -1,1 +1,2 @@
+ALL CMD test.sh
 ALL XFAIL should always fail

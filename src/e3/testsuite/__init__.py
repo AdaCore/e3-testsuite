@@ -129,14 +129,8 @@ class TestsuiteCore(object):
     def test_result_filename(self, test_name):
         """Return the name of the file in which the result are stored.
 
-        :param test_case_file: path to a test case scenario relative to the
-            test directory
-        :type test_case_file: str | unicode
-        :param variant: the test variant
-        :type variant: str
-        :return: the test name. Note that test names should not contain path
-            separators
-        :rtype: str | unicode
+        :param str test_name: Name of the test for this result file.
+        :rtype: str
         """
         return os.path.join(self.output_dir, test_name + ".yaml")
 
@@ -432,7 +426,7 @@ class TestsuiteCore(object):
 
         :param e3.collection.dag.DAG actions: The dag of actions for the
             testsuite.
-        :param e3.testsuite.testcase_finder.ParsedTest test_case_file: Test to
+        :param e3.testsuite.testcase_finder.ParsedTest parsed_test: Test to
             instantiate.
 
         :return: Whether the test was successfully registered.
@@ -618,16 +612,12 @@ class Testsuite(TestsuiteCore):
 
     @property
     def default_driver(self):
-        """Return the default driver for testcases.
+        """Return the name of the default driver for testcases.
 
-        The return value is used only if the test.yaml file does not contain
-        any ``driver`` key. Note that you have access to the current test.yaml
-        location using the attribute ``self.test_case_file``.
+        When tests do not query a specific driver, the one associated to this
+        name is used instead. If this property returns None, all tests are
+        required to query a driver.
 
-        If the result is None, consider that "driver" is a mandatory key in
-        test.yaml files.
-
-        :return: the driver to be used by default
         :rtype: str|None
         """
         return None

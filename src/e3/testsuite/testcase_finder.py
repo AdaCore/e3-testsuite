@@ -96,7 +96,6 @@ class YAMLTestFinder(TestFinder):
                     "cannot find driver for test '{}'".format(test_name)
                 )
 
-        test_env["test_case_file"] = yaml_file
         return ParsedTest(test_name, driver_cls, test_env, dirpath)
 
 
