@@ -68,7 +68,7 @@ class TestFragment(Job):
         :param notify_end: Internal parameter. See e3.job
         :type notify_end: str -> None
         """
-        super(TestFragment, self).__init__(uid, fun, notify_end)
+        super().__init__(uid, fun, notify_end)
         self.test_instance = test_instance
         self.previous_values = previous_values
 
