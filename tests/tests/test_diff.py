@@ -5,6 +5,8 @@ import shutil
 import sys
 import tempfile
 
+import yaml
+
 from e3.testsuite import Testsuite as Suite
 import e3.testsuite.driver.diff as diff
 from e3.testsuite.result import TestStatus as Status
@@ -97,3 +99,38 @@ def test_diff_rewriting():
         # Check that non-regexp baselines were updated
         check_test_out("plain", ["helloo", "world", "!"])
         check_test_out("regexp", ["h.l+o", "world"])
+
+
+def test_double_diff():
+    """Check proper result constructions for multiple diff failures."""
+
+    class MyDriver(diff.DiffTestDriver):
+        def run(self):
+            pass
+
+        def compute_failures(self):
+            d1 = self.compute_diff(
+                None, "a\nb\nc\n", "a\nc\n", failure_message="first diff"
+            )
+            d2 = self.compute_diff(
+                None, "1\n3\n", "1\n2\n3\n", failure_message="second diff"
+            )
+            return d1 + d2
+
+    class Mysuite(Suite):
+        tests_subdir = "simple-tests"
+        test_driver_map = {"default": MyDriver}
+
+    suite = run_testsuite(Mysuite, args=["test1"])
+    assert suite.results == {"test1": Status.FAIL}
+
+    # When multiple diff failures are involved, we expect .expected/.out to be
+    # empty, as this formalism assumes that a single output comparison. We
+    # expect .diff to contain both diff's though.
+    with open(os.path.join("out", "new", "test1.yaml")) as f:
+        result = yaml.safe_load(f)
+    assert result.expected is None
+    assert result.out is None
+    assert result.diff is not None
+    assert "first diff" in result.diff
+    assert "second diff" in result.diff
