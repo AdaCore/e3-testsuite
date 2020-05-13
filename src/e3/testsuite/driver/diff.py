@@ -190,6 +190,12 @@ class DiffTestDriver(ClassicTestDriver):
         """
         return False
 
+    def set_up(self):
+        super().set_up()
+
+        # Keep track of the number of non-clean diffs
+        self.failing_diff_count = 0
+
     def compute_diff(self, baseline_file, baseline, actual,
                      failure_message="unexpected output",
                      ignore_white_chars=None):
@@ -236,6 +242,7 @@ class DiffTestDriver(ClassicTestDriver):
         if not d:
             return []
 
+        self.failing_diff_count += 1
         message = failure_message
 
         diff_lines = []
@@ -261,10 +268,23 @@ class DiffTestDriver(ClassicTestDriver):
                     f.write(line)
             message = "{} (baseline updated)".format(message)
 
-        # Send the appropriate logging
-        self.result.expected = Log(baseline)
-        self.result.out = Log(actual)
-        self.result.diff = Log("\n".join(diff_lines))
+        # Send the appropriate logging. Make sure ".log" has all the
+        # information. If there are multiple diff failures for this testcase,
+        # do not emit the "expected/out" logs, as they support only one diff.
+        diff_log = (
+            self.Style.RESET_ALL + self.Style.BRIGHT
+            + "Diff failure: {}\n".format(message)
+            + "\n".join(diff_lines) + "\n"
+        )
+        self.result.log += "\n" + diff_log
+        if self.failing_diff_count == 1:
+            self.result.expected = Log(baseline)
+            self.result.out = Log(actual)
+            self.result.diff = Log(diff_log)
+        else:
+            self.result.expected = None
+            self.result.out = None
+            self.result.diff += "\n" + diff_log
 
         return [message]
 
