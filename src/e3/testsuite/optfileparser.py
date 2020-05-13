@@ -27,7 +27,7 @@ OVERIDABLE = 2
 logger = logging.getLogger("optfileparser")
 
 
-class OptFileParse(object):
+class OptFileParse:
     """test.opt parser.
 
     ATTRIBUTES

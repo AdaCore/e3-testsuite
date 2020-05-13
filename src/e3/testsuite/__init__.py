@@ -42,7 +42,7 @@ def isatty(stream):
     return stream and getattr(stream, 'isatty') and stream.isatty()
 
 
-class DummyColors(object):
+class DummyColors:
     """Stub to replace colorama's Fore/Style when colors are disabled."""
 
     def __getattr__(self, name):
@@ -94,7 +94,7 @@ class TestFragment(Job):
             self.return_value = e
 
 
-class TestsuiteCore(object):
+class TestsuiteCore:
     """Testsuite Core driver.
 
     This class is the base of Testsuite class and should not be instanciated.

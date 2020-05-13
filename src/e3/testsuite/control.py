@@ -22,7 +22,7 @@ class TestControlKind(Enum):
     """
 
 
-class TestControl(object):
+class TestControl:
     """Control the execution and analysis of a testcase."""
 
     def __init__(self, message=None, skip=False, xfail=False):
@@ -40,7 +40,7 @@ class TestControl(object):
         self.message = message
 
 
-class TestControlCreator(object):
+class TestControlCreator:
     """Abstract class to create test controls."""
 
     def create(self, driver):
