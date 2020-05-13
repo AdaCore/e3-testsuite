@@ -6,7 +6,7 @@ from e3.env import Env
 import e3.yaml
 
 
-class ParsedTest(object):
+class ParsedTest:
     """Basic information to instantiate a test driver."""
 
     def __init__(self, test_name, driver_cls, test_env, test_dir):
@@ -32,7 +32,7 @@ class ProbingError(Exception):
     pass
 
 
-class TestFinder(object):
+class TestFinder:
     """Interface for objects that find testcases in the tests subdirectory."""
 
     def probe(self, testsuite, dirpath, dirnames, filenames):

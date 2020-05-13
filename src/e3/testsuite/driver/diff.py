@@ -20,7 +20,7 @@ def indent(text, prefix="  "):
     return "\n".join((prefix + line) for line in text.split("\n"))
 
 
-class OutputRefiner(object):
+class OutputRefiner:
     """
     Interface to refine a test output before baseline and actual comparison.
 
