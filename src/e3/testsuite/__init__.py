@@ -118,6 +118,7 @@ class TestsuiteCore(object):
             root_dir = os.path.dirname(inspect.getfile(type(self)))
         self.root_dir = os.path.abspath(root_dir)
         self.test_dir = os.path.join(self.root_dir, self.tests_subdir)
+        logger.debug("Test directory: %s", self.test_dir)
         self.consecutive_failures = 0
         self.return_values = {}
         self.results = {}
