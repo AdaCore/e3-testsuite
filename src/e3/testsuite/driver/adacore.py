@@ -47,7 +47,7 @@ class AdaCoreLegacyTestDriver(DiffTestDriver):
         return (self._baseline_file, False)
 
     def set_up(self):
-        super(AdaCoreLegacyTestDriver, self).set_up()
+        super().set_up()
 
         # Make sure the test script is present
         script = self.test_control.opt_results["CMD"]

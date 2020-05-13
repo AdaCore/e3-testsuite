@@ -90,7 +90,7 @@ class ReplacePath(RefiningChain):
         def escape(s):
             return s.replace("\\", "\\\\")
 
-        super(ReplacePath, self).__init__([
+        super().__init__([
             Substitute(substring, replacement)
             for substring in [escape(os.path.abspath(path)),
                               escape(unixpath(path)),
