@@ -246,11 +246,9 @@ class TestResult(yaml.YAMLObject):
     def set_status(self, status, msg=""):
         """Update the test status.
 
-        :param status: new status. Note that only test results with status
-            set to ERROR can be changed.
-        :type status: TestStatus
-        :param msg: short message associated with the test result
-        :type msg: str
+        :param TestStatus status: New status. Note that only test results with
+            status set to ERROR can be changed.
+        :param None|str msg: Optional short message to describe the result.
         """
         if self.status != TestStatus.ERROR:
             logging.error("cannot set test %s status twice", self.test_name)
