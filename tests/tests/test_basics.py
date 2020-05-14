@@ -495,3 +495,31 @@ def test_path_builders():
         default_driver = "default"
 
     run_testsuite(Mysuite)
+
+
+def test_multiline_message():
+    """Check that multiline messages are adjusted in test results."""
+
+    class MyDriver(BasicDriver):
+        def run(self, prev, slot):
+            pass
+
+        def analyze(self, prev, slot):
+            self.result.set_status(
+                Status.PASS, "   Ugly  \nmultiline\r\n   \tstring  "
+            )
+            self.push_result()
+
+    class Mysuite(Suite):
+        tests_subdir = "simple-tests"
+        test_driver_map = {"default": MyDriver}
+
+        @property
+        def default_driver(self):
+            return "default"
+
+    run_testsuite(Mysuite, args=["test1"])
+    with open(os.path.join("out", "new", "test1.yaml")) as f:
+        result = yaml.safe_load(f)
+    assert result.status == Status.PASS
+    assert result.msg == "Ugly multiline string"

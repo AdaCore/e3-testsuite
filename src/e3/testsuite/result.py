@@ -249,12 +249,18 @@ class TestResult(yaml.YAMLObject):
         :param TestStatus status: New status. Note that only test results with
             status set to ERROR can be changed.
         :param None|str msg: Optional short message to describe the result.
+            Note that multiline strings are turned into single-line strings.
         """
         if self.status != TestStatus.ERROR:
             logging.error("cannot set test %s status twice", self.test_name)
             return
         self.status = status
-        self.msg = msg
+
+        self.msg = (
+            " ".join(line.strip() for line in msg.splitlines() if line)
+            if msg
+            else None
+        )
 
     def __str__(self):
         return "%-24s %-12s %s" % (self.test_name, self.status, self.msg)
