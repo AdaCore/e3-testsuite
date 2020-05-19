@@ -208,7 +208,7 @@ class TestResult(yaml.YAMLObject):
         # When the test failed, optional set of reasons for the failure. This
         # information is used only in advanced viewers, which may highlight
         # specifically some failure reasons. For instance, highlight crashes,
-        # that may be more important to investigate that mere unexpected
+        # that may be more important to investigate than mere unexpected
         # outputs.
         self.failure_reasons = set()
 
@@ -234,8 +234,8 @@ class TestResult(yaml.YAMLObject):
         self.diff = None
 
         # Optional decimal number of seconds (float). Test drivers can use this
-        # field to track performance (most likely the time it took to run the
-        # test). Advanced results viewer can then plot the evolution of time
+        # field to track performance, most likely the time it took to run the
+        # test. Advanced results viewer can then plot the evolution of time
         # over software evolution.
         self.time = None
 
