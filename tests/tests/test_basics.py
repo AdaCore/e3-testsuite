@@ -251,8 +251,8 @@ def test_exception_in_driver():
     assert len(results) == 2
 
     keys = sorted(results)
-    assert keys[0].startswith("test1__except")
-    assert keys[1].startswith("test2__except")
+    assert keys[0].startswith("test1.run__except")
+    assert keys[1].startswith("test2.run__except")
     assert set(results.values()) == {Status.ERROR}
 
 
