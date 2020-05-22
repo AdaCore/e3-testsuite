@@ -78,6 +78,16 @@ class Substitute(OutputRefiner):
         return output.replace(self.substring, self.replacement)
 
 
+class CanonicalizeLineEndings(OutputRefiner):
+    r"""Replace \r\n with \n in outputs."""
+
+    def refine(self, output):
+        if isinstance(output, str):
+            return output.replace('\r\n', '\n')
+        else:
+            return output.replace(b'\r\n', b'\n')
+
+
 class ReplacePath(RefiningChain):
     """Return an output refiner to replace the given path."""
 
@@ -167,9 +177,17 @@ class DiffTestDriver(ClassicTestDriver):
         """
         List of refiners for test baselines/outputs.
 
+        This just returns a refiner to canonicalize line endings unless the
+        test environment contains a "strict_line_endings" key associated to
+        true.
+
         :rtype: list[OutputRefiner]
         """
-        return []
+        return (
+            []
+            if self.test_env.get("strict_line_endings", False)
+            else [CanonicalizeLineEndings()]
+        )
 
     @property
     def diff_ignore_white_chars(self):
