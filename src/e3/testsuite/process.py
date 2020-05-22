@@ -21,12 +21,7 @@ def check_call(driver, cmd, test_name=None, result=None, **kwargs):
         result = driver.result
     if test_name is None:
         test_name = driver.test_name
-    try:
-        process = Run(cmd, **kwargs)
-    except UnicodeDecodeError as exc:
-        result.set_status(TestStatus.ERROR, str(exc))
-        driver.push_result(result)
-        raise
+    process = Run(cmd, **kwargs)
     result.processes.append(
         {
             "output": Log(process.out),
