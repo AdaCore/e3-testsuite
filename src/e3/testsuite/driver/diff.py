@@ -325,6 +325,10 @@ class DiffTestDriver(ClassicTestDriver):
         if isinstance(regexp, (str, bytes)):
             regexp = re.compile(regexp)
 
+        # Run output refiners
+        refiners = RefiningChain(self.output_refiners)
+        actual = refiners.refine(actual)
+
         match = regexp.match(actual)
         if match:
             return []

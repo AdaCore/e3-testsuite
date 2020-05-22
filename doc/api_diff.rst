@@ -198,8 +198,8 @@ All refined outputs from ``foo.py`` would match the following baseline:
 
    <object object at [HEX-ADDR]>
 
-Note that output refining applies only when using the default output equality:
-refiners are ignored in regexp matching mode.
+Note that output refining applies to baselines only when using the default
+output equality: regexp baselines are kept untransformed.
 
 
 .. _api_diff_alternative_baselines:
