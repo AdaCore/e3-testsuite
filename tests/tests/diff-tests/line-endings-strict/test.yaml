@@ -1,0 +1,4 @@
+driver: diff-script-driver
+process_args: [-crlf, -phello, -pworld]
+encoding: binary
+strict_line_endings: true

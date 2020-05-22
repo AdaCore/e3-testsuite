@@ -58,6 +58,9 @@ def test_diff():
         "regexp-binary-fail": Status.FAIL,
         "missing-baseline": Status.ERROR,
         "path-substitution": Status.PASS,
+        "line-endings": Status.PASS,
+        "line-endings-binary": Status.PASS,
+        "line-endings-strict": Status.FAIL,
     }
 
 
@@ -85,7 +88,7 @@ def test_diff_rewriting():
 
         def check_test_out(test, expected_lines):
             with open(os.path.join(tests_copy, test, "test.out")) as f:
-                lines = [l.rstrip() for l in f]
+                lines = [line.rstrip() for line in f]
             assert lines == expected_lines
 
         # Make sure we have the expected baselines before running the testsuite
