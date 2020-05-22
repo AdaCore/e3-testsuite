@@ -80,17 +80,18 @@ class TestFragment(Job):
         except TestAbort:
             pass
         except Exception as e:
-            # In case of exception generate a test result. The name is based on
-            # the test name with an additional random part to avoid conflicts.
-            logger.exception("got exception in test: %s", e)
+            # In case of exception generate a test result to log the exception
+            # as well as the traceback, for post-mortem investigation. The name
+            # is based on the test fragment name with an additional random part
+            # to avoid conflicts.
             test = self.test_instance
-            test.push_result(
-                TestResult(
-                    "%s__except%s" % (test.test_name, self.index),
-                    env=test.test_env,
-                    status=TestStatus.ERROR,
-                )
+            result = TestResult(
+                "{}__except{}".format(self.uid, self.index),
+                env=test.test_env,
+                status=TestStatus.ERROR,
             )
+            result.log += traceback.format_exc()
+            test.push_result(result)
             self.return_value = e
 
 
