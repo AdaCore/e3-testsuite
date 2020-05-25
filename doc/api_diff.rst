@@ -171,7 +171,7 @@ Several very common subclasses are available in ``driver.diff``:
       Substitute("<foo>")
 
       # Replace occurences of <foo> with <bar>
-      Substitute("<bar>")
+      Substitute("<foo>", "<bar>")
 
 ``ReplacePath(path, replacement="")``
    Replace a specific filename: ``path`` itself, the corresponding absolute
