@@ -26,6 +26,8 @@ def test_adacore():
 
     suite = run_testsuite(Mysuite1)
     assert suite.results == {
+        # Regular test execution, exercize output refiners
+        "T415-993": Status.PASS,
         # Missing non-default baseline
         "T415-994": Status.ERROR,
         # Missing test script
