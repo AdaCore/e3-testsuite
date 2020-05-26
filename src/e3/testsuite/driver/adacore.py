@@ -189,7 +189,7 @@ class AdaCoreLegacyTestDriver(DiffTestDriver):
                 rb"[^ '\"]*"
                 + os.path.basename(self.working_dir()).encode("ascii")
                 + rb"/src/",
-                r""
+                rb""
             ),
         ]
 
