@@ -72,13 +72,21 @@ This driver is coupled with a custom test execution control mechanism:
 ``test.opt`` files (see the previous section), and thus overrides the
 ``test_control_creator`` property accordingly.
 
-Note that this driver requires ``Testsuite`` subclasses using it to put the
-list of discriminants in ``self.env.discs``. Starting from the result of the
-``e3.env.AbstractEnv.discriminants`` property for this can help, as it computes
-standard discriminants based on the current host/build/target platforms.
-Testsuites can then add more discriminants as needed. For instance, imagine a
-testsuites that want standard dircriminants plus the ``valgrind`` discriminant
-if the ``--valgrind`` command-line option is passed to the testsuite:
+This driver has two requirements for ``Testsuite`` subclasses using it:
+
+* Put a process environment (string dictionary) for subprocesses in
+  ``self.env.test_environ``. By default they can just put a copy of the
+  testsuite's own environment: ``dict(os.environ)``.
+
+* Put the list of discriminants (list of strings) in ``self.env.discs``.
+  For the latter, starting from the result of the
+  ``e3.env.AbstractEnv.discriminants`` property can help, as it computes
+  standard discriminants based on the current host/build/target platforms.
+  Testsuites can then add more discriminants as needed.
+
+For instance, imagine a testsuite that wants standard dircriminants plus the
+``valgrind`` discriminant if the ``--valgrind`` command-line option is passed
+to the testsuite:
 
 .. code-block:: python
 
@@ -89,6 +97,7 @@ if the ``--valgrind`` command-line option is passed to the testsuite:
 
        def set_up(self):
            super(MyTestsuite, self).set_up()
+           self.env.test_environ = dict(os.environ)
            self.env.discs = self.env.discriminants
            if self.env.options.valgrind:
                self.env.discs.append("valgrind")
