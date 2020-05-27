@@ -341,6 +341,7 @@ class TestsuiteCore:
         for parsed_test in self.test_list:
             if not self.add_test(actions, parsed_test):
                 self.has_error = True
+        actions.check()
 
         with open(os.path.join(self.output_dir, "tests.dot"), "w") as fd:
             fd.write(actions.as_dot())

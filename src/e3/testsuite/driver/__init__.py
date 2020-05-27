@@ -76,8 +76,12 @@ class TestDriver(object, metaclass=abc.ABCMeta):
         if fun is None:
             fun = getattr(self, name)
 
-        dag.add_vertex(self.test_name + "." + name, (self, fun),
-                       predecessors=after)
+        dag.update_vertex(
+            vertex_id=self.test_name + "." + name,
+            data=(self, fun),
+            predecessors=after,
+            enable_checks=False
+        )
 
     def working_dir(self, *args):
         """Build a filename in the test working directory."""
