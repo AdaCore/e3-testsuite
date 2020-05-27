@@ -522,7 +522,7 @@ class TestsuiteCore:
             if (
                 self.main.args.show_error_output
                 and result.status not in (TestStatus.PASS, TestStatus.XFAIL,
-                                          TestStatus.XPASS)
+                                          TestStatus.XPASS, TestStatus.SKIP)
             ):
                 def format_log(log):
                     return "\n" + str(log) + self.Style.RESET_ALL
