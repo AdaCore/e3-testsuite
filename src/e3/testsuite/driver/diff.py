@@ -3,7 +3,7 @@ import re
 
 from e3.diff import diff
 from e3.os.fs import unixpath
-from e3.testsuite.result import Log, binary_repr
+from e3.testsuite.result import Log, binary_repr, truncated
 from e3.testsuite.driver.classic import ClassicTestDriver, TestAbortWithError
 
 
@@ -216,7 +216,8 @@ class DiffTestDriver(ClassicTestDriver):
 
     def compute_diff(self, baseline_file, baseline, actual,
                      failure_message="unexpected output",
-                     ignore_white_chars=None):
+                     ignore_white_chars=None,
+                     truncate_logs_threshold=None):
         """Compute the diff between expected and actual outputs.
 
         Return an empty list if there is no diff, and return a list that
@@ -231,11 +232,18 @@ class DiffTestDriver(ClassicTestDriver):
         :param None|bool ignore_white_chars: Whether to ignore whitespaces
             during the diff computation. If left to None, use
             ``self.diff_ignore_white_chars``.
+        :param int|None truncate_logs_threshold: Threshold to truncate the diff
+            message in ``self.result.log``. See
+            ``e3.testsuite.result.truncated``'s ``line_count`` argument. If
+            left to None, use the testsuite's ``--truncate-logs`` option.
 
         :rtype: list[str]
         """
         if ignore_white_chars is None:
             ignore_white_chars = self.diff_ignore_white_chars
+
+        if truncate_logs_threshold is None:
+            truncate_logs_threshold = self.env.options.truncate_logs
 
         # Run output refiners
         refiners = RefiningChain(self.output_refiners)
@@ -294,7 +302,7 @@ class DiffTestDriver(ClassicTestDriver):
             + "Diff failure: {}\n".format(message)
             + "\n".join(diff_lines) + "\n"
         )
-        self.result.log += "\n" + diff_log
+        self.result.log += "\n" + truncated(diff_log, truncate_logs_threshold)
         if self.failing_diff_count == 1:
             self.result.expected = Log(baseline)
             self.result.out = Log(actual)
@@ -308,7 +316,8 @@ class DiffTestDriver(ClassicTestDriver):
 
     def compute_regexp_match(
         self, regexp, actual,
-        failure_message="output does not match expected pattern"
+        failure_message="output does not match expected pattern",
+        truncate_logs_threshold=None
     ):
         """Compute whether the actual output matches a regexp.
 
@@ -319,11 +328,18 @@ class DiffTestDriver(ClassicTestDriver):
         :param str|bytes actual: Actual content to match.
         :param str failure_message: Failure message to return if there is a
             difference.
+        :param int|None truncate_logs_threshold: Threshold to truncate the diff
+            message in ``self.result.log``. See
+            ``e3.testsuite.result.truncated``'s ``line_count`` argument. If
+            left to None, use the testsuite's ``--truncate-logs`` option.
 
         :rtype: list[str]
         """
         if isinstance(regexp, (str, bytes)):
             regexp = re.compile(regexp)
+
+        if truncate_logs_threshold is None:
+            truncate_logs_threshold = self.env.options.truncate_logs
 
         # Run output refiners
         refiners = RefiningChain(self.output_refiners)
@@ -340,9 +356,12 @@ class DiffTestDriver(ClassicTestDriver):
 
         # Send the appropriate logging
         self.result.log += failure_message + ":\n"
-        self.result.log += quote(actual)
+        self.result.log += truncated(quote(actual), truncate_logs_threshold)
         self.result.log += "\nDoes not match the expected pattern:\n"
-        self.result.log += quote(regexp.pattern)
+        self.result.log += truncated(
+            quote(regexp.pattern),
+            truncate_logs_threshold
+        )
 
         return [failure_message]
 

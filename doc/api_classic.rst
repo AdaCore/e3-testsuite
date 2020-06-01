@@ -94,7 +94,11 @@ just a holder for process information: its ``status`` attribute contains the
 process exit code (an integer) while its ``out`` attribute contains the
 captured output.
 
-The other arguments give finer control over process execution:
+Note that the ``shell`` method also automatically appends a description of the
+spawned subprocess (arguments, working directory, exit code, output) to the
+:ref:`test result log <api_test_result_log>`.
+
+Its other arguments give finer control over process execution:
 
 ``cwd``
    Without surprise for people familiar with process handling APIs: this
@@ -135,9 +139,12 @@ The other arguments give finer control over process execution:
    present) or ``utf-8``. Again, subclasses are free to override this property
    if needed.
 
-Note that the ``shell`` method automatically appends a description of the
-spawned subprocess (arguments, working directory, exit code, output) to the
-:ref:`test result log <api_test_result_log>`.
+``truncate_logs_threshold``
+   Natural number, threshold to truncate the subprocess output that ``shell``
+   logs in the :ref:`test result log <api_test_result_log>`.  This threshold is
+   interpreted as half the number of output lines allowed before truncation,
+   and 0 means that truncation is disabled. If left to ``None``, use the
+   testsuite's ``--truncate-logs`` option.
 
 
 Set up/analyze/tear down

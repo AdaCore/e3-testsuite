@@ -254,6 +254,14 @@ class TestsuiteCore:
             " report."
         )
         parser.add_argument(
+            "--truncate-logs", "-T", metavar="N", type=int, default=200,
+            help="When outputs (for instance subprocess outputs) exceed 2*N"
+            " lines, only include the first and last N lines in logs. This is"
+            " necessary when storage for testsuite results have size limits,"
+            " and the useful information is generally either at the beginning"
+            " or the end of such outputs. If 0, never truncate logs."
+        )
+        parser.add_argument(
             "sublist", metavar="tests", nargs="*", default=[], help="test"
         )
         # Add user defined options

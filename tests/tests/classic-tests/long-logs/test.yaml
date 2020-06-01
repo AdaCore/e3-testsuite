@@ -1,0 +1,4 @@
+driver: script-driver
+process:
+    args: [-pa0, -pa1, -pa2, -pa3, -pa4, -pa5, -pa6,
+           -pb0, -pb1, -pb2, -pb3, -pb4, -pb5, -pb6]

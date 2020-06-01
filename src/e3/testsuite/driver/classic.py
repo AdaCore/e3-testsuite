@@ -5,7 +5,7 @@ from e3.os.process import get_rlimit, quote_arg
 from e3.testsuite import DummyColors
 from e3.testsuite.control import YAMLTestControlCreator
 from e3.testsuite.driver import TestDriver
-from e3.testsuite.result import Log, TestStatus
+from e3.testsuite.result import Log, TestStatus, truncated
 
 from colorama import Fore, Style
 
@@ -124,7 +124,8 @@ class ClassicTestDriver(TestDriver):
         return YAMLTestControlCreator({})
 
     def shell(self, args, cwd=None, env=None, catch_error=True,
-              analyze_output=True, timeout=None, encoding=None):
+              analyze_output=True, timeout=None, encoding=None,
+              truncate_logs_threshold=None):
         """Run a subprocess.
 
         :param str args: Arguments for the subprocess to run.
@@ -142,6 +143,10 @@ class ClassicTestDriver(TestDriver):
             (``self.default_encoding``, from the ``encoding`` entry in
             test.yaml). If "binary", leave the output undecoded as a bytes
             string.
+        :param int|None truncate_logs_threshold: Threshold to truncate the
+            subprocess output in ``self.result.log``. See
+            ``e3.testsuite.result.truncated``'s ``line_count`` argument. If
+            left to None, use the testsuite's ``--truncate-logs`` option.
         :rtype: ProcessResult
         """
         # By default, run the subprocess in the test working directory
@@ -150,6 +155,9 @@ class ClassicTestDriver(TestDriver):
 
         if timeout is None:
             timeout = self.default_process_timeout
+
+        if truncate_logs_threshold is None:
+            truncate_logs_threshold = self.env.options.truncate_logs
 
         # Run the subprocess and log it
         def format_header(label, value):
@@ -205,7 +213,8 @@ class ClassicTestDriver(TestDriver):
         process_info["output"] = Log(stdout)
 
         self.result.log += format_header(
-            "Output", "\n" + str(process_info["output"])
+            "Output", "\n"
+            + truncated(str(process_info["output"]), truncate_logs_threshold)
         )
 
         # If requested, use its output for analysis
