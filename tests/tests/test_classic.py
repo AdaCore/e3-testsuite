@@ -169,7 +169,7 @@ def test_classic(caplog):
         ),
     )
 
-    suite = run_testsuite(Mysuite, args=[tests_subdir])
+    suite = run_testsuite(Mysuite, args=["--truncate-logs=0", tests_subdir])
     assert suite.results == {
         "simple": Status.PASS,
         "catch-error-pass": Status.PASS,
@@ -186,6 +186,7 @@ def test_classic(caplog):
         "invalid-utf8-output": Status.ERROR,
         "suspicious-test-opt": Status.PASS,
         "abs-test-dir": Status.PASS,
+        "long-logs": Status.FAIL,
     }
 
     log = (
@@ -193,3 +194,34 @@ def test_classic(caplog):
         " entries are considered"
     )
     assert log in testsuite_logs(caplog)
+
+
+def test_long_logs(caplog):
+    """Check that long logs are truncated as requested."""
+
+    class Mysuite(Suite):
+        tests_subdir = "classic-tests"
+        test_driver_map = {"script-driver": ScriptDriver}
+
+    suite = run_testsuite(
+        Mysuite, args=["--truncate-logs=3", "long-logs", "--gaia-output"]
+    )
+    assert suite.results == {"long-logs": Status.FAIL}
+
+    with open(os.path.join("out", "new", "long-logs.log")) as f:
+        content = f.read().splitlines()
+    assert content[0].startswith("Running: ")
+    assert content[1:] == [
+        "Status code: 0",
+        "Output: ",
+        "a0",
+        "a1",
+        "a2",
+        "",
+        "... 8 lines skipped...",
+        "",
+        "b4",
+        "b5",
+        "b6",
+        "",
+    ]

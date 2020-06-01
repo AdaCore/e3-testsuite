@@ -166,6 +166,28 @@ def binary_repr(binary):
     )
 
 
+def truncated(output, line_count):
+    """Truncate an output not to exceed twice the given number of lines.
+
+    If ``output`` has more than ``2 * line_count`` lines, only keep the first
+    ``N`` and last ``N`` lines of it. Return it unchanged otherwise, or if
+    ``line_count`` is 0.
+
+    :param str output: Output to (maybe) truncate.
+    :param int line_count: Half the maximum number of lines to keep.
+    :rtype: str
+    """
+    lines = output.splitlines(True)
+    max_lines = 2 * line_count
+    if line_count and len(lines) > max_lines:
+        lines = (
+            lines[:line_count]
+            + ['\n... {} lines skipped...\n\n'.format(len(lines) - max_lines)]
+            + lines[-line_count:]
+        )
+    return ''.join(lines)
+
+
 class TestResult(yaml.YAMLObject):
     """Represent a result for a given test."""
 
