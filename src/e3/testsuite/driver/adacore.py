@@ -60,10 +60,10 @@ class AdaCoreLegacyTestDriver(DiffTestDriver):
         # If we have a non-standard output baseline file, make sure it is
         # present.
         baseline = self.test_control.opt_results["OUT"]
-        baseline_abs = self.test_dir(baseline)
+        self._original_baseline_file = self.test_dir(baseline)
         if (
             not baseline.endswith("test.out")
-            and not os.path.isfile(baseline_abs)
+            and not os.path.isfile(self._original_baseline_file)
         ):
             raise TestAbortWithError(
                 "cannot find output file {}".format(script)
@@ -205,3 +205,18 @@ class AdaCoreLegacyTestDriver(DiffTestDriver):
             catch_error=False
         )
         self.result.execution_time = time.time() - start_time
+
+    def compute_failures(self):
+        # First, do compute the failures and let the baseline rewriting
+        # machinery do its magic on the baseline it is given (i.e. the copy in
+        # the working directory: see set_up).
+        result = super().compute_failures()
+
+        # Now, make sure we propagate the new baseline to the test directory
+        if getattr(self.env, "rewrite_baselines", False):
+            with open(self._baseline_file, 'rb') as f:
+                content = f.read()
+            with open(self._original_baseline_file, 'wb') as f:
+                f.write(content)
+
+        return result

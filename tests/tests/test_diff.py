@@ -8,6 +8,7 @@ import tempfile
 import yaml
 
 from e3.testsuite import Testsuite as Suite
+import e3.testsuite.driver.adacore as adacore
 import e3.testsuite.driver.diff as diff
 from e3.testsuite.result import TestStatus as Status
 
@@ -77,7 +78,10 @@ def test_diff_rewriting():
 
         class Mysuite(Suite):
             tests_subdir = tests_copy
-            test_driver_map = {"diff-script-driver": DiffScriptDriver}
+            test_driver_map = {
+                "diff-script-driver": DiffScriptDriver,
+                "adacore-driver": adacore.AdaCoreLegacyTestDriver,
+            }
 
             def add_options(self, parser):
                 parser.add_argument("--rewrite", "-r", action="store_true")
@@ -85,6 +89,8 @@ def test_diff_rewriting():
             def set_up(self):
                 super(Mysuite, self).set_up()
                 self.env.rewrite_baselines = self.main.args.rewrite
+                self.env.discs = []
+                self.env.test_environ = dict(os.environ)
 
         def check_test_out(test, expected_lines):
             with open(os.path.join(tests_copy, test, "test.out")) as f:
@@ -92,14 +98,20 @@ def test_diff_rewriting():
             assert lines == expected_lines
 
         # Make sure we have the expected baselines before running the testsuite
+        check_test_out("adacore", ["legacy"])
         check_test_out("plain", ["hello", "world"])
         check_test_out("regexp", ["h.l+o", "world"])
 
         # Run the testsuite in rewrite mode
         suite = run_testsuite(Mysuite, args=["-r"])
-        assert suite.results == {"plain": Status.FAIL, "regexp": Status.FAIL}
+        assert suite.results == {
+            "adacore": Status.FAIL,
+            "plain": Status.FAIL,
+            "regexp": Status.FAIL,
+        }
 
         # Check that non-regexp baselines were updated
+        check_test_out("adacore", ["adacore", "legacy", "driver"])
         check_test_out("plain", ["helloo", "world", "!"])
         check_test_out("regexp", ["h.l+o", "world"])
 
