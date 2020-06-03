@@ -262,6 +262,14 @@ class TestsuiteCore:
             " or the end of such outputs. If 0, never truncate logs."
         )
         parser.add_argument(
+            "--failure-exit-code", metavar="N", type=int, default=0,
+            help="Exit code the testsuite must use when at least one test"
+            " result shows a failure/error. By default, this is 0. This option"
+            " is useful when running a testsuite in a continuous integration"
+            " setup, as this can make the testing process stop when there is"
+            " a regression."
+        )
+        parser.add_argument(
             "sublist", metavar="tests", nargs="*", default=[], help="test"
         )
         # Add user defined options
@@ -363,7 +371,19 @@ class TestsuiteCore:
 
         # Clean everything
         self.tear_down()
-        return 1 if self.has_error else 0
+
+        # Return the appropriate status code: 1 when there is a framework
+        # issue, the failure status code from the --failure-exit-code=N option
+        # when there is a least one testcase failure, or 0.
+        statuses = {
+            s for s, count in self.test_status_counters.items() if count
+        }
+        if self.has_error:
+            return 1
+        elif TestStatus.FAIL in statuses or TestStatus.ERROR in statuses:
+            return self.main.args.failure_exit_code
+        else:
+            return 0
 
     def get_test_list(self, sublist):
         """Retrieve the list of tests.
