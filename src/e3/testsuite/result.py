@@ -108,9 +108,9 @@ class Log(yaml.YAMLObject):
     def __init__(self, content):
         """Initialize log instance.
 
-        :param content: an initial message to log
-        :type content: str
+        :param str|bytes content: Initial message to log.
         """
+        assert isinstance(content, (str, bytes))
         self.log = content
 
     @property
