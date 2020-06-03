@@ -270,8 +270,8 @@ meantime:
 
        # Add a command-line flag to the testsuite script to allow users to
        # trigger baseline rewriting.
-       def add_options(self):
-           self.main.argument_parser.add_argument(
+       def add_options(self, parser):
+           parser.add_argument(
                "--rewrite", action="store_true",
                help="Rewrite test baselines according to current outputs"
            )
