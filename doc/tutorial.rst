@@ -28,7 +28,7 @@ First, create an empty directory and put the following Python code in a
 
 
    if __name__ == "__main__":
-       BcTestsuite().testsuite_main()
+       sys.exit(BcTestsuite().testsuite_main())
 
 Just this already makes a functional (but useless) testsuite. Make this file
 executable and then run it:
