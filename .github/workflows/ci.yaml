@@ -1,0 +1,45 @@
+name: Continuous Integration
+on:
+    push:
+        branches: [master]
+    pull_request:
+        branches: [master]
+
+jobs:
+    test:
+        strategy:
+            matrix:
+                os: [ubuntu-latest, macos-latest]
+                # Add windows-latest once the rlimit problem is fixed
+                # (T608-018).
+        runs-on: ${{ matrix.os }}
+        steps:
+            - uses: actions/checkout@v1
+
+            - uses: actions/setup-python@v2
+              with:
+                python-version: '3.8'
+            - name: Setup testing tools
+              run: |
+                pip install --upgrade pip
+                pip install tox
+                pip install mypy==0.782
+
+            # TODO: it seems that Mypy does not support namespace packages yet
+            # (see https://github.com/python/mypy/issues/5759), so hack around:
+            # rebuild the tree of sources as if e3-core and e3-testsuite
+            # belonged to the same distribution.
+            - name: Get e3-core sources for Mypy
+              uses: actions/checkout@v2
+              with:
+                repository: AdaCore/e3-core
+                path: e3-core
+            - run: |
+                cp -r src/e3/testsuite e3-core/src/e3/testsuite
+                mypy --config-file=mypy.ini e3-core/src/e3/testsuite/
+                # Make sure we remove e3-core once done with typing so that
+                # testing does not pick it up.
+                rm -rf e3-core
+
+            # Run the testsuite and style checks
+            - run: tox -e py-ci-cov-codecov,checkstyle,security
