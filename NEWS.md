@@ -1,6 +1,7 @@
 23.1 (Not released yet)
 =======================
 
+* Do not rewrite baselines for tests with expected failures.
 
 23.0 (2020-06-04)
 =================

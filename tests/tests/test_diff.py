@@ -101,6 +101,7 @@ def test_diff_rewriting():
         check_test_out("adacore", ["legacy"])
         check_test_out("plain", ["hello", "world"])
         check_test_out("regexp", ["h.l+o", "world"])
+        check_test_out("xfail", ["hello", "world"])
 
         # Run the testsuite in rewrite mode
         suite = run_testsuite(Mysuite, args=["-r"])
@@ -108,12 +109,15 @@ def test_diff_rewriting():
             "adacore": Status.FAIL,
             "plain": Status.FAIL,
             "regexp": Status.FAIL,
+            "xfail": Status.XFAIL,
         }
 
-        # Check that non-regexp baselines were updated
+        # Check that non-regexp baselines were updated, except when a failure
+        # is expected.
         check_test_out("adacore", ["adacore", "legacy", "driver"])
         check_test_out("plain", ["helloo", "world", "!"])
         check_test_out("regexp", ["h.l+o", "world"])
+        check_test_out("xfail", ["hello", "world"])
 
 
 def test_double_diff():
