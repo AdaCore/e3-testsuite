@@ -1,6 +1,7 @@
 23.1 (Not released yet)
 =======================
 
+* AdaCoreLegacyDriver: use bash as soon as we have a Bourne shell script
 * Accept invalid regexps as testcase filters
 * Make DiffTestDriver add a DIFF failure reason (useful for advanced viewers)
 * Switch to more common statuses in the GAIA output (--gaia-output: OK instead
