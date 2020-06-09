@@ -121,7 +121,7 @@ def test_outer_testcase():
 
 
 def test_invalid_filter_pattern(caplog):
-    """Check the proper detection of invalid tests on the command line."""
+    """Check the proper detection of invalid regexps on the command line."""
 
     class MyDriver(BasicDriver):
         def run(self, prev, slot):
@@ -136,9 +136,11 @@ def test_invalid_filter_pattern(caplog):
         test_driver_map = {"default": MyDriver}
         default_driver = "default"
 
-    run_testsuite(Mysuite, args=["("], expect_failure=True)
+    run_testsuite(Mysuite, args=["\\h"])
     assert any(
-        message.startswith("Invalid test pattern, skipping: ")
+        message.startswith(
+            "Test pattern is not a valid regexp, try to match it as-is: "
+        )
         for message in testsuite_logs(caplog)
     )
 
