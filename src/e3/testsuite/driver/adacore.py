@@ -126,12 +126,13 @@ class AdaCoreLegacyTestDriver(DiffTestDriver):
             return [sys.executable, self.script_file]
 
         elif (
-            self.env.host.os.name != "windows"
+            ext == ".sh"
+            or self.env.host.os.name != "windows"
             or "FORCE_SH" in self.env.discs
         ):
-            # If not running on Windows, or if specifically asked to use a
-            # Bourne shell, create a shell script to run instead of the given
-            # test script.
+            # If running a Bourne shell script, not running on Windows, or if
+            # specifically asked to use a Bourne shell, create a shell script
+            # to run instead of the given test script.
             new_script = []
 
             # First, make sure the current directory is in the PATH, to ease
