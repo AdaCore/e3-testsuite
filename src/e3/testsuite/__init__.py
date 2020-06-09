@@ -408,13 +408,11 @@ class TestsuiteCore:
                 try:
                     pattern = re.compile(pattern)
                 except re.error as exc:
-                    self.has_error = True
-                    logger.error(
-                        "Invalid test pattern, skipping: {} ({})".format(
-                            pattern, exc
-                        )
+                    logger.debug(
+                        "Test pattern is not a valid regexp, try to match it"
+                        " as-is: {}".format(exc)
                     )
-                    return
+                    pattern = re.compile(re.escape(pattern))
 
             # For each directory in the requested subdir, ask our test finders
             # to probe for a testcase. Register matches.
