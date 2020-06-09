@@ -284,9 +284,11 @@ class DiffTestDriver(ClassicTestDriver):
                 color = ""
             diff_lines.append(color + line + self.Style.RESET_ALL)
 
-        # If requested, rewrite the test baseline with the new one
+        # If requested and the failure is not expected, rewrite the test
+        # baseline with the new one.
         if (
             baseline_file is not None
+            and not self.test_control.xfail
             and getattr(self.env, "rewrite_baselines", False)
         ):
             with open(baseline_file, "w") as f:
