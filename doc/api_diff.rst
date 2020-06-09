@@ -282,3 +282,26 @@ meantime:
        def set_up(self):
            super(MyTestsuite, self).set_up()
            self.env.rewrite_baselines = self.main.args.rewrite
+
+Note that baseline rewriting applies only to tests that are not already
+expected to fail. Imagine for instance the situation described above (date
+format change), and the following testcase:
+
+.. code-block:: yaml
+
+   # test.yaml
+   control:
+      - [XFAIL, "True",
+         "Precision bug: max temperature is 280.1 while it should be 280.0"]
+
+.. code-block:: text
+
+   # test.out
+   01/01/2020 270.3 280.1
+
+The testsuite must not rewrite ``test.out``, otherwise the precision bug
+(``280.1`` instead of ``280.0``) will be recorded in the baseline, and thus the
+testcase will incorrectly start to pass (``XPASS``). But this is just a
+compromise: in the future, the testcase will fail not only because of the lack
+of precision, but also because of the bad date formatting, so in such cases,
+baselines must be manually updated.
