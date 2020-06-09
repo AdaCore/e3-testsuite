@@ -80,7 +80,8 @@ def test_optfile(caplog):
 
         def set_up(self):
             super(Mysuite, self).set_up()
-            self.env.test_environ = {}
+            self.env.discs = []
+            self.env.test_environ = dict(os.environ)
 
     suite = run_testsuite(Mysuite)
     assert suite.results == {
