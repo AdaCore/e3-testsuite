@@ -1,2 +1,17 @@
 include README.md
 include VERSION
+include *.md
+include LICENSE
+include tox.ini
+recursive-include doc *.bat
+recursive-include doc *.py
+recursive-include doc *.rst
+recursive-include doc Makefile
+recursive-include tests *.cmd
+recursive-include tests *.opt
+recursive-include tests *.out
+recursive-include tests *.py
+recursive-include tests *.rc
+recursive-include tests *.sh
+recursive-include tests *.txt
+recursive-include tests *.yaml
