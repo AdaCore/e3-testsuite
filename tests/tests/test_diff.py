@@ -153,3 +153,27 @@ def test_double_diff():
     assert result.diff is not None
     assert "first diff" in result.diff
     assert "second diff" in result.diff
+
+
+def test_failure_reason():
+    """Check that DiffTestDriver properly sets the DIFF failure reason."""
+
+    class Mysuite(Suite):
+        tests_subdir = "diff-tests"
+        test_driver_map = {"diff-script-driver": DiffScriptDriver}
+
+    suite = run_testsuite(
+        Mysuite, args=["plain-pass", "plain-fail", "--gaia-output"]
+    )
+    assert suite.results == {
+        "plain-pass": Status.PASS,
+        "plain-fail": Status.FAIL,
+    }
+
+    with open(os.path.join("out", "new", "results")) as f:
+        results = sorted(line.strip().split(":", 2) for line in f)
+
+    assert results == [
+        ["plain-fail", "DIFF", "unexpected output"],
+        ["plain-pass", "OK", ""],
+    ]

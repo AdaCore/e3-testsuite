@@ -1,6 +1,7 @@
 23.1 (Not released yet)
 =======================
 
+* Make DiffTestDriver add a DIFF failure reason (useful for advanced viewers)
 * Switch to more common statuses in the GAIA output (--gaia-output: OK instead
   of PASSED, XFAIL instead of XFAILED, ...)
 * Do not rewrite baselines for tests with expected failures.
