@@ -10,10 +10,10 @@ from e3.testsuite.result import FailureReason, TestStatus
 
 
 STATUS_MAP = {
-    TestStatus.PASS: "PASSED",
-    TestStatus.FAIL: "FAILED",
-    TestStatus.XFAIL: "XFAILED",
-    TestStatus.XPASS: "UPASSED",
+    TestStatus.PASS: "OK",
+    TestStatus.FAIL: "FAIL",
+    TestStatus.XFAIL: "XFAIL",
+    TestStatus.XPASS: "UOK",
     TestStatus.VERIFY: "VERIFY",
     TestStatus.SKIP: "DEAD",
     TestStatus.NOT_APPLICABLE: "NOT_APPLICABLE",
