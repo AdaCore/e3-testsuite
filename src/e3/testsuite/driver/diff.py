@@ -102,7 +102,7 @@ class ReplacePath(RefiningChain):
 
         super().__init__([
             Substitute(substring, replacement)
-            for substring in [escape(os.path.abspath(path)),
+            for substring in [escape(os.path.realpath(path)),
                               escape(unixpath(path)),
                               escape(path)]
         ])
