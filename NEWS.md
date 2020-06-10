@@ -1,6 +1,7 @@
 23.1 (Not released yet)
 =======================
 
+* Fix CRLF handling when truncating too long logs
 * AdaCoreLegacyDriver: use bash as soon as we have a Bourne shell script
 * Accept invalid regexps as testcase filters
 * Make DiffTestDriver add a DIFF failure reason (useful for advanced viewers)

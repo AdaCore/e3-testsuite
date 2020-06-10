@@ -223,5 +223,4 @@ def test_long_logs(caplog):
         "b4",
         "b5",
         "b6",
-        "",
     ]

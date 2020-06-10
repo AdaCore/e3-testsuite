@@ -177,15 +177,20 @@ def truncated(output, line_count):
     :param int line_count: Half the maximum number of lines to keep.
     :rtype: str
     """
-    lines = output.splitlines(True)
+    # Given that we insert Unix-style line breaks here, make .splitlines()
+    # strip line terminators. If ``output`` contains Windows-style ones, this
+    # function will convert them to Unix-style ones. This transformation
+    # mangles the output a bit, but this is necessary to keep things tractable
+    # here.
+    lines = output.splitlines()
     max_lines = 2 * line_count
     if line_count and len(lines) > max_lines:
         lines = (
             lines[:line_count]
-            + ['\n... {} lines skipped...\n\n'.format(len(lines) - max_lines)]
+            + ['\n... {} lines skipped...\n'.format(len(lines) - max_lines)]
             + lines[-line_count:]
         )
-    return ''.join(lines)
+    return '\n'.join(lines)
 
 
 class TestResult(yaml.YAMLObject):
