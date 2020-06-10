@@ -3,7 +3,7 @@ import re
 
 from e3.diff import diff
 from e3.os.fs import unixpath
-from e3.testsuite.result import Log, binary_repr, truncated
+from e3.testsuite.result import FailureReason, Log, binary_repr, truncated
 from e3.testsuite.driver.classic import ClassicTestDriver, TestAbortWithError
 
 
@@ -380,7 +380,11 @@ class DiffTestDriver(ClassicTestDriver):
         :rtype: list[str]
         """
         filename, baseline, is_regexp = self.baseline
-        if is_regexp:
-            return self.compute_regexp_match(baseline, self.output.log)
-        else:
-            return self.compute_diff(filename, baseline, self.output.log)
+        result = (
+            self.compute_regexp_match(baseline, self.output.log)
+            if is_regexp else
+            self.compute_diff(filename, baseline, self.output.log)
+        )
+        if result:
+            self.result.failure_reasons.add(FailureReason.DIFF)
+        return result
