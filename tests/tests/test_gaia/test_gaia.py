@@ -49,20 +49,20 @@ def test_gaia():
     with open(os.path.join("out", "new", "results")) as f:
         lines = sorted(f.read().splitlines())
         assert lines == [
-            "fail-binary-out:FAILED:",
+            "fail-binary-out:FAIL:",
             "fail-crash:CRASH:",
-            "fail-expected-out-diff:FAILED:",
-            "fail-info:FAILED:",
+            "fail-expected-out-diff:FAIL:",
+            "fail-info:FAIL:",
             "fail-memcheck-diff:PROBLEM:",
-            "fail-out:FAILED:",
-            "fail-simple:FAILED:",
+            "fail-out:FAIL:",
+            "fail-simple:FAIL:",
             "fail-timeout:TIMEOUT:",
-            "pass-log:PASSED:",
-            "pass-time:PASSED:",
-            "pass:PASSED:",
+            "pass-log:OK:",
+            "pass-time:OK:",
+            "pass:OK:",
             "skip:DEAD:This test was skipped",
-            "xfail-crash:XFAILED:",
-            "xfail-out:XFAILED:",
+            "xfail-crash:XFAIL:",
+            "xfail-out:XFAIL:",
         ]
 
     # Check the presence and content of log files

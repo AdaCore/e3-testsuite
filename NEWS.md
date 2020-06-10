@@ -1,6 +1,8 @@
 23.1 (Not released yet)
 =======================
 
+* Switch to more common statuses in the GAIA output (--gaia-output: OK instead
+  of PASSED, XFAIL instead of XFAILED, ...)
 * Do not rewrite baselines for tests with expected failures.
 
 23.0 (2020-06-04)
