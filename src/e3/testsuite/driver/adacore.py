@@ -214,10 +214,23 @@ class AdaCoreLegacyTestDriver(DiffTestDriver):
         result = super().compute_failures()
 
         # Now, make sure we propagate the new baseline to the test directory
-        if getattr(self.env, "rewrite_baselines", False):
+        if (
+            not self.test_control.xfail
+            and getattr(self.env, "rewrite_baselines", False)
+        ):
             with open(self._baseline_file, 'rb') as f:
                 content = f.read()
-            with open(self._original_baseline_file, 'wb') as f:
-                f.write(content)
+
+            # Materialize empty baselines as missing baseline file, but only
+            # for the default baseline file.
+            default_baseline_file = self.test_dir('test.out')
+            if (
+                content
+                or self._original_baseline_file != default_baseline_file
+            ):
+                with open(self._original_baseline_file, 'wb') as f:
+                    f.write(content)
+            elif os.path.exists(default_baseline_file):
+                os.remove(default_baseline_file)
 
         return result
