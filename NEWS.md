@@ -1,6 +1,8 @@
 23.1 (Not released yet)
 =======================
 
+* `AdaCoreLegacyTestDriver`: when rewriting empty baselines with
+  default file (`test.out`), just remove the baseline file.
 * `driver.diff.PathSubstitute: use `realpath` rather than `abspath`.
 * Fix CRLF handling when truncating too long logs.
 * `AdaCoreLegacyTestDriver`: use Bash as soon as we have a Bourne shell script.

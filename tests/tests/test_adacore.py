@@ -1,6 +1,8 @@
 """Tests for the "test.opt" handling."""
 
 import os
+import shutil
+import tempfile
 
 from e3.testsuite import Testsuite as Suite
 import e3.testsuite.control as control
@@ -96,3 +98,72 @@ def test_optfile(caplog):
         " test.opt files are considered"
     )
     assert message in testsuite_logs(caplog)
+
+
+def test_rewriting(caplog):
+    """Check that ACDriver's baseline rewriting works as expected."""
+    # This testcase involves the rewriting of testcase files, so work on a
+    # temporary copy.
+    with tempfile.TemporaryDirectory(
+        prefix="test_adacore_rewriting"
+    ) as temp_dir:
+        tests_source = os.path.join(
+            os.path.dirname(__file__), "adacore-rewriting-tests"
+        )
+        tests_copy = os.path.join(temp_dir, "tests")
+        shutil.copytree(tests_source, tests_copy)
+
+        class Mysuite(Suite):
+            tests_subdir = tests_copy
+            test_driver_map = {"adacore": ACDriver}
+            default_driver = "adacore"
+
+            def add_options(self, parser):
+                parser.add_argument("--rewrite", "-r", action="store_true")
+
+            def set_up(self):
+                super().set_up()
+                self.env.discs = []
+                self.env.test_environ = dict(os.environ)
+                self.env.rewrite_baselines = self.main.args.rewrite
+
+        def check_baselines(test, expected_desc):
+            files = sorted(
+                f
+                for f in os.listdir(os.path.join(tests_copy, test))
+                if f.endswith(".out")
+            )
+            expected_files = sorted(expected_desc)
+            assert files == expected_files
+
+            for filename in files:
+                expected_lines = expected_desc[filename]
+                with open(os.path.join(tests_copy, test, filename)) as f:
+                    lines = [line.rstrip() for line in f]
+                assert lines == expected_lines
+
+        # Make sure we have the expected baselines before running the testsuite
+        check_baselines("default-nodiff", {"test.out": ["Hello"]})
+        check_baselines("default-diff", {"test.out": ["World"]})
+        check_baselines("default-empty", {"test.out": ["Hello"]})
+        check_baselines("nondefault-nodiff", {"baseline.out": ["Hello"]})
+        check_baselines("nondefault-empty", {"baseline.out": ["Hello"]})
+        check_baselines("xfail-diff", {"test.out": ["World"]})
+
+        suite = run_testsuite(Mysuite, args=["-r"])
+        assert suite.results == {
+            "default-nodiff": Status.PASS,
+            "default-diff": Status.FAIL,
+            "default-empty": Status.FAIL,
+            "nondefault-nodiff": Status.PASS,
+            "nondefault-empty": Status.FAIL,
+            "xfail-diff": Status.XFAIL,
+        }
+
+        # Now check that baselines were updated as expected
+        check_baselines("default-nodiff", {"test.out": ["Hello"]})
+        check_baselines("default-diff", {"test.out": ["Hello"]})
+        check_baselines("default-empty", {})
+        check_baselines("nondefault-nodiff", {"baseline.out": ["Hello"]})
+        check_baselines("nondefault-empty", {"baseline.out": []})
+        check_baselines("xfail-diff", {"test.out": ["World"]})
