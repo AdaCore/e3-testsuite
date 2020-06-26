@@ -104,7 +104,7 @@ def test_diff_rewriting():
         check_test_out("xfail", ["hello", "world"])
 
         # Run the testsuite in rewrite mode
-        suite = run_testsuite(Mysuite, args=["-r"])
+        suite = run_testsuite(Mysuite, args=["-rE"])
         assert suite.results == {
             "adacore": Status.FAIL,
             "plain": Status.FAIL,

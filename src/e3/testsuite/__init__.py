@@ -1,5 +1,8 @@
 """Generic testsuite framework."""
 
+from __future__ import annotations
+
+import argparse
 import inspect
 import logging
 import os
@@ -7,6 +10,9 @@ import re
 import sys
 import tempfile
 import traceback
+from typing import (Any, AnyStr, Callable, Dict, FrozenSet, IO, List,
+                    Optional, Pattern, TYPE_CHECKING, Tuple, Type, cast)
+
 import yaml
 
 from e3.collection.dag import DAG
@@ -18,10 +24,16 @@ from e3.main import Main
 from e3.os.process import quote_arg
 from e3.testsuite.report.gaia import dump_gaia_report
 from e3.testsuite.report.xunit import dump_xunit_report
-from e3.testsuite.result import TestResult, TestStatus
-from e3.testsuite.testcase_finder import ProbingError, YAMLTestFinder
+from e3.testsuite.result import Log, TestResult, TestStatus
+from e3.testsuite.testcase_finder import (ParsedTest, ProbingError, TestFinder,
+                                          YAMLTestFinder)
 
 from colorama import Fore, Style
+
+
+if TYPE_CHECKING:
+    from e3.testsuite.driver import TestDriver
+
 
 logger = logging.getLogger("testsuite")
 
@@ -32,20 +44,20 @@ class TestAbort(Exception):
     pass
 
 
-def isatty(stream):
+def isatty(stream: IO[AnyStr]) -> bool:
     """Return whether stream is a TTY.
 
     This is a safe predicate: it works if stream is None or if it does not even
     support TTY detection: in these cases, be conservative (consider it's not a
     TTY).
     """
-    return stream and getattr(stream, 'isatty') and stream.isatty()
+    return bool(stream) and bool(getattr(stream, 'isatty')) and stream.isatty()
 
 
 class DummyColors:
     """Stub to replace colorama's Fore/Style when colors are disabled."""
 
-    def __getattr__(self, name):
+    def __getattr__(self, name: str) -> str:
         return ''
 
 
@@ -56,23 +68,27 @@ class TestFragment(Job):
     :ivar data: a function to call with the following signature (,) -> None
     """
 
-    def __init__(self, uid, test_instance, fun, previous_values, notify_end):
+    test_instance: TestDriver
+    previous_values: Dict[str, Any]
+
+    def __init__(self,
+                 uid: str,
+                 test_instance: TestDriver,
+                 fun: Callable[[], None],
+                 previous_values: Dict[str, Any],
+                 notify_end: Callable[[str], None]) -> None:
         """Initialize a TestFragment.
 
-        :param uid: uid of the test fragment (should be unique)
-        :type uid: str
-        :param test_instance: a TestDriver instance
-        :type test_instance: e3.testsuite.driver.TestDriver
-        :param fun: callable to be executed by the job
-        :type fun: (,) -> None
-        :param notify_end: Internal parameter. See e3.job
-        :type notify_end: str -> None
+        :param uid: UID of the test fragment (should be unique).
+        :param test_instance: A TestDriver instance.
+        :param fun: Callable to be executed by the job.
+        :param notify_end: Internal parameter. See e3.job.
         """
         super().__init__(uid, fun, notify_end)
         self.test_instance = test_instance
         self.previous_values = previous_values
 
-    def run(self):
+    def run(self) -> None:
         """Run the test fragment."""
         self.return_value = None
         try:
@@ -105,15 +121,27 @@ class TestsuiteCore:
     variables.
     """
 
-    def __init__(self, root_dir=None, testsuite_name="Untitled testsute"):
+    consecutive_failures: int
+    main: Main
+    result_tracebacks: dict
+    results: dict
+    return_values: dict
+    root_dir: str
+    test_counter: int
+    test_dir: str
+    test_status_counters: Dict[TestStatus, int]
+    testsuite_name: str
+
+    def __init__(self,
+                 root_dir: Optional[str] = None,
+                 testsuite_name: str = "Untitled testsute") -> None:
         """Testsuite constructor.
 
         :param root_dir: Root directory for the testsuite. If left to None, use
             the directory containing the Python module that created self's
             class.
-        :param str testsuite_name: Name for this testsuite. It can be used to
+        :param testsuite_name: Name for this testsuite. It can be used to
             provide a title in some report formats.
-        :type root_dir: str | unicode
         """
         if root_dir is None:
             root_dir = os.path.dirname(inspect.getfile(type(self)))
@@ -128,15 +156,18 @@ class TestsuiteCore:
         self.test_status_counters = {s: 0 for s in TestStatus}
         self.testsuite_name = testsuite_name
 
-    def test_result_filename(self, test_name):
+    def test_result_filename(self, test_name: str) -> str:
         """Return the name of the file in which the result are stored.
 
-        :param str test_name: Name of the test for this result file.
-        :rtype: str
+        :param test_name: Name of the test for this result file.
         """
         return os.path.join(self.output_dir, test_name + ".yaml")
 
-    def job_factory(self, uid, data, predecessors, notify_end):
+    def job_factory(self,
+                    uid: str,
+                    data: Any,
+                    predecessors: FrozenSet[str],
+                    notify_end: Callable[[str], None]) -> TestFragment:
         """Run internal function.
 
         See e3.job.scheduler
@@ -150,7 +181,7 @@ class TestsuiteCore:
         key_prefix = data[0].test_name + "."
         key_prefix_len = len(key_prefix)
 
-        def filter_key(k):
+        def filter_key(k: str) -> str:
             if k.startswith(key_prefix):
                 return k[key_prefix_len:]
             else:
@@ -164,11 +195,12 @@ class TestsuiteCore:
             notify_end,
         )
 
-    def testsuite_main(self, args=None):
+    def testsuite_main(self, args: Optional[List[str]] = None) -> int:
         """Main for the main testsuite script.
 
-        :param args: command line arguments. If None use sys.argv
-        :type args: list[str] | None
+        :param args: Command line arguments. If None, use `sys.argv`.
+        :return: The testsuite status code (0 for success, a positive for
+            failure).
         """
         self.main = Main(platform_args=self.enable_cross_support)
 
@@ -275,8 +307,9 @@ class TestsuiteCore:
         # Add user defined options
         self.add_options(parser)
 
-        # parse options
+        # Parse options
         self.main.parse_args(args)
+        assert self.main.args is not None
 
         # If there is a chance for the logging to end up in a non-tty stream,
         # disable colors.
@@ -350,8 +383,13 @@ class TestsuiteCore:
 
         self.scheduler = Scheduler(
             job_provider=self.job_factory,
-            collect=self.collect_result,
             tokens=self.main.args.jobs,
+
+            # correct_result expects specifically TestFragment instances (a Job
+            # subclass), while Scheduler only guarantees Job instances.
+            # Test drivers are supposed to register only TestFragment
+            # instances, so the following cast should be fine.
+            collect=cast(Any, self.collect_result),
         )
         actions = DAG()
         for parsed_test in self.test_list:
@@ -385,34 +423,34 @@ class TestsuiteCore:
         else:
             return 0
 
-    def get_test_list(self, sublist):
+    def get_test_list(self, sublist: List[str]) -> List[ParsedTest]:
         """Retrieve the list of tests.
 
-        :param list[str] sublist: A list of tests scenarios or patterns.
-        :rtype: list[str]
+        :param sublist: A list of tests scenarios or patterns.
         """
         # Use a mapping: absolute test directory -> ParsedTest when building
         # the result, as several patterns in "sublist" may yield the same
         # testcase.
-        result = {}
+        testcases: Dict[str, ParsedTest] = {}
         test_finders = self.test_finders
 
-        def helper(pattern):
+        def helper(spec: str) -> None:
+            pattern: Optional[Pattern[str]] = None
+
             # If the given pattern is a directory, do not go through the whole
             # tests subdirectory.
-            if os.path.isdir(pattern):
-                root = pattern
-                pattern = None
+            if os.path.isdir(spec):
+                root = spec
             else:
                 root = self.test_dir
                 try:
-                    pattern = re.compile(pattern)
+                    pattern = re.compile(spec)
                 except re.error as exc:
                     logger.debug(
                         "Test pattern is not a valid regexp, try to match it"
                         " as-is: {}".format(exc)
                     )
-                    pattern = re.compile(re.escape(pattern))
+                    pattern = re.compile(re.escape(spec))
 
             # For each directory in the requested subdir, ask our test finders
             # to probe for a testcase. Register matches.
@@ -434,7 +472,7 @@ class TestsuiteCore:
                         logger.error(str(exc))
                         break
                     if test is not None:
-                        result[test.test_dir] = test
+                        testcases[test.test_dir] = test
                         break
 
         # If specific tests are requested, only look for them. Otherwise, just
@@ -445,21 +483,17 @@ class TestsuiteCore:
         else:
             helper(self.test_dir)
 
-        result = list(result.values())
+        result = list(testcases.values())
         logger.info("Found {} tests".format(len(result)))
         logger.debug("tests:\n  " + "\n  ".join(t.test_dir for t in result))
         return result
 
-    def add_test(self, actions, parsed_test):
+    def add_test(self, actions: DAG, parsed_test: ParsedTest) -> bool:
         """Register a test to run.
 
-        :param e3.collection.dag.DAG actions: The dag of actions for the
-            testsuite.
-        :param e3.testsuite.testcase_finder.ParsedTest parsed_test: Test to
-            instantiate.
-
+        :param actions: The dag of actions for the testsuite.
+        :param parsed_test: Test to instantiate.
         :return: Whether the test was successfully registered.
-        :rtype: bool
         """
         test_name = parsed_test.test_name
 
@@ -467,6 +501,8 @@ class TestsuiteCore:
         test_env = dict(parsed_test.test_env)
         test_env["test_dir"] = parsed_test.test_dir
         test_env["test_name"] = test_name
+
+        assert isinstance(self.env.working_dir, str)
         test_env["working_dir"] = os.path.join(self.env.working_dir, test_name)
 
         # Fetch the test driver to use
@@ -494,7 +530,7 @@ class TestsuiteCore:
 
         return True
 
-    def dump_testsuite_result(self):
+    def dump_testsuite_result(self) -> None:
         """Log a summary of test results.
 
         Subclasses are free to override this to do whatever is suitable for
@@ -505,7 +541,7 @@ class TestsuiteCore:
         # Display test count for each status, but only for status that have
         # at least one test. Sort them by status value, to get consistent
         # order.
-        def sort_key(couple):
+        def sort_key(couple: Tuple[TestStatus, int]) -> Any:
             status, _ = couple
             return status.value
         stats = sorted(((status, count)
@@ -523,15 +559,21 @@ class TestsuiteCore:
         with open(os.path.join(self.output_dir, "comment"), "w") as f:
             self.write_comment_file(f)
 
-    def collect_result(self, job):
+    def collect_result(self, job: TestFragment) -> bool:
         """Run internal function.
 
-        :param job: a job that is finished
-        :type job: TestFragment
+        :param job: A job that is finished.
         """
+        assert self.main.args
+
         self.return_values[job.uid] = job.return_value
         while job.test_instance.result_queue:
             result, tb = job.test_instance.result_queue.pop()
+
+            # The test results that reach this point are special: there were
+            # serialized/deserialized through YAML, so the Log layer
+            # disappeared.
+            assert result.status is not None
 
             # Log the test result. If error output is requested and the test
             # failed unexpectedly, show the detailed logs.
@@ -551,7 +593,7 @@ class TestsuiteCore:
                 and result.status not in (TestStatus.PASS, TestStatus.XFAIL,
                                           TestStatus.XPASS, TestStatus.SKIP)
             ):
-                def format_log(log):
+                def format_log(log: Log) -> str:
                     return "\n" + str(log) + self.Style.RESET_ALL
 
                 if result.diff:
@@ -560,7 +602,7 @@ class TestsuiteCore:
                     log_line += format_log(result.log)
             logger.info(log_line)
 
-            def indented_tb(tb):
+            def indented_tb(tb: List[str]) -> str:
                 return "".join("  {}".format(line) for line in tb)
 
             assert result.test_name not in self.results, (
@@ -582,8 +624,10 @@ class TestsuiteCore:
             self.test_status_counters[result.status] += 1
         return False
 
-    def setup_result_dir(self):
+    def setup_result_dir(self) -> None:
         """Create the output directory in which the results are stored."""
+        assert self.main.args
+
         if os.path.isdir(self.old_output_dir):
             rm(self.old_output_dir, True)
         if os.path.isdir(self.output_dir):
@@ -596,6 +640,109 @@ class TestsuiteCore:
                     f.write("export {}={}\n".format(
                         var_name, quote_arg(os.environ[var_name])))
 
+    # Unlike the previous methods, the following ones are supposed to be
+    # overriden.
+
+    @property
+    def enable_cross_support(self) -> bool:
+        """
+        Return whether this testsuite has support for cross toolchains.
+
+        If cross support is enabled, the testsuite will have
+        --target/--build/--host command-line arguments.
+
+        :rtype: bool
+        """
+        raise NotImplementedError
+
+    @property
+    def tests_subdir(self) -> str:
+        """
+        Return the subdirectory in which tests are looked for.
+
+        The returned directory name is considered relative to the root
+        testsuite directory (self.root_dir).
+
+        :rtype: str
+        """
+        raise NotImplementedError
+
+    @property
+    def test_driver_map(self) -> Dict[str, Type[TestDriver]]:
+        """Return a map from test driver names to TestDriver subclasses.
+
+        Test finders will be able to use this map to fetch the test drivers
+        referenced in testcases.
+        """
+        raise NotImplementedError
+
+    @property
+    def default_driver(self) -> Optional[str]:
+        """Return the name of the default driver for testcases.
+
+        When tests do not query a specific driver, the one associated to this
+        name is used instead. If this property returns None, all tests are
+        required to query a driver.
+        """
+        raise NotImplementedError
+
+    def test_name(self, test_dir: str) -> str:
+        """Compute the test name given a testcase spec.
+
+        This function can be overridden. By default it uses the name of the
+        test directory. Note that the test name should be a valid filename (not
+        dir seprators, or special characters such as ``:``, ...).
+        """
+        raise NotImplementedError
+
+    @property
+    def test_finders(self) -> List[TestFinder]:
+        """Return test finders to probe tests directories."""
+        raise NotImplementedError
+
+    def add_options(self, parser: argparse.ArgumentParser) -> None:
+        """Add testsuite specific switches.
+
+        Subclasses can override this method to add their own testsuite
+        command-line options.
+
+        :param parser: Parser for command-line arguments. See
+            <https://docs.python.org/3/library/argparse.html> for usage.
+        """
+        raise NotImplementedError
+
+    def set_up(self) -> None:
+        """Execute operations before running the testsuite.
+
+        Before running this, command-line arguments were parsed. After this
+        returns, the testsuite will look for testcases.
+
+        By default, this does nothing. Overriding this method allows testsuites
+        to prepare the execution of the testsuite depending on their needs. For
+        instance:
+
+        * process testsuite-specific options;
+        * initialize environment variables;
+        * adjust self.env (object forwarded to test drivers).
+        """
+        raise NotImplementedError
+
+    def tear_down(self) -> None:
+        """Execute operation when finalizing the testsuite.
+
+        By default, this cleans the working (temporary) directory in which the
+        tests were run.
+        """
+        raise NotImplementedError
+
+    def write_comment_file(self, comment_file: IO[str]) -> None:
+        """Write the comment file's content.
+
+        :param comment_file: File descriptor for the comment file.  Overriding
+            methods should only call its "write" method (or print to it).
+        """
+        raise NotImplementedError
+
 
 class Testsuite(TestsuiteCore):
     """Testsuite class.
@@ -605,62 +752,22 @@ class Testsuite(TestsuiteCore):
     """
 
     @property
-    def enable_cross_support(self):
-        """
-        Return whether this testsuite has support for cross toolchains.
-
-        If cross support is enabled, the testsuite will have
-        --target/--build/--host command-line arguments.
-
-        :rtype: bool
-        """
+    def enable_cross_support(self) -> bool:
         return False
 
     @property
-    def tests_subdir(self):
-        """
-        Return the subdirectory in which tests are looked for.
-
-        The returned directory name is considered relative to the root
-        testsuite directory (self.root_dir).
-
-        :rtype: str
-        """
+    def tests_subdir(self) -> str:
         return "."
 
     @property
-    def test_driver_map(self):
-        """Return a map from test driver names to TestDriver subclasses.
-
-        Test finders will be able to use this map to fetch the test drivers
-        referenced in testcases.
-
-        :rtype: dict[str, e3.testsuite.driver.TestDriver]
-        """
+    def test_driver_map(self) -> Dict[str, Type[TestDriver]]:
         return {}
 
     @property
-    def default_driver(self):
-        """Return the name of the default driver for testcases.
-
-        When tests do not query a specific driver, the one associated to this
-        name is used instead. If this property returns None, all tests are
-        required to query a driver.
-
-        :rtype: str|None
-        """
+    def default_driver(self) -> Optional[str]:
         return None
 
-    def test_name(self, test_dir):
-        """Compute the test name given a testcase spec.
-
-        This function can be overridden. By default it uses the name of the
-        test directory. Note that the test name should be a valid filename (not
-        dir seprators, or special characters such as ``:``, ...).
-
-        :param str test_dir: Directory that contains the testcase.
-        :rtype: str
-        """
+    def test_name(self, test_dir: str) -> str:
         # Start with a relative directory name from the tests subdirectory
         result = os.path.relpath(test_dir, self.test_dir)
 
@@ -675,55 +782,20 @@ class Testsuite(TestsuiteCore):
         return result.replace("\\", "/").rstrip("/").replace("/", "__")
 
     @property
-    def test_finders(self):
-        """Return test finders to probe tests directories.
-
-        :rtype: list[e3.testsuite.testcase_finder.TestFinder]
-        """
+    def test_finders(self) -> List[TestFinder]:
         return [YAMLTestFinder()]
 
-    def add_options(self, parser):
-        """Add testsuite specific switches.
-
-        Subclasses can override this method to add their own testsuite
-        command-line options.
-
-        :param argparse.ArgumentParser parser: Parser for command-line
-            arguments. See <https://docs.python.org/3/library/argparse.html>
-            for usage.
-        """
+    def add_options(self, parser: argparse.ArgumentParser) -> None:
         pass
 
-    def set_up(self):
-        """Execute operations before running the testsuite.
-
-        Before running this, command-line arguments were parsed. After this
-        returns, the testsuite will look for testcases.
-
-        By default, this does nothing. Overriding this method allows testsuites
-        to prepare the execution of the testsuite depending on their needs. For
-        instance:
-
-        * process testsuite-specific options;
-        * initialize environment variables;
-        * adjust self.env (object forwarded to test drivers).
-        """
+    def set_up(self) -> None:
         pass
 
-    def tear_down(self):
-        """Execute operation when finalizing the testsuite.
+    def tear_down(self) -> None:
+        assert self.main.args
 
-        By default, this cleans the working (temporary) directory in which the
-        tests were run.
-        """
         if self.main.args.enable_cleanup:
             rm(self.working_dir, True)
 
-    def write_comment_file(self, comment_file):
-        """Write the comment file's content.
-
-        :param file comment_file: File descriptor for the comment file.
-            Overriding methods should only call its "write" method (or print to
-            it).
-        """
+    def write_comment_file(self, comment_file: IO[str]) -> None:
         pass

@@ -1,24 +1,41 @@
+from __future__ import annotations
+
 import collections.abc
 import os.path
 import re
+from typing import List, Optional, TYPE_CHECKING, Type
 
 from e3.env import Env
 import e3.yaml
+
+from e3.testsuite.driver import TestDriver
+
+if TYPE_CHECKING:
+    from e3.testsuite import TestsuiteCore
 
 
 class ParsedTest:
     """Basic information to instantiate a test driver."""
 
-    def __init__(self, test_name, driver_cls, test_env, test_dir):
+    test_name: str
+    driver_cls: Optional[Type[TestDriver]]
+    test_env: dict
+    test_dir: str
+
+    def __init__(self,
+                 test_name: str,
+                 driver_cls: Optional[Type[TestDriver]],
+                 test_env: dict,
+                 test_dir: str) -> None:
         """
         Initialize a ParsedTest instance.
 
-        :param str test_name: Name for this testcase.
-        :param None|TestDriver driver_cls: Test driver class to instantiate,
-            None to use the default one.
-        :param dict test_env: Base test environment. Driver instantiation will
+        :param test_name: Name for this testcase.
+        :param driver_cls: Test driver class to instantiate, None to use the
+            default one.
+        :param test_env: Base test environment. Driver instantiation will
             complete it with test directory, test name, etc.
-        :param str test_dir: Directory that contains the testcase.
+        :param test_dir: Directory that contains the testcase.
         """
         self.test_name = test_name
         self.driver_cls = driver_cls
@@ -35,18 +52,19 @@ class ProbingError(Exception):
 class TestFinder:
     """Interface for objects that find testcases in the tests subdirectory."""
 
-    def probe(self, testsuite, dirpath, dirnames, filenames):
+    def probe(self,
+              testsuite: TestsuiteCore,
+              dirpath: str,
+              dirnames: List[str],
+              filenames: List[str]) -> Optional[ParsedTest]:
         """Return a test if the "dirpath" directory contains a testcase.
 
         Raise a ProbingError if anything is wrong.
 
-        :param e3.testsuite.Testsuite testsuite: Testsuite instance that is
-            looking for testcases.
-        :param str dirpath: Directory to probe for a testcase.
-        :param list[str] dirnames: List of directories that "dirpath" contains.
-        :param list[str] filenames: List of files that "dirpath" contains.
-
-        :rtype: None|ParsedTest
+        :param testsuite: Testsuite instance that is looking for testcases.
+        :param dirpath: Directory to probe for a testcase.
+        :param dirnames: List of directories that "dirpath" contains.
+        :param filenames: List of files that "dirpath" contains.
         """
         raise NotImplementedError
 
@@ -61,7 +79,11 @@ class YAMLTestFinder(TestFinder):
     driver whose name corresponds to the associated string value.
     """
 
-    def probe(self, testsuite, dirpath, dirnames, filenames):
+    def probe(self,
+              testsuite: TestsuiteCore,
+              dirpath: str,
+              dirnames: List[str],
+              filenames: List[str]) -> Optional[ParsedTest]:
         # There is a testcase iff there is a "test.yaml" file
         if "test.yaml" not in filenames:
             return None
@@ -103,17 +125,22 @@ class AdaCoreLegacyTestFinder(TestFinder):
     """Look for testcases in directories whose name matches a Ticket Number."""
 
     TN_RE = re.compile("[0-9A-Z]{2}[0-9]{2}-[A-Z0-9]{3}")
+    driver_cls: Type[TestDriver]
 
-    def __init__(self, driver_cls):
+    def __init__(self, driver_cls: Type[TestDriver]) -> None:
         """
         Initialize an AdaCoreLegacyTestFinder instance.
 
-        :param e3.testsuite.driver.TestDriver driver_cls: TestDriver subclass
-            to use for all tests that are found.
+        :param driver_cls: TestDriver subclass to use for all tests that are
+            found.
         """
         self.driver_cls = driver_cls
 
-    def probe(self, testsuite, dirpath, dirnames, filenames):
+    def probe(self,
+              testsuite: TestsuiteCore,
+              dirpath: str,
+              dirnames: List[str],
+              filenames: List[str]) -> Optional[ParsedTest]:
         # There is a testcase iff the test directory name is a valid TN
         dirname = os.path.basename(dirpath)
         if not self.TN_RE.match(dirname):

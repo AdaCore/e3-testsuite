@@ -3,10 +3,18 @@
 GAIA is AdaCore's internal Web analyzer.
 """
 
+from __future__ import annotations
+
 import os.path
+from typing import AnyStr, TYPE_CHECKING
+
 import yaml
 
-from e3.testsuite.result import FailureReason, TestStatus
+from e3.testsuite.result import FailureReason, TestResult, TestStatus
+
+# Import TestsuiteCore only for typing, as this creates a circular import
+if TYPE_CHECKING:
+    from e3.testsuite import TestsuiteCore
 
 
 STATUS_MAP = {
@@ -38,12 +46,13 @@ Map FailureReason values to equivalent GAIA-compatible test statuses.
 """
 
 
-def gaia_status(result):
+def gaia_status(result: TestResult) -> str:
     """Return the GAIA-compatible status that describes this result the best.
 
-    :param TestResult result: Result to analyze.
-    :rtype: str
+    :param result: Result to analyze.
     """
+    assert result.status is not None
+
     # Translate test failure status to the GAIA status that is most appropriate
     # given the failure reasons.
     if result.status == TestStatus.FAIL and result.failure_reasons:
@@ -53,12 +62,12 @@ def gaia_status(result):
     return STATUS_MAP[result.status]
 
 
-def dump_gaia_report(testsuite, output_dir):
+def dump_gaia_report(testsuite: TestsuiteCore, output_dir: str) -> None:
     """Dump a GAIA-compatible testsuite report.
 
-    :param Testsuite testsuite: Testsuite instance, which have run its
-        testcases, for which to generate the report.
-    :param str output_dir: Directory in which to emit the report.
+    :param testsuite: Testsuite instance, which have run its testcases, for
+        which to generate the report.
+    :param output_dir: Directory in which to emit the report.
     """
     with open(os.path.join(output_dir, "results"), "w") as results_fd:
         for test_name in testsuite.results:
@@ -75,7 +84,7 @@ def dump_gaia_report(testsuite, output_dir):
             )
 
             # If there are logs, put them in dedicated files
-            def write_log(log, file_ext):
+            def write_log(log: AnyStr, file_ext: str) -> None:
                 filename = os.path.join(output_dir, test_name + file_ext)
                 mode = "wb" if isinstance(log, bytes) else "w"
 

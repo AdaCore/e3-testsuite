@@ -1,9 +1,15 @@
-import subprocess
+from __future__ import annotations
 
+import argparse
+import subprocess
+from typing import Any, Dict, List, Optional, Union
+
+import e3.collection.dag
 from e3.fs import sync_tree
 from e3.os.process import get_rlimit, quote_arg
 from e3.testsuite import DummyColors
-from e3.testsuite.control import YAMLTestControlCreator
+from e3.testsuite.control import (TestControl, TestControlCreator,
+                                  YAMLTestControlCreator)
 from e3.testsuite.driver import TestDriver
 from e3.testsuite.result import Log, TestStatus, truncated
 
@@ -46,7 +52,10 @@ class TestAbortWithFailure(Exception):
 class ProcessResult:
     """Record results from a subprocess."""
 
-    def __init__(self, status, out):
+    status: int
+    out: Union[str, bytes]
+
+    def __init__(self, status: int, out: Union[str, bytes]):
         """ProcessResult constructor.
 
         :param int status: Process exit code.
@@ -69,19 +78,28 @@ class ClassicTestDriver(TestDriver):
     * have support for automatic XFAIL/SKIP test results.
     """
 
+    # These can also be colorama.Style and colorama.Fore, but we don't have
+    # type hints for them.
+    Style: DummyColors
+    Fore: DummyColors
+
+    # Depending on the default encoding, this can be either a log of strings or
+    # a log of bytes.
+    output: Log
+
+    test_control: TestControl
+
     @property
-    def copy_test_directory(self):
+    def copy_test_directory(self) -> bool:
         """
         Return whether to automatically copy test directory to working dir.
 
         If this returns True, the working directory is automatically
         synchronized to the test directory before running the testcase:
-
-        :rtype: bool
         """
         return True
 
-    def run(self):
+    def run(self) -> None:
         """Run the testcase.
 
         Subclasses must override this.
@@ -89,20 +107,18 @@ class ClassicTestDriver(TestDriver):
         raise NotImplementedError
 
     @property
-    def default_process_timeout(self):
+    def default_process_timeout(self) -> int:
         """
         Return the default timeout for processes spawn in the ``shell`` method.
 
         The result is a number of seconds.
-
-        :rtype: int
         """
         # Return the timeout defined in test.yaml, if present, otherwise return
         # our true default: 5 minutes.
         return self.test_env.get("timeout", 5 * 60)
 
     @property
-    def default_encoding(self):
+    def default_encoding(self) -> str:
         """Return the default encoding to decode process outputs.
 
         If "binary", consider that process outputs are binary, so do not try to
@@ -111,43 +127,46 @@ class ClassicTestDriver(TestDriver):
         return self.test_env.get("encoding", "utf-8")
 
     @property
-    def test_control_creator(self):
+    def test_control_creator(self) -> TestControlCreator:
         """Return a test control creator for this test.
 
         By default, this returns a YAMLTestControlCreator instance tied to this
         driver with an empty condition environment. Subclasses are free to
         override this to suit their needs: for instance returning a
         OptfileCreater to process "test.opt" files.
-
-        :rtype: e3.testsuite.control.TestControlCreator
         """
         return YAMLTestControlCreator({})
 
-    def shell(self, args, cwd=None, env=None, catch_error=True,
-              analyze_output=True, timeout=None, encoding=None,
-              truncate_logs_threshold=None):
+    def shell(self,
+              args: List[str],
+              cwd: Optional[str] = None,
+              env: Optional[Dict[str, str]] = None,
+              catch_error: bool = True,
+              analyze_output: bool = True,
+              timeout: Optional[int] = None,
+              encoding: Optional[str] = None,
+              truncate_logs_threshold: Optional[int] = None) -> ProcessResult:
         """Run a subprocess.
 
-        :param str args: Arguments for the subprocess to run.
-        :param None|str cwd: Current working directory for the subprocess. By
-            default (i.e. if None), use the test working directory.
-        :param None|dict[str, str] env: Environment to pass to the subprocess.
-        :param bool catch_error: If True, consider that an error status code
-            leads to a test failure. In that case, abort the testcase.
-        :param bool analyze_output: If True, add the subprocess output to the
+        :param args: Arguments for the subprocess to run.
+        :param cwd: Current working directory for the subprocess. By default
+            (i.e. if None), use the test working directory.
+        :param env: Environment to pass to the subprocess.
+        :param catch_error: If True, consider that an error status code leads
+            to a test failure. In that case, abort the testcase.
+        :param analyze_output: If True, add the subprocess output to the
             ``self.output`` log.
-        :param None|int timeout: Timeout (in seconds) for the subprocess. Use
+        :param timeout: Timeout (in seconds) for the subprocess. Use
             ``self.default_timeout`` if left to None.
-        :param str|None encoding: Encoding to use when decoding the subprocess'
-            output stream. If None, use the default enocding for this test
+        :param encoding: Encoding to use when decoding the subprocess' output
+            stream. If None, use the default enocding for this test
             (``self.default_encoding``, from the ``encoding`` entry in
-            test.yaml). If "binary", leave the output undecoded as a bytes
+            test.yaml).  If "binary", leave the output undecoded as a bytes
             string.
-        :param int|None truncate_logs_threshold: Threshold to truncate the
-            subprocess output in ``self.result.log``. See
+        :param truncate_logs_threshold: Threshold to truncate the subprocess
+            output in ``self.result.log``. See
             ``e3.testsuite.result.truncated``'s ``line_count`` argument. If
             left to None, use the testsuite's ``--truncate-logs`` option.
-        :rtype: ProcessResult
         """
         # By default, run the subprocess in the test working directory
         if cwd is None:
@@ -157,10 +176,11 @@ class ClassicTestDriver(TestDriver):
             timeout = self.default_process_timeout
 
         if truncate_logs_threshold is None:
+            assert isinstance(self.env.options, argparse.Namespace)
             truncate_logs_threshold = self.env.options.truncate_logs
 
         # Run the subprocess and log it
-        def format_header(label, value):
+        def format_header(label: str, value: Any) -> str:
             return "{}{}{}: {}{}\n".format(
                 self.Style.RESET_ALL + self.Style.BRIGHT,
                 label,
@@ -194,7 +214,9 @@ class ClassicTestDriver(TestDriver):
             args, cwd=cwd, env=env, stdin=subprocess.DEVNULL,
             stdout=subprocess.PIPE, stderr=subprocess.STDOUT
         )
+        stdout: Union[str, bytes]
         stdout, _ = subp.communicate()
+        assert isinstance(stdout, bytes)
         encoding = encoding or self.default_encoding
         if encoding != "binary":
             try:
@@ -226,10 +248,10 @@ class ClassicTestDriver(TestDriver):
 
         return p
 
-    def add_test(self, dag):
+    def add_test(self, dag: e3.collection.dag.DAG) -> None:
         self.add_fragment(dag, "run_wrapper")
 
-    def push_success(self):
+    def push_success(self) -> None:
         """Set status to consider that the test passed."""
         # Given that we skip execution right after the test control evaluation,
         # there should be no way to call push_success in this case.
@@ -241,16 +263,16 @@ class ClassicTestDriver(TestDriver):
             self.result.set_status(TestStatus.PASS)
         self.push_result()
 
-    def push_skip(self, message):
+    def push_skip(self, message: Optional[str]) -> None:
         """
         Consider that we skipped the test, set status accordingly.
 
-        :param str message: Label to explain the skipping.
+        :param message: Label to explain the skipping.
         """
         self.result.set_status(TestStatus.SKIP, message)
         self.push_result()
 
-    def push_error(self, message):
+    def push_error(self, message: Optional[str]) -> None:
         """
         Set status to consider that something went wrong during test execution.
 
@@ -259,7 +281,7 @@ class ClassicTestDriver(TestDriver):
         self.result.set_status(TestStatus.ERROR, message)
         self.push_result()
 
-    def push_failure(self, message):
+    def push_failure(self, message: Optional[str]) -> None:
         """
         Consider that the test failed and set status according to test control.
 
@@ -274,7 +296,7 @@ class ClassicTestDriver(TestDriver):
         self.result.set_status(status, message)
         self.push_result()
 
-    def set_up(self):
+    def set_up(self) -> None:
         """Run initialization operations before a test runs.
 
         Subclasses can override this to prepare testcase execution.
@@ -290,7 +312,7 @@ class ClassicTestDriver(TestDriver):
         """
         pass
 
-    def tear_down(self):
+    def tear_down(self) -> None:
         """Run finalization operations after a test has run.
 
         Subclasses can override this to run clean-ups after testcase execution.
@@ -299,7 +321,7 @@ class ClassicTestDriver(TestDriver):
         """
         pass
 
-    def run_wrapper(self, prev, slot):
+    def run_wrapper(self, prev: Dict[str, Any], slot: int) -> None:
         # Make the slot (unique identifier for active jobs at a specific time)
         # available to the overridable methods.
         self.slot = slot
@@ -357,7 +379,7 @@ class ClassicTestDriver(TestDriver):
         finally:
             self.tear_down()
 
-    def compute_failures(self):
+    def compute_failures(self) -> List[str]:
         """
         Analyze the testcase result and return the list of reasons for failure.
 
@@ -374,7 +396,7 @@ class ClassicTestDriver(TestDriver):
         """
         return []
 
-    def analyze(self):
+    def analyze(self) -> None:
         """Analyze the testcase result, adjust status accordingly."""
         failures = self.compute_failures()
         if failures:

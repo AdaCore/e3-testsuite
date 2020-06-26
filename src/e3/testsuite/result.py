@@ -1,10 +1,19 @@
 """Data structures for testcase execution results."""
 
+from __future__ import annotations
+
 import binascii
 from enum import Enum, auto
 import logging
+from typing import (Any, AnyStr, Dict, Iterator, Generic, Optional, Set,
+                    TYPE_CHECKING, cast)
 
 import yaml
+
+
+# Import TestsuiteCore only for typing, as this creates a circular import
+if TYPE_CHECKING:
+    from e3.testsuite import TestsuiteCore
 
 
 class TestStatus(Enum):
@@ -54,13 +63,10 @@ class TestStatus(Enum):
     # This is equivalent to DejaGnu's UNRESOLVED test output.
     ERROR = auto()
 
-    def color(self, testsuite):
+    def color(self, testsuite: TestsuiteCore) -> str:
         """Return the ANSI color code for this test status.
 
         This returns an empty string if colors are disabled.
-
-        :param testsuite: TestsuiteCore instance.
-        :rtype: str
         """
         Fore = testsuite.Fore
         Style = testsuite.Style
@@ -96,7 +102,7 @@ class FailureReason(Enum):
     DIFF = auto()
 
 
-class Log(yaml.YAMLObject):
+class Log(yaml.YAMLObject, Generic[AnyStr]):
     """Object to hold long text or binary logs.
 
     We ensure that when dump to yaml the result will be human readable.
@@ -105,7 +111,9 @@ class Log(yaml.YAMLObject):
     yaml_loader = yaml.SafeLoader
     yaml_tag = '!e3.testsuite.result.Log'
 
-    def __init__(self, content):
+    log: AnyStr
+
+    def __init__(self, content: AnyStr) -> None:
         """Initialize log instance.
 
         :param str|bytes content: Initial message to log.
@@ -114,7 +122,7 @@ class Log(yaml.YAMLObject):
         self.log = content
 
     @property
-    def is_binary(self):
+    def is_binary(self) -> bool:
         """Return whether this log contains binary data.
 
         :rtype: bool
@@ -122,14 +130,14 @@ class Log(yaml.YAMLObject):
         return isinstance(self.log, bytes)
 
     @property
-    def is_text(self):
+    def is_text(self) -> bool:
         """Return whether this log contains text data.
 
         :rtype: bool
         """
         return not self.is_binary
 
-    def __iadd__(self, content):
+    def __iadd__(self, content: AnyStr) -> Log[AnyStr]:
         """Add additional content to the log.
 
         :param content: a message to log
@@ -138,21 +146,22 @@ class Log(yaml.YAMLObject):
         self.log += content
         return self
 
-    def __str__(self):
-        return self.log if self.is_text else binary_repr(self.log)
+    def __str__(self) -> str:
+        return (cast(str, self.log)
+                if self.is_text
+                else binary_repr(cast(bytes, self.log)))
 
 
-def binary_repr(binary):
+def binary_repr(binary: bytes) -> str:
     r"""Return a human readable representation for the given bytes string.
 
     This just decodes ASCII printable bytes and newlines to the corresponding
     strings and represents other bytes with the "\xXX" escapes.
 
-    :param bytes binary: Bytes string to represent.
-    :rtype: str
+    :param binary: Bytes string to represent.
     """
 
-    def escape(b):
+    def escape(b: int) -> str:
         if b == ord("\\"):
             return "\\\\"
         elif b == ord("\n") or (b >= ord(" ") and b <= ord("~")):
@@ -166,16 +175,15 @@ def binary_repr(binary):
     )
 
 
-def truncated(output, line_count):
+def truncated(output: str, line_count: int) -> str:
     """Truncate an output not to exceed twice the given number of lines.
 
     If ``output`` has more than ``2 * line_count`` lines, only keep the first
     ``N`` and last ``N`` lines of it. Return it unchanged otherwise, or if
     ``line_count`` is 0.
 
-    :param str output: Output to (maybe) truncate.
-    :param int line_count: Half the maximum number of lines to keep.
-    :rtype: str
+    :param output: Output to (maybe) truncate.
+    :param line_count: Half the maximum number of lines to keep.
     """
     # Given that we insert Unix-style line breaks here, make .splitlines()
     # strip line terminators. If ``output`` contains Windows-style ones, this
@@ -199,16 +207,32 @@ class TestResult(yaml.YAMLObject):
     yaml_loader = yaml.SafeLoader
     yaml_tag = '!e3.testsuite.result.TestResult'
 
-    def __init__(self, name, env=None, status=None, msg=""):
+    test_name: str
+    env: Optional[dict]
+    status: Optional[TestStatus]
+    msg: Optional[str]
+    log: Log[str]
+    processes: list
+    failure_reasons: Set[FailureReason]
+    expected: Optional[Log]
+    out: Optional[Log]
+    diff: Optional[Log]
+    time: Optional[float]
+    info: Dict[str, str]
+
+    def __init__(self,
+                 name: str,
+                 env: Optional[dict] = None,
+                 status: Optional[TestStatus] = None,
+                 msg: str = ""):
         """Initialize a test result.
 
-        :param str name: Name of the test that this result describes.
-        :param dict env: Test environment. Usually a dict that contains
-            relevant test information (output, ...). The object should be
-            serializable to YAML format.
-        :param TestStatus|None status: Test status. If None status is set to
-            ERROR.
-        :param str msg: Short message associated with the test result.
+        :param name: Name of the test that this result describes.
+        :param env: Test environment. Usually a dict that contains relevant
+            test information (output, ...). The object should be serializable
+            to YAML format.
+        :param status: Test status. If None status is set to ERROR.
+        :param msg: Short message associated with the test result.
         """
         self.test_name = name
         self.env = env
@@ -270,13 +294,13 @@ class TestResult(yaml.YAMLObject):
         # is that no string can contain a newline character.
         self.info = {}
 
-    def set_status(self, status, msg=""):
+    def set_status(self, status: TestStatus, msg: Optional[str] = "") -> None:
         """Update the test status.
 
-        :param TestStatus status: New status. Note that only test results with
-            status set to ERROR can be changed.
-        :param None|str msg: Optional short message to describe the result.
-            Note that multiline strings are turned into single-line strings.
+        :param status: New status. Note that only test results with status set
+            to ERROR can be changed.
+        :param msg: Optional short message to describe the result.  Note that
+            multiline strings are turned into single-line strings.
         """
         if self.status != TestStatus.ERROR:
             logging.error("cannot set test %s status twice", self.test_name)
@@ -289,12 +313,12 @@ class TestResult(yaml.YAMLObject):
             else None
         )
 
-    def __str__(self):
+    def __str__(self) -> str:
         return "%-24s %-12s %s" % (self.test_name, self.status, self.msg)
 
 
 # Enforce representation of Log objects when dumped to yaml
-def _log_representer(dumper, data):
+def _log_representer(dumper: Any, data: Log) -> Any:
     return (
         dumper.represent_scalar("tag:yaml.org,2002:str", data.log, style="|")
         if data.is_text else
@@ -314,7 +338,7 @@ _failure_reason_tag = "!e3.testsuite.result.FailureReason"
 # We cannot use yaml.YAMLObject metaclass magic for TestStatus as it derives
 # from Enum, which already has a metaclass. So use an alternative YAML API to
 # make it serializable. Likewise for FailureReason.
-def _test_status_constructor(self, node):
+def _test_status_constructor(self: Any, node: Any) -> Iterator[Any]:
     # Get the numeric value corresponding to the test status, then build a
     # TestStatus instance from it.
     num = int(node.value[0])
@@ -322,13 +346,13 @@ def _test_status_constructor(self, node):
     yield status
 
 
-def _test_status_representer(dumper, data):
+def _test_status_representer(dumper: Any, data: TestStatus) -> Any:
     return dumper.represent_scalar(
         _test_status_tag, str(data.value), style="|"
     )
 
 
-def _failure_reason_constructor(self, node):
+def _failure_reason_constructor(self: Any, node: Any) -> Iterator[Any]:
     # Get the numeric value corresponding to the test status, then build a
     # TestStatus instance from it.
     num = int(node.value[0])
@@ -336,7 +360,7 @@ def _failure_reason_constructor(self, node):
     yield status
 
 
-def _failure_reason_representer(dumper, data):
+def _failure_reason_representer(dumper: Any, data: FailureReason) -> Any:
     return dumper.represent_scalar(
         _failure_reason_tag, str(data.value), style="|"
     )
