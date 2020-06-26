@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import logging
 import os
 import sys
@@ -7,7 +9,7 @@ from e3.main import Main
 from e3.os.process import Run
 
 
-def main():
+def main() -> int:
     """Run e3-test script."""
     m = Main()
 
@@ -41,4 +43,5 @@ def main():
         output=None,
         cwd=root_dir,
     )
+    assert isinstance(p.status, int)
     return p.status

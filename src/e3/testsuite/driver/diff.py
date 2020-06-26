@@ -1,5 +1,7 @@
+import argparse
 import os
 import re
+from typing import AnyStr, Generic, List, Optional, Pattern, Tuple, Union
 
 from e3.diff import diff
 from e3.os.fs import unixpath
@@ -7,12 +9,11 @@ from e3.testsuite.result import FailureReason, Log, binary_repr, truncated
 from e3.testsuite.driver.classic import ClassicTestDriver, TestAbortWithError
 
 
-def indent(text, prefix="  "):
+def indent(text: str, prefix: str = "  ") -> str:
     """Prepend ``prefix`` to every line in ``text``.
 
-    :param str text: Text to transform.
-    :param str prefix: String to prepend.
-    :rtype: str
+    :param text: Text to transform.
+    :param prefix: String to prepend.
     """
     # Use .split() rather than .splitlines() because we need to preserve the
     # last line if is empty. "a\n".splitlines() returns ["a"], so we must avoid
@@ -20,7 +21,7 @@ def indent(text, prefix="  "):
     return "\n".join((prefix + line) for line in text.split("\n"))
 
 
-class OutputRefiner:
+class OutputRefiner(Generic[AnyStr]):
     """
     Interface to refine a test output before baseline and actual comparison.
 
@@ -33,7 +34,7 @@ class OutputRefiner:
     drivers operate in binary mode.
     """
 
-    def refine(self, output):
+    def refine(self, output: AnyStr) -> AnyStr:
         """
         Refine a test/baseline output.
 
@@ -43,10 +44,10 @@ class OutputRefiner:
         raise NotImplementedError
 
 
-class RefiningChain(OutputRefiner):
+class RefiningChain(OutputRefiner[AnyStr]):
     """Simple wrapper for a sequence of output refiners applied in chain."""
 
-    def __init__(self, refiners):
+    def __init__(self, refiners: List[OutputRefiner]):
         """
         Initialize a RefiningChain instance.
 
@@ -55,49 +56,56 @@ class RefiningChain(OutputRefiner):
         """
         self.refiners = refiners
 
-    def refine(self, output):
+    def refine(self, output: AnyStr) -> AnyStr:
         for r in self.refiners:
             output = r.refine(output)
         return output
 
 
-class Substitute(OutputRefiner):
+class Substitute(OutputRefiner[AnyStr]):
     """Replace substrings in outputs."""
 
-    def __init__(self, substring, replacement=""):
+    substring: AnyStr
+    replacement: AnyStr
+
+    def __init__(self,
+                 substring: AnyStr,
+                 replacement: Optional[AnyStr] = None) -> None:
         """
         Initialize a Substitute instance.
 
-        :param str substring: Substring to replace.
-        :param str replacement: Replacement to use for the substitution.
+        :param substring: Substring to replace.
+        :param replacement: Replacement to use for the substitution. If left to
+            None, just remove the substring (i.e. use an empty replacement
+            string).
         """
         self.substring = substring
-        self.replacement = replacement
+        self.replacement = replacement or type(substring)()
 
-    def refine(self, output):
+    def refine(self, output: AnyStr) -> AnyStr:
         return output.replace(self.substring, self.replacement)
 
 
-class CanonicalizeLineEndings(OutputRefiner):
+class CanonicalizeLineEndings(OutputRefiner[AnyStr]):
     r"""Replace \r\n with \n in outputs."""
 
-    def refine(self, output):
+    def refine(self, output: AnyStr) -> AnyStr:
         if isinstance(output, str):
             return output.replace('\r\n', '\n')
         else:
             return output.replace(b'\r\n', b'\n')
 
 
-class ReplacePath(RefiningChain):
+class ReplacePath(RefiningChain[str]):
     """Return an output refiner to replace the given path."""
 
-    def __init__(self, path, replacement=""):
+    def __init__(self, path: str, replacement: str = "") -> None:
         # TODO: the path processings below were mostly copied from gnatpython.
         # The exact intend behind them is unknown: we should investigate
         # removing them at some point, and if they are really needed, document
         # here why they are.
 
-        def escape(s):
+        def escape(s: str) -> str:
             return s.replace("\\", "\\\\")
 
         super().__init__([
@@ -108,20 +116,25 @@ class ReplacePath(RefiningChain):
         ])
 
 
-class PatternSubstitute(OutputRefiner):
+class PatternSubstitute(OutputRefiner, Generic[AnyStr]):
     """Replace patterns in outputs."""
 
-    def __init__(self, pattern, replacement=""):
+    regexp: Pattern[AnyStr]
+    replacement: AnyStr
+
+    def __init__(self, pattern: AnyStr, replacement: AnyStr = None) -> None:
         """
         Initialize a PatternSubstitute instance.
 
-        :param str pattern: Pattern (regular expression) to replace.
-        :param str replacement: Replacement to use for the substitution.
+        :param pattern: Pattern (regular expression) to replace.
+        :param replacement: Replacement to use for the substitution. If left to
+            None, just remove the substring (i.e. use an empty replacement
+            string).
         """
         self.regexp = re.compile(pattern)
-        self.replacement = replacement
+        self.replacement = replacement or type(pattern)()
 
-    def refine(self, output):
+    def refine(self, output: AnyStr) -> AnyStr:
         return self.regexp.sub(self.replacement, output)
 
 
@@ -129,20 +142,19 @@ class DiffTestDriver(ClassicTestDriver):
     """Test driver to compute test output against a baseline."""
 
     @property
-    def baseline_file(self):
+    def baseline_file(self) -> Tuple[str, bool]:
         """Return the test output baseline file.
 
         :return: The name of the text file (relative to test directories) that
             contains the expected test output and whether the baseline is a
             regexp.
-        :rtype: (str, bool)
         """
         filename = self.test_env.get("baseline_file", "test.out")
         is_regexp = self.test_env.get("baseline_regexp", False)
         return (filename, is_regexp)
 
     @property
-    def baseline(self):
+    def baseline(self) -> Tuple[Optional[str], Union[str, bytes], bool]:
         """Return the test output baseline.
 
         Subclasses can override this method if they want to provide a baseline
@@ -154,7 +166,6 @@ class DiffTestDriver(ClassicTestDriver):
             encoding), and whether the baseline is a regexp. The baseline
             filename is used to rewrite test output: leave it to None if
             rewriting does not make sense.
-        :rtype: (str|None, str|bytes, bool)
         """
         filename, is_regexp = self.baseline_file
         filename = self.test_dir(filename)
@@ -173,15 +184,13 @@ class DiffTestDriver(ClassicTestDriver):
         return (filename, baseline, is_regexp)
 
     @property
-    def output_refiners(self):
+    def output_refiners(self) -> List[OutputRefiner]:
         """
         List of refiners for test baselines/outputs.
 
         This just returns a refiner to canonicalize line endings unless the
         test environment contains a "strict_line_endings" key associated to
         true.
-
-        :rtype: list[OutputRefiner]
         """
         return (
             []
@@ -190,7 +199,7 @@ class DiffTestDriver(ClassicTestDriver):
         )
 
     @property
-    def diff_ignore_white_chars(self):
+    def diff_ignore_white_chars(self) -> bool:
         """
         Whether to ignore white characters in diff computations.
 
@@ -203,62 +212,72 @@ class DiffTestDriver(ClassicTestDriver):
         Note that at some point, this mechanism should be unified with the
         ``output_refiners`` machinery. However, this relies on e3.diff's
         ignore_white_chars feature, which is not trivial to reimplement.
-
-        :rtype: bool
         """
         return False
 
-    def set_up(self):
+    def set_up(self) -> None:
         super().set_up()
 
         # Keep track of the number of non-clean diffs
         self.failing_diff_count = 0
 
-    def compute_diff(self, baseline_file, baseline, actual,
-                     failure_message="unexpected output",
-                     ignore_white_chars=None,
-                     truncate_logs_threshold=None):
+    def compute_diff(
+        self,
+        baseline_file: Optional[str],
+        baseline: AnyStr,
+        actual: AnyStr,
+        failure_message: str = "unexpected output",
+        ignore_white_chars: Optional[bool] = None,
+        truncate_logs_threshold: Optional[int] = None
+    ) -> List[str]:
         """Compute the diff between expected and actual outputs.
 
         Return an empty list if there is no diff, and return a list that
         contains an error message based on ``failure_message`` otherwise.
 
-        :param str|None baseline_file: Absolute filename for the text file that
-            contains the expected content (for baseline rewriting, if enabled),
-            or None.
-        :param str|bytes actual: Actual content to compare.
-        :param str failure_message: Failure message to return if there is a
+        :param baseline_file: Absolute filename for the text file that contains
+            the expected content (for baseline rewriting, if enabled), or None.
+        :param actual: Actual content to compare.
+        :param failure_message: Failure message to return if there is a
             difference.
-        :param None|bool ignore_white_chars: Whether to ignore whitespaces
-            during the diff computation. If left to None, use
+        :param ignore_white_chars: Whether to ignore whitespaces during the
+            diff computation. If left to None, use
             ``self.diff_ignore_white_chars``.
-        :param int|None truncate_logs_threshold: Threshold to truncate the diff
-            message in ``self.result.log``. See
-            ``e3.testsuite.result.truncated``'s ``line_count`` argument. If
-            left to None, use the testsuite's ``--truncate-logs`` option.
-
-        :rtype: list[str]
+        :param truncate_logs_threshold: Threshold to truncate the diff message
+            in ``self.result.log``. See ``e3.testsuite.result.truncated``'s
+            ``line_count`` argument. If left to None, use the testsuite's
+            ``--truncate-logs`` option.
         """
         if ignore_white_chars is None:
             ignore_white_chars = self.diff_ignore_white_chars
 
         if truncate_logs_threshold is None:
+            assert isinstance(self.env.options, argparse.Namespace)
             truncate_logs_threshold = self.env.options.truncate_logs
 
         # Run output refiners
-        refiners = RefiningChain(self.output_refiners)
-        actual = refiners.refine(actual)
-        baseline = refiners.refine(baseline)
+        refiners = (RefiningChain[str](self.output_refiners)
+                    if isinstance(actual, str)
+                    else RefiningChain[bytes](self.output_refiners))
+        refined_actual = refiners.refine(actual)
+        refined_baseline = refiners.refine(baseline)
 
         # When running in binary mode, make sure the diff runs on text strings
         if self.default_encoding == "binary":
-            actual = binary_repr(actual)
-            baseline = binary_repr(baseline)
+            assert isinstance(refined_actual, bytes)
+            assert isinstance(refined_baseline, bytes)
+            decoded_actual = binary_repr(refined_actual)
+            decoded_baseline = binary_repr(refined_baseline)
+        else:
+            assert isinstance(refined_actual, str)
+            assert isinstance(refined_baseline, str)
+            decoded_actual = refined_actual
+            decoded_baseline = refined_baseline
 
         # Get the two texts to compare as list of lines, with trailing
         # characters preserved (splitlines(keepends=True)).
-        expected_lines = baseline.splitlines(True)
-        actual_lines = actual.splitlines(True)
+        expected_lines = decoded_baseline.splitlines(True)
+        actual_lines = decoded_actual.splitlines(True)
 
         # Compute the diff. If it is empty, return no failure. Otherwise,
         # include the diff in the test log and return the given failure
@@ -291,9 +310,13 @@ class DiffTestDriver(ClassicTestDriver):
             and not self.test_control.xfail
             and getattr(self.env, "rewrite_baselines", False)
         ):
-            with open(baseline_file, "w") as f:
-                for line in actual:
-                    f.write(line)
+            if isinstance(refined_actual, str):
+                with open(baseline_file, "w") as f:
+                    f.write(refined_actual)
+            else:
+                assert isinstance(refined_actual, bytes)
+                with open(baseline_file, "wb") as f:
+                    f.write(refined_actual)
             message = "{} (baseline updated)".format(message)
 
         # Send the appropriate logging. Make sure ".log" has all the
@@ -306,59 +329,73 @@ class DiffTestDriver(ClassicTestDriver):
         )
         self.result.log += "\n" + truncated(diff_log, truncate_logs_threshold)
         if self.failing_diff_count == 1:
-            self.result.expected = Log(baseline)
-            self.result.out = Log(actual)
+            self.result.expected = Log(decoded_baseline)
+            self.result.out = Log(decoded_actual)
             self.result.diff = Log(diff_log)
         else:
             self.result.expected = None
             self.result.out = None
+            assert (isinstance(self.result.diff, Log)
+                    and isinstance(self.result.diff.log, str))
             self.result.diff += "\n" + diff_log
 
         return [message]
 
     def compute_regexp_match(
-        self, regexp, actual,
-        failure_message="output does not match expected pattern",
-        truncate_logs_threshold=None
-    ):
+        self,
+        regexp: Union[Pattern[AnyStr], AnyStr],
+        actual: AnyStr,
+        failure_message: str = "output does not match expected pattern",
+        truncate_logs_threshold: Optional[int] = None
+    ) -> List[str]:
         """Compute whether the actual output matches a regexp.
 
         Return an empty list if the acutal content matches, and return a list
         that contains an error message based on ``failure_message`` otherwise.
 
-        :param str|bytes|regexp regexp: Regular expression to use.
-        :param str|bytes actual: Actual content to match.
-        :param str failure_message: Failure message to return if there is a
+        :param regexp: Regular expression to use.
+        :param actual: Actual content to match.
+        :param failure_message: Failure message to return if there is a
             difference.
-        :param int|None truncate_logs_threshold: Threshold to truncate the diff
-            message in ``self.result.log``. See
-            ``e3.testsuite.result.truncated``'s ``line_count`` argument. If
-            left to None, use the testsuite's ``--truncate-logs`` option.
-
-        :rtype: list[str]
+        :param truncate_logs_threshold: Threshold to truncate the diff message
+            in ``self.result.log``. See ``e3.testsuite.result.truncated``'s
+            ``line_count`` argument. If left to None, use the testsuite's
+            ``--truncate-logs`` option.
         """
         if isinstance(regexp, (str, bytes)):
             regexp = re.compile(regexp)
 
         if truncate_logs_threshold is None:
+            assert isinstance(self.env.options, argparse.Namespace)
             truncate_logs_threshold = self.env.options.truncate_logs
 
-        # Run output refiners
-        refiners = RefiningChain(self.output_refiners)
-        actual = refiners.refine(actual)
+        # Run output refiners. Code is more complex than it should be to
+        # satisfy Mypy's constraints.
+        refiners = (RefiningChain[str](self.output_refiners)
+                    if isinstance(actual, str)
+                    else RefiningChain[bytes](self.output_refiners))
+        refined_actual = refiners.refine(actual)
 
-        match = regexp.match(actual)
+        match = regexp.match(refined_actual)
         if match:
             return []
 
-        def quote(content):
+        def quote(content: AnyStr) -> str:
+            decoded_content: str
             if self.default_encoding == "binary":
-                content = binary_repr(content)
-            return indent(content)
+                assert isinstance(content, bytes)
+                decoded_content = binary_repr(content)
+            else:
+                assert isinstance(content, str)
+                decoded_content = content
+            return indent(decoded_content)
 
         # Send the appropriate logging
         self.result.log += failure_message + ":\n"
-        self.result.log += truncated(quote(actual), truncate_logs_threshold)
+        self.result.log += truncated(
+            quote(refined_actual),
+            truncate_logs_threshold
+        )
         self.result.log += "\nDoes not match the expected pattern:\n"
         self.result.log += truncated(
             quote(regexp.pattern),
@@ -367,7 +404,7 @@ class DiffTestDriver(ClassicTestDriver):
 
         return [failure_message]
 
-    def compute_failures(self):
+    def compute_failures(self) -> List[str]:
         """Return a failure if ``self.output.log`` does not match the baseline.
 
         This computes a diff with the content of the baseline file, unless
@@ -376,15 +413,24 @@ class DiffTestDriver(ClassicTestDriver):
 
         Subclasses can override this if they need more involved analysis:
         for instance computing multiple diffs.
-
-        :rtype: list[str]
         """
+        # Get the baseline, then check that the actual output matches
         filename, baseline, is_regexp = self.baseline
-        result = (
-            self.compute_regexp_match(baseline, self.output.log)
-            if is_regexp else
-            self.compute_diff(filename, baseline, self.output.log)
-        )
+        if is_regexp:
+            result = self.compute_regexp_match(baseline, self.output.log)
+        else:
+            # Run output refiners. Code is more complex than it should be to
+            # satisfy Mypy's constraints.
+            if isinstance(baseline, str):
+                assert isinstance(self.output.log, str)
+                result = self.compute_diff(filename, baseline, self.output.log)
+            else:
+                assert isinstance(baseline, bytes)
+                assert isinstance(self.output.log, bytes)
+                result = self.compute_diff(filename, baseline, self.output.log)
+
+        # Adjust the result if there is a mismatch
         if result:
             self.result.failure_reasons.add(FailureReason.DIFF)
+
         return result

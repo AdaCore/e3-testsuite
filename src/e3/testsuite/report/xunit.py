@@ -1,19 +1,26 @@
 """Helpers to generate testsuite reports using the XUnit XML format."""
 
+from __future__ import annotations
+
 import xml.etree.ElementTree as etree
+from typing import TYPE_CHECKING
 
 import yaml
 
 from e3.testsuite.result import TestStatus
 
+# Import TestsuiteCore only for typing, as this creates a circular import
+if TYPE_CHECKING:
+    from e3.testsuite import TestsuiteCore
 
-def dump_xunit_report(ts, filename):
+
+def dump_xunit_report(ts: TestsuiteCore, filename: str) -> None:
     """
     Dump a testsuite report to `filename` in the standard XUnit XML format.
 
-    :param TestsuiteCore ts: Testsuite instance, which have run its testcases,
-        for which to generate the report.
-    :param str filename: Name of the text file to write.
+    :param ts: Testsuite instance, which have run its testcases, for which to
+        generate the report.
+    :param filename: Name of the text file to write.
     """
     testsuites = etree.Element("testsuites", name=ts.testsuite_name)
     testsuite = etree.Element("testsuite", name=ts.testsuite_name)
@@ -65,7 +72,7 @@ def dump_xunit_report(ts, filename):
         # post-mortem debugging. They are included in a standalone
         # "system-out" element in case the test succeeded, or directly in
         # the status element if the test failed.
-        markup = counter_to_markup.get(counter_key, None)
+        markup = counter_key and counter_to_markup.get(counter_key, None)
         if markup:
             status_elt = etree.Element(markup)
             testcase.append(status_elt)

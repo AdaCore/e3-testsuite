@@ -5,9 +5,12 @@ test.opt files. These files are used mainly to tweak tests depending on the
 context.
 """
 
-import re
+from __future__ import annotations
+
 import logging
 import os.path
+import re
+from typing import Dict, List, Literal, Optional, Tuple, Union
 
 
 # Regexp that matches valid lines in test.opt files
@@ -20,9 +23,9 @@ class BadFormattingError(Exception):
     pass
 
 
-TAGS = 0
-ARG = 1
-OVERIDABLE = 2
+TAGS: Literal[0] = 0
+ARG: Literal[1] = 1
+OVERIDABLE: Literal[2] = 2
 
 logger = logging.getLogger("optfileparser")
 
@@ -35,16 +38,22 @@ class OptFileParse:
       is_dead: True if the test should be considered DEAD, False otherwise
     """
 
-    def __init__(self, system_tags, filename):
+    system_tags: List[str]
+    is_dead: bool
+    __note: Optional[Tuple[List[str], str, bool]]
+    __enable_note: bool
+    __matches: Dict[str, Tuple[List[str], str, bool]]
+
+    def __init__(self,
+                 system_tags: Union[str, List[str]],
+                 filename: Union[str, List[str]]) -> None:
         """Parse a test.opt file.
 
-        :param system_tags: either a list of tags or a string containing the
-            list of tags separated by commas
-        :type system_tags: str | list[str]
-        :param filename: the test.opt to be parsed. If this is a string then
+        :param system_tags: Either a list of tags or a string containing the
+            list of tags separated by commas.
+        :param filename: The test.opt to be parsed. If this is a string then
             the argument is a filename otherwise if this is a list we consider
-            it is the content of the .opt file
-        :type filename: str | list[str]
+            it is the content of the .opt file.
         """
         if isinstance(system_tags, str):
             self.system_tags = system_tags.lower().split(",")
@@ -62,16 +71,15 @@ class OptFileParse:
         self.__matches = {}
         self.__parse_file(filename)
 
-    def get_value(self, cmd, default_value=None):
+    def get_value(self,
+                  cmd: str,
+                  default_value: Optional[str] = None) -> Optional[str]:
         """Query on the parsing result.
 
-        :param cmd: the command on which we do the query ex: dead, cmd, out...
-        :type cmd: str
-        :param default_value: value returned by default
-        :type default_value: str | None
+        :param cmd: The command on which we do the query ex: dead, cmd, out...
+        :param default_value: Value returned by default.
 
-        :return: a string or default value (None by default)
-        :rtype: str | None
+        :return: A string or default value (None by default).
 
         by default the query will return ``default_value`` if there is no
         entry for the selected command.
@@ -89,15 +97,16 @@ class OptFileParse:
         else:
             return default_value
 
-    def get_values(self, default_values):
+    def get_values(
+        self,
+        default_values: Dict[str, Optional[str]]
+    ) -> Dict[str, Optional[str]]:
         """Query on the parsing result.
 
-        :param default_values: a dictionary for which keys are the commands on
+        :param default_values: A dictionary for which keys are the commands on
             which we do the query and the associated default values.
-        :type default_values: dict
 
-        :return: a dictionary containing the resulting value for each command
-        :rtype: dict
+        :return: A dictionary containing the resulting value for each command.
 
         Doing ``get_values({"CMD": "test.cmd", "OUT": "test.out"})`` is
         equivalent to do::
@@ -105,21 +114,19 @@ class OptFileParse:
             get_value("CMD", "test.cmd")
             get_value("OUT", "test.out")
         """
-        result = {}
+        result: Dict[str, Optional[str]] = {}
         for key in default_values:
             result[key] = self.get_value(key, default_values[key])
         return result
 
-    def get_note(self, sep=None):
+    def get_note(self, sep: Optional[str] = None) -> Union[str, List[str]]:
         """Get the note.
 
         :param sep: string used to join the activating tags. Default is ",".
             If "" is specified then a list is returned.
-        :type sep: str
 
         :return: a string (list of tags responsible for the activation of the
             test) is sep is not "" or a list.
-        :rtype: str | list[str]
 
         If there is no note then "" or [] is returned depending on the sep
         value
@@ -139,10 +146,8 @@ class OptFileParse:
                 return ""
 
     # INTERNAL FUNCTIONS
-    def __process_opt_line(self, line):
+    def __process_opt_line(self, line: str) -> None:
         """process one line of a test.opt type file.
-
-        :type line: string
 
         :raise BadFormattingError: in case the line cannot be parsed
 
@@ -203,20 +208,19 @@ class OptFileParse:
         elif cmd == "required" and not self.__match(tags):
             self.__matches["required"] = (tags, arg, False)
 
-    def __is_overidable(self, cmd):
-        return cmd not in self.__matches or \
-            self.__matches[cmd][OVERIDABLE]
+    def __is_overidable(self, cmd: str) -> bool:
+        return cmd not in self.__matches or self.__matches[cmd][OVERIDABLE]
 
     @classmethod
-    def __is_all(cls, tag_list):
+    def __is_all(cls, tag_list: List[str]) -> bool:
         return len(tag_list) == 1 and tag_list[0].lower() == "all"
 
-    def __is_dead_cmd(self, cmd):
+    def __is_dead_cmd(self, cmd: str) -> bool:
         return cmd == "dead" and \
             "dead" in self.__matches and \
             self.__matches["dead"][ARG] != "false"
 
-    def __match(self, tag_list):
+    def __match(self, tag_list: List[str]) -> bool:
         """Match tags against the system tags.
 
         True if all non-negated tags and none of the negated tags in the given
@@ -233,7 +237,7 @@ class OptFileParse:
                     return False
         return True
 
-    def __parse_file(self, filename):
+    def __parse_file(self, filename: Union[str, List[str]]) -> None:
         have_opt_data = False
         if isinstance(filename, list):
             for line in filename:
@@ -260,7 +264,7 @@ class OptFileParse:
                     or not self.__enable_note:
                 self.__note = None
 
-    def __str__(self):
+    def __str__(self) -> str:
         result = ""
 
         if self.is_dead:

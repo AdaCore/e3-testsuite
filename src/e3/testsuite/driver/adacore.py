@@ -1,11 +1,15 @@
+from __future__ import annotations
+
 import os.path
 import re
 import sys
 import time
+from typing import Dict, List, Pattern, Tuple
 
 from e3.fs import cp, sync_tree
 from e3.testsuite.driver.classic import TestAbortWithError
-from e3.testsuite.driver.diff import DiffTestDriver, PatternSubstitute
+from e3.testsuite.driver.diff import (DiffTestDriver, OutputRefiner,
+                                      PatternSubstitute)
 from e3.testsuite.control import AdaCoreLegacyTestControlCreator
 
 
@@ -36,18 +40,23 @@ class AdaCoreLegacyTestDriver(DiffTestDriver):
     # By default, ignore white characters in outputs
     diff_ignore_white_chars = True
 
+    argv: List[str]
+    test_environ: Dict[str, str]
+
     @property
-    def test_control_creator(self):
+    def test_control_creator(self) -> AdaCoreLegacyTestControlCreator:
+        assert isinstance(self.env.discs, list)
         return AdaCoreLegacyTestControlCreator(self.env.discs)
 
     @property
-    def baseline_file(self):
+    def baseline_file(self) -> Tuple[str, bool]:
         # the "_baseline_file" attribute is defined during the "set_up" stage,
         # and our baseline is never a regexp.
         return (self._baseline_file, False)
 
-    def set_up(self):
+    def set_up(self) -> None:
         super().set_up()
+        assert self.test_control.opt_results is not None
 
         # Make sure the test script is present
         script = self.test_control.opt_results["CMD"]
@@ -80,10 +89,11 @@ class AdaCoreLegacyTestDriver(DiffTestDriver):
 
         # Prepare the test script execution
         self.timeout = int(self.test_control.opt_results["RLIMIT"])
+        assert isinstance(self.env.test_environ, dict)
         self.test_environ = dict(self.env.test_environ)
         self.argv = self.get_script_command_line()
 
-    default_substitutions = [
+    default_substitutions: List[Tuple[Pattern[str], str]] = [
         # Remove ".exe" suffix for output files. This will for instance turn
         # "gcc -o main.exe main.adb" into "gcc -o main main.adb".
         (re.compile(r"-o(.*).exe"), r"-o \1"),
@@ -102,25 +112,22 @@ class AdaCoreLegacyTestDriver(DiffTestDriver):
     ]
 
     @property
-    def cmd_substitutions(self):
+    def cmd_substitutions(self) -> List[Tuple[Pattern[str], str]]:
         """
         List of substitutions to apply to scripts.
 
         This returns a list of patterns/replacements couples for substitutions
         to apply to scripts in order to convert them from "cmd" syntax to
         Bourne shell.
-
-        :rtype: list[(re.regexp, str)]
         """
         return list(self.default_substitutions)
 
-    def get_script_command_line(self):
-        """Return the command line to run the test script.
-
-        :rtype: list[str]
-        """
+    def get_script_command_line(self) -> List[str]:
+        """Return the command line to run the test script."""
         # Command line computation depends on the kind of script (Python or
         # shell).
+        assert isinstance(self.env.discs, list)
+
         _, ext = os.path.splitext(self.script_file)
         if ext == ".py":
             return [sys.executable, self.script_file]
@@ -176,7 +183,7 @@ class AdaCoreLegacyTestDriver(DiffTestDriver):
             return ["cmd.exe", "/q", "/c", script_file]
 
     @property
-    def output_refiners(self):
+    def output_refiners(self) -> List[OutputRefiner[bytes]]:
         return [
             # Remove platform specificities in relative filenames
             PatternSubstitute(rb"\\", rb"/"),
@@ -194,7 +201,7 @@ class AdaCoreLegacyTestDriver(DiffTestDriver):
             ),
         ]
 
-    def run(self):
+    def run(self) -> None:
         # Run the test script and record execution time. Note that the
         # status code is not significant (catch_error=False).
         start_time = time.time()
@@ -205,9 +212,9 @@ class AdaCoreLegacyTestDriver(DiffTestDriver):
             timeout=self.timeout,
             catch_error=False
         )
-        self.result.execution_time = time.time() - start_time
+        self.result.time = time.time() - start_time
 
-    def compute_failures(self):
+    def compute_failures(self) -> List[str]:
         # First, do compute the failures and let the baseline rewriting
         # machinery do its magic on the baseline it is given (i.e. the copy in
         # the working directory: see set_up).

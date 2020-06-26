@@ -1,7 +1,11 @@
+from __future__ import annotations
+
 from enum import Enum
 import os.path
+from typing import Any, Dict, List, NoReturn, Optional
 
 from e3.testsuite import logger
+from e3.testsuite.driver import TestDriver
 from e3.testsuite.optfileparser import OptFileParse
 
 
@@ -25,7 +29,17 @@ class TestControlKind(Enum):
 class TestControl:
     """Control the execution and analysis of a testcase."""
 
-    def __init__(self, message=None, skip=False, xfail=False):
+    skip: bool
+    xfail: bool
+    message: Optional[str]
+
+    # See AdaCoreLegacyTestControlCreator
+    opt_results: Optional[Dict[str, Any]]
+
+    def __init__(self,
+                 message: Optional[str] = None,
+                 skip: bool = False,
+                 xfail: bool = False) -> None:
         """Initialize a TestControl instance.
 
         :param None|str message: Optional message to convey with the test
@@ -38,12 +52,13 @@ class TestControl:
         self.skip = skip
         self.xfail = xfail
         self.message = message
+        self.opt_results = None
 
 
 class TestControlCreator:
     """Abstract class to create test controls."""
 
-    def create(self, driver):
+    def create(self, driver: TestDriver) -> TestControl:
         """Create a TestControl instance for the given test driver.
 
         Raise a ValueError exception if the configuration is invalid.
@@ -57,15 +72,18 @@ class TestControlCreator:
 class YAMLTestControlCreator(TestControlCreator):
     """Create test controls from "test.yaml"'s "control" entries."""
 
-    def __init__(self, condition_env=None):
+    condition_env: Dict[str, Any]
+
+    def __init__(self,
+                 condition_env: Optional[Dict[str, Any]] = None) -> None:
         """Initialize a YAMLTestControlCreator instance.
 
-        :param None|dict condition_env: Environment to pass to condition
-            evaluation in control entries. If None, use an empty dictionary.
+        :param condition_env: Environment to pass to condition evaluation in
+            control entries. If None, use an empty dictionary.
         """
         self.condition_env = {} if condition_env is None else condition_env
 
-    def create(self, driver):
+    def create(self, driver: TestDriver) -> TestControl:
         # If there is a "test.opt" file while the YAML "control" entry
         # mechanism is in use, it probably means someone mistakenly wrote a
         # test.opt file that will not be interpreted: be helpful and warn about
@@ -110,7 +128,7 @@ class YAMLTestControlCreator(TestControlCreator):
             raise ValueError("list expected at the top level")
 
         for i, entry in enumerate(control, 1):
-            def error(message):
+            def error(message: str) -> NoReturn:
                 raise ValueError("entry #{}: {}".format(i, message))
 
             if (
@@ -153,11 +171,14 @@ class YAMLTestControlCreator(TestControlCreator):
 class AdaCoreLegacyTestControlCreator(TestControlCreator):
     """Create test controls for "test.opt"-based legacy AdaCore testsuites."""
 
-    def default_script(self, driver):
+    opt_filename: str
+    system_tags: List[str]
+
+    def default_script(self, driver: TestDriver) -> str:
         """Return the default test script filename.
 
-        :param TestDriver driver: Test driver for which we must parse the
-            "control" configuration.
+        :param driver: Test driver for which we must parse the "control"
+            configuration.
         """
         # Use "test.cmd" by default. If it does not exist while there is a
         # "test.py" file, use that instead.
@@ -168,7 +189,8 @@ class AdaCoreLegacyTestControlCreator(TestControlCreator):
             return "test.py"
         return "test.cmd"
 
-    def default_opt_results(self, driver):
+    def default_opt_results(self,
+                            driver: TestDriver) -> Dict[str, Optional[str]]:
         """Return the default options. test.opt files can override these.
 
         By default, a test is not DEAD, SKIP, nor XFAIL. Its execution timeout
@@ -190,7 +212,9 @@ class AdaCoreLegacyTestControlCreator(TestControlCreator):
             "NOTE": None,
         }
 
-    def __init__(self, system_tags, opt_filename="test.opt"):
+    def __init__(self,
+                 system_tags: List[str],
+                 opt_filename: str = "test.opt") -> None:
         """Initialize a OptfileTestControlCreator instance.
 
         :param str|list[str] system_tags: Tags to forward to OptFileParse().
@@ -200,7 +224,7 @@ class AdaCoreLegacyTestControlCreator(TestControlCreator):
         self.opt_filename = opt_filename
         self.system_tags = system_tags
 
-    def create(self, driver):
+    def create(self, driver: TestDriver) -> TestControl:
         # If there is a "control" entry in the testcase's test.yaml file while
         # the optfile mechanism is in use, it probably means someone mistakenly
         # wrote a "control" entry that will not be interpreted: be helpful and

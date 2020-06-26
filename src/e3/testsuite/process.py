@@ -6,15 +6,23 @@ incomplete. For instance, it is not possible to disable relocated builds in
 future: use at your own risk.
 """
 
+from __future__ import annotations
+
 import os
+from typing import Any, List, Optional
 
 from e3.fs import mkdir
 from e3.os.process import Run
 from e3.testsuite import TestAbort
-from e3.testsuite.result import Log, TestStatus
+from e3.testsuite.driver import TestDriver
+from e3.testsuite.result import Log, TestResult, TestStatus
 
 
-def check_call(driver, cmd, test_name=None, result=None, **kwargs):
+def check_call(driver: TestDriver,
+               cmd: List[str],
+               test_name: Optional[str] = None,
+               result: Optional[TestResult] = None,
+               **kwargs: Any) -> Run:
     if "cwd" not in kwargs and "working_dir" in driver.test_env:
         kwargs["cwd"] = driver.test_env["working_dir"]
     if result is None:
@@ -44,7 +52,10 @@ def check_call(driver, cmd, test_name=None, result=None, **kwargs):
     return process
 
 
-def gprbuild(driver, project_file=None, cwd=None, gcov=False):
+def gprbuild(driver: TestDriver,
+             project_file: Optional[str] = None,
+             cwd: Optional[str] = None,
+             gcov: bool = False) -> bool:
     if project_file is None:
         project_file = os.path.join(driver.test_env["test_dir"], "test.gpr")
     if cwd is None:
