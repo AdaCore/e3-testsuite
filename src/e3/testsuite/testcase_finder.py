@@ -10,7 +10,7 @@ import e3.yaml
 
 from e3.testsuite.driver import TestDriver
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # no cover
     from e3.testsuite import TestsuiteCore
 
 

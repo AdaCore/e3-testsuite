@@ -10,7 +10,13 @@ from __future__ import annotations
 import logging
 import os.path
 import re
-from typing import Dict, List, Literal, Optional, Tuple, Union
+from typing import Dict, List, Optional, TYPE_CHECKING, Tuple, Union
+
+
+# Import Literal only if type checking, as Literal was introduced in Python
+# 3.8, and we need to support Python 3.7 at runtime.
+if TYPE_CHECKING:  # no cover
+    from typing import Literal
 
 
 # Regexp that matches valid lines in test.opt files
