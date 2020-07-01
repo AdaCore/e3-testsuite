@@ -100,19 +100,14 @@ class ReplacePath(RefiningChain[str]):
     """Return an output refiner to replace the given path."""
 
     def __init__(self, path: str, replacement: str = "") -> None:
-        # TODO: the path processings below were mostly copied from gnatpython.
-        # The exact intend behind them is unknown: we should investigate
-        # removing them at some point, and if they are really needed, document
-        # here why they are.
-
-        def escape(s: str) -> str:
-            return s.replace("\\", "\\\\")
-
+        # First replace the normalized path, then the Unix-style path (which
+        # some tool may output even on Windows) and finally the very path that
+        # was given.
         super().__init__([
             Substitute(substring, replacement)
-            for substring in [escape(os.path.realpath(path)),
-                              escape(unixpath(path)),
-                              escape(path)]
+            for substring in [os.path.realpath(path),
+                              unixpath(path),
+                              path]
         ])
 
 
