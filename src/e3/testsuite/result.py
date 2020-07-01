@@ -12,7 +12,7 @@ import yaml
 
 
 # Import TestsuiteCore only for typing, as this creates a circular import
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # no cover
     from e3.testsuite import TestsuiteCore
 
 

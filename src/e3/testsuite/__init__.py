@@ -31,7 +31,7 @@ from e3.testsuite.testcase_finder import (ParsedTest, ProbingError, TestFinder,
 from colorama import Fore, Style
 
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # no cover
     from e3.testsuite.driver import TestDriver
 
 
