@@ -1,6 +1,7 @@
 23.1 (Not released yet)
 =======================
 
+* Fix `ReplacePath` to work on Windows.
 * `AdaCoreLegacyTestDriver`: when rewriting empty baselines with
   default file (`test.out`), just remove the baseline file.
 * `driver.diff.PathSubstitute: use `realpath` rather than `abspath`.
