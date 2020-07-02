@@ -69,7 +69,9 @@ def dump_gaia_report(testsuite: TestsuiteCore, output_dir: str) -> None:
         which to generate the report.
     :param output_dir: Directory in which to emit the report.
     """
-    with open(os.path.join(output_dir, "results"), "w") as results_fd:
+    with open(
+        os.path.join(output_dir, "results"), "w", encoding="utf-8"
+    ) as results_fd:
         for test_name in testsuite.results:
             # Load the result for this testcase
             with open(testsuite.test_result_filename(test_name), "r") as f:
@@ -86,9 +88,11 @@ def dump_gaia_report(testsuite: TestsuiteCore, output_dir: str) -> None:
             # If there are logs, put them in dedicated files
             def write_log(log: AnyStr, file_ext: str) -> None:
                 filename = os.path.join(output_dir, test_name + file_ext)
-                mode = "wb" if isinstance(log, bytes) else "w"
-
-                with open(filename, mode) as f:
+                with (
+                    open(filename, "wb")
+                    if isinstance(log, bytes) else
+                    open(filename, "w", encoding="utf-8")
+                ) as f:
                     f.write(log)
 
             if result.log:
