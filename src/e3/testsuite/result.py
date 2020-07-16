@@ -111,15 +111,13 @@ class Log(yaml.YAMLObject, Generic[AnyStr]):
     yaml_loader = yaml.SafeLoader
     yaml_tag = '!e3.testsuite.result.Log'
 
-    log: AnyStr
-
     def __init__(self, content: AnyStr) -> None:
         """Initialize log instance.
 
         :param str|bytes content: Initial message to log.
         """
         assert isinstance(content, (str, bytes))
-        self.log = content
+        self.log: AnyStr = content
 
     @property
     def is_binary(self) -> bool:
@@ -207,19 +205,6 @@ class TestResult(yaml.YAMLObject):
     yaml_loader = yaml.SafeLoader
     yaml_tag = '!e3.testsuite.result.TestResult'
 
-    test_name: str
-    env: Optional[dict]
-    status: Optional[TestStatus]
-    msg: Optional[str]
-    log: Log[str]
-    processes: list
-    failure_reasons: Set[FailureReason]
-    expected: Optional[Log]
-    out: Optional[Log]
-    diff: Optional[Log]
-    time: Optional[float]
-    info: Dict[str, str]
-
     def __init__(self,
                  name: str,
                  env: Optional[dict] = None,
@@ -239,7 +224,7 @@ class TestResult(yaml.YAMLObject):
 
         # Use the set_status method to change these once initialization is done
         self.status = TestStatus.ERROR if status is None else status
-        self.msg = msg
+        self.msg: Optional[str] = msg
 
         # Free-form text, for debugging purposes. Test drivers are invited to
         # write content that will be useful if things go wrong during the test
@@ -254,14 +239,14 @@ class TestResult(yaml.YAMLObject):
         # Note that both e3.testsuite.process.check_call and
         # e3.testsuite.driver.classic.ClassicTestDriver.shell fill this
         # automatically with command-line arguments, exit code, etc.
-        self.processes = []
+        self.processes: list = []
 
         # When the test failed, optional set of reasons for the failure. This
         # information is used only in advanced viewers, which may highlight
         # specifically some failure reasons. For instance, highlight crashes,
         # that may be more important to investigate than mere unexpected
         # outputs.
-        self.failure_reasons = set()
+        self.failure_reasons: Set[FailureReason] = set()
 
         # Drivers that compare expected and actual output to validate a
         # testcase should initialize these with Log instances to hold the
@@ -280,19 +265,19 @@ class TestResult(yaml.YAMLObject):
         # If, for some reason, it is not possible to store expected and actual
         # outputs, self.diff can be assigned a Log instance holding the diff
         # itself. For instance, the output of the `diff -u` command.
-        self.expected = None
-        self.out = None
-        self.diff = None
+        self.expected: Optional[Log] = None
+        self.out: Optional[Log] = None
+        self.diff: Optional[Log] = None
 
         # Optional decimal number of seconds (float). Test drivers can use this
         # field to track performance, most likely the time it took to run the
         # test. Advanced results viewer can then plot the evolution of time
         # over software evolution.
-        self.time = None
+        self.time: Optional[float] = None
 
         # Key/value string mapping, for unspecified use. The only restriction
         # is that no string can contain a newline character.
-        self.info = {}
+        self.info: Dict[str, str] = {}
 
     def set_status(self, status: TestStatus, msg: Optional[str] = "") -> None:
         """Update the test status.

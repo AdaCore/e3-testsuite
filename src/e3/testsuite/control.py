@@ -29,13 +29,6 @@ class TestControlKind(Enum):
 class TestControl:
     """Control the execution and analysis of a testcase."""
 
-    skip: bool
-    xfail: bool
-    message: Optional[str]
-
-    # See AdaCoreLegacyTestControlCreator
-    opt_results: Optional[Dict[str, Any]]
-
     def __init__(self,
                  message: Optional[str] = None,
                  skip: bool = False,
@@ -52,7 +45,9 @@ class TestControl:
         self.skip = skip
         self.xfail = xfail
         self.message = message
-        self.opt_results = None
+
+        # Not none iff created by AdaCoreLegacyTestControlCreator
+        self.opt_results: Optional[Dict[str, Any]] = None
 
 
 class TestControlCreator:
@@ -71,8 +66,6 @@ class TestControlCreator:
 
 class YAMLTestControlCreator(TestControlCreator):
     """Create test controls from "test.yaml"'s "control" entries."""
-
-    condition_env: Dict[str, Any]
 
     def __init__(self,
                  condition_env: Optional[Dict[str, Any]] = None) -> None:
@@ -170,9 +163,6 @@ class YAMLTestControlCreator(TestControlCreator):
 
 class AdaCoreLegacyTestControlCreator(TestControlCreator):
     """Create test controls for "test.opt"-based legacy AdaCore testsuites."""
-
-    opt_filename: str
-    system_tags: List[str]
 
     def default_script(self, driver: TestDriver) -> str:
         """Return the default test script filename.

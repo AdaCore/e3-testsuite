@@ -65,9 +65,6 @@ class RefiningChain(OutputRefiner[AnyStr]):
 class Substitute(OutputRefiner[AnyStr]):
     """Replace substrings in outputs."""
 
-    substring: AnyStr
-    replacement: AnyStr
-
     def __init__(self,
                  substring: AnyStr,
                  replacement: Optional[AnyStr] = None) -> None:
@@ -79,8 +76,8 @@ class Substitute(OutputRefiner[AnyStr]):
             None, just remove the substring (i.e. use an empty replacement
             string).
         """
-        self.substring = substring
-        self.replacement = replacement or type(substring)()
+        self.substring: AnyStr = substring
+        self.replacement: AnyStr = replacement or type(substring)()
 
     def refine(self, output: AnyStr) -> AnyStr:
         return output.replace(self.substring, self.replacement)
@@ -114,9 +111,6 @@ class ReplacePath(RefiningChain[str]):
 class PatternSubstitute(OutputRefiner, Generic[AnyStr]):
     """Replace patterns in outputs."""
 
-    regexp: Pattern[AnyStr]
-    replacement: AnyStr
-
     def __init__(self, pattern: AnyStr, replacement: AnyStr = None) -> None:
         """
         Initialize a PatternSubstitute instance.
@@ -126,8 +120,8 @@ class PatternSubstitute(OutputRefiner, Generic[AnyStr]):
             None, just remove the substring (i.e. use an empty replacement
             string).
         """
-        self.regexp = re.compile(pattern)
-        self.replacement = replacement or type(pattern)()
+        self.regexp: Pattern[AnyStr] = re.compile(pattern)
+        self.replacement: AnyStr = replacement or type(pattern)()
 
     def refine(self, output: AnyStr) -> AnyStr:
         return self.regexp.sub(self.replacement, output)
