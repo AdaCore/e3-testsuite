@@ -33,13 +33,13 @@ jobs:
               uses: actions/checkout@v2
               with:
                 repository: AdaCore/e3-core
-                path: e3-core
+                path: src-e3-core
             - run: |
-                cp -r src/e3/testsuite e3-core/src/e3/testsuite
-                mypy --config-file=mypy.ini e3-core/src/e3/testsuite/
-                # Make sure we remove e3-core once done with typing so that
+                cp -r src/e3/testsuite src-e3-core/src/e3/testsuite
+                mypy --config-file=mypy.ini src-e3-core/src/e3/testsuite/
+                # Make sure we remove src-e3-core once done with typing so that
                 # testing does not pick it up.
-                rm -rf e3-core
+                rm -rf src-e3-core
 
             # Run the testsuite and style checks
             - run: tox -e py-ci-cov-codecov,checkstyle,security
