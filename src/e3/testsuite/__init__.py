@@ -68,9 +68,6 @@ class TestFragment(Job):
     :ivar data: a function to call with the following signature (,) -> None
     """
 
-    test_instance: TestDriver
-    previous_values: Dict[str, Any]
-
     def __init__(self,
                  uid: str,
                  test_instance: TestDriver,
@@ -121,17 +118,6 @@ class TestsuiteCore:
     variables.
     """
 
-    consecutive_failures: int
-    main: Main
-    result_tracebacks: dict
-    results: dict
-    return_values: dict
-    root_dir: str
-    test_counter: int
-    test_dir: str
-    test_status_counters: Dict[TestStatus, int]
-    testsuite_name: str
-
     def __init__(self,
                  root_dir: Optional[str] = None,
                  testsuite_name: str = "Untitled testsute") -> None:
@@ -149,9 +135,9 @@ class TestsuiteCore:
         self.test_dir = os.path.join(self.root_dir, self.tests_subdir)
         logger.debug("Test directory: %s", self.test_dir)
         self.consecutive_failures = 0
-        self.return_values = {}
-        self.results = {}
-        self.result_tracebacks = {}
+        self.return_values: Dict[str, Any] = {}
+        self.results: Dict[str, TestStatus] = {}
+        self.result_tracebacks: Dict[str, List[str]] = {}
         self.test_counter = 0
         self.test_status_counters = {s: 0 for s in TestStatus}
         self.testsuite_name = testsuite_name

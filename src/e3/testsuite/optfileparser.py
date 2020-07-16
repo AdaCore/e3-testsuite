@@ -44,12 +44,6 @@ class OptFileParse:
       is_dead: True if the test should be considered DEAD, False otherwise
     """
 
-    system_tags: List[str]
-    is_dead: bool
-    __note: Optional[Tuple[List[str], str, bool]]
-    __enable_note: bool
-    __matches: Dict[str, Tuple[List[str], str, bool]]
-
     def __init__(self,
                  system_tags: Union[str, List[str]],
                  filename: Union[str, List[str]]) -> None:
@@ -72,9 +66,9 @@ class OptFileParse:
             self.system_tags.append("all")
 
         self.is_dead = False
-        self.__note = None
+        self.__note: Optional[Tuple[List[str], str, bool]] = None
         self.__enable_note = False
-        self.__matches = {}
+        self.__matches: Dict[str, Tuple[List[str], str, bool]] = {}
         self.__parse_file(filename)
 
     def get_value(self,

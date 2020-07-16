@@ -17,11 +17,6 @@ if TYPE_CHECKING:  # no cover
 class ParsedTest:
     """Basic information to instantiate a test driver."""
 
-    test_name: str
-    driver_cls: Optional[Type[TestDriver]]
-    test_env: dict
-    test_dir: str
-
     def __init__(self,
                  test_name: str,
                  driver_cls: Optional[Type[TestDriver]],
@@ -125,7 +120,6 @@ class AdaCoreLegacyTestFinder(TestFinder):
     """Look for testcases in directories whose name matches a Ticket Number."""
 
     TN_RE = re.compile("[0-9A-Z]{2}[0-9]{2}-[A-Z0-9]{3}")
-    driver_cls: Type[TestDriver]
 
     def __init__(self, driver_cls: Type[TestDriver]) -> None:
         """

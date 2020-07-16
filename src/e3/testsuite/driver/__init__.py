@@ -17,12 +17,6 @@ class TestDriver(object, metaclass=abc.ABCMeta):
     All drivers declared in a testsuite should inherit from this class
     """
 
-    env: e3.env.BaseEnv
-    test_env: dict
-    test_name: str
-    result: TestResult
-    result_queue: List[Tuple[TestResult, List[str]]]
-
     def __init__(self, env: e3.env.BaseEnv, test_env: dict) -> None:
         """Initialize a TestDriver instance.
 
@@ -51,7 +45,7 @@ class TestDriver(object, metaclass=abc.ABCMeta):
         # couple that contains the TestResult instance and a string traceback
         # corresponding to the chain of call that pushed that result. This
         # traceback is useful to debug test drivers that push twice results.
-        self.result_queue = []
+        self.result_queue: List[Tuple[TestResult, List[str]]] = []
 
     def push_result(self, result: Optional[TestResult] = None) -> None:
         """Push a result to the testsuite.

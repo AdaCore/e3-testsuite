@@ -52,9 +52,6 @@ class TestAbortWithFailure(Exception):
 class ProcessResult:
     """Record results from a subprocess."""
 
-    status: int
-    out: Union[str, bytes]
-
     def __init__(self, status: int, out: Union[str, bytes]):
         """ProcessResult constructor.
 
