@@ -440,7 +440,9 @@ class TestsuiteCore:
 
             # For each directory in the requested subdir, ask our test finders
             # to probe for a testcase. Register matches.
-            for dirpath, dirnames, filenames in os.walk(root):
+            for dirpath, dirnames, filenames in os.walk(
+                root, followlinks=True
+            ):
                 # If the directory name does not match the given pattern, skip
                 # it.
                 if pattern is not None and not pattern.search(dirpath):
