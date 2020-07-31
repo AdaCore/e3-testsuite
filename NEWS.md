@@ -1,6 +1,7 @@
 23.1 (Not released yet)
 =======================
 
+* Follow symbolic links to find testcases.
 * Force the use of UTF-8 for GAIA reports.
 * Fix `ReplacePath` to work on Windows.
 * `AdaCoreLegacyTestDriver`: when rewriting empty baselines with
