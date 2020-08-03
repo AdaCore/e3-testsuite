@@ -638,8 +638,6 @@ class TestsuiteCore:
 
         If cross support is enabled, the testsuite will have
         --target/--build/--host command-line arguments.
-
-        :rtype: bool
         """
         raise NotImplementedError
 
@@ -650,8 +648,6 @@ class TestsuiteCore:
 
         The returned directory name is considered relative to the root
         testsuite directory (self.root_dir).
-
-        :rtype: str
         """
         raise NotImplementedError
 

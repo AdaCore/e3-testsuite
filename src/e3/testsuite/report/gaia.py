@@ -29,8 +29,6 @@ STATUS_MAP = {
 }
 """
 Map TestStatus values to GAIA-compatible test statuses.
-
-:type: dict[TestStatus, str]
 """
 
 FAILURE_REASON_MAP = {
@@ -41,8 +39,6 @@ FAILURE_REASON_MAP = {
 }
 """
 Map FailureReason values to equivalent GAIA-compatible test statuses.
-
-:type: dict[FailureReason, str]
 """
 
 

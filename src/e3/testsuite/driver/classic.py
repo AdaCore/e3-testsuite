@@ -55,8 +55,8 @@ class ProcessResult:
     def __init__(self, status: int, out: Union[str, bytes]):
         """ProcessResult constructor.
 
-        :param int status: Process exit code.
-        :param bytes|str out: Captured process output stream.
+        :param status: Process exit code.
+        :param out: Captured process output stream.
         """
         self.status = status
         self.out = out
@@ -273,7 +273,7 @@ class ClassicTestDriver(TestDriver):
         """
         Set status to consider that something went wrong during test execution.
 
-        :param str message: Message to explain what went wrong.
+        :param message: Message to explain what went wrong.
         """
         self.result.set_status(TestStatus.ERROR, message)
         self.push_result()
@@ -282,7 +282,7 @@ class ClassicTestDriver(TestDriver):
         """
         Consider that the test failed and set status according to test control.
 
-        :param str message: Test failure description.
+        :param message: Test failure description.
         """
         if self.test_control.xfail:
             status = TestStatus.XFAIL
@@ -388,8 +388,6 @@ class ClassicTestDriver(TestDriver):
 
         By default, consider that the testcase succeeded if we reach the
         analysis step. Subclasses may override this to actually perform checks.
-
-        :rtype: list[str]
         """
         return []
 
