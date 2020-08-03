@@ -114,32 +114,25 @@ class Log(yaml.YAMLObject, Generic[AnyStr]):
     def __init__(self, content: AnyStr) -> None:
         """Initialize log instance.
 
-        :param str|bytes content: Initial message to log.
+        :param content: Initial message to log.
         """
         assert isinstance(content, (str, bytes))
         self.log: AnyStr = content
 
     @property
     def is_binary(self) -> bool:
-        """Return whether this log contains binary data.
-
-        :rtype: bool
-        """
+        """Return whether this log contains binary data."""
         return isinstance(self.log, bytes)
 
     @property
     def is_text(self) -> bool:
-        """Return whether this log contains text data.
-
-        :rtype: bool
-        """
+        """Return whether this log contains text data."""
         return not self.is_binary
 
     def __iadd__(self, content: AnyStr) -> Log[AnyStr]:
         """Add additional content to the log.
 
         :param content: a message to log
-        :type content: str
         """
         self.log += content
         return self

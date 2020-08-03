@@ -38,8 +38,7 @@ class OutputRefiner(Generic[AnyStr]):
         """
         Refine a test/baseline output.
 
-        :param str output: Output to refine.
-        :rtype: str
+        :param output: Output to refine.
         """
         raise NotImplementedError
 
@@ -51,8 +50,7 @@ class RefiningChain(OutputRefiner[AnyStr]):
         """
         Initialize a RefiningChain instance.
 
-        :param list[OutputRefiner] refiners: List of refiners to execute in
-            sequence.
+        :param refiners: List of refiners to execute in sequence.
         """
         self.refiners = refiners
 

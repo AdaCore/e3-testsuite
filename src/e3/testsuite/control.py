@@ -35,12 +35,11 @@ class TestControl:
                  xfail: bool = False) -> None:
         """Initialize a TestControl instance.
 
-        :param None|str message: Optional message to convey with the test
-            status.
-        :param bool skip: Whether to skip the test execution.
-        :param bool xfail: Whether we expect the test to fail. If the test
-            should be skipped, and xfailed, we consider it failed even though
-            it did not run.
+        :param message: Optional message to convey with the test status.
+        :param skip: Whether to skip the test execution.
+        :param xfail: Whether we expect the test to fail. If the test should be
+            skipped, and xfailed, we consider it failed even though it did not
+            run.
         """
         self.skip = skip
         self.xfail = xfail
@@ -58,8 +57,8 @@ class TestControlCreator:
 
         Raise a ValueError exception if the configuration is invalid.
 
-        :param TestDriver driver: Test driver for which we must parse the
-            "control" configuration.
+        :param driver: Test driver for which we must parse the "control"
+            configuration.
         """
         raise NotImplementedError
 
@@ -187,8 +186,8 @@ class AdaCoreLegacyTestControlCreator(TestControlCreator):
         is 780 seconds. Test script is "test.cmd" and its output is compared
         against "test.out".
 
-        :param TestDriver driver: Test driver for which we must parse the
-            "control" configuration.
+        :param driver: Test driver for which we must parse the "control"
+            configuration.
         """
         return {
             "RLIMIT": "780",
@@ -207,9 +206,9 @@ class AdaCoreLegacyTestControlCreator(TestControlCreator):
                  opt_filename: str = "test.opt") -> None:
         """Initialize a OptfileTestControlCreator instance.
 
-        :param str|list[str] system_tags: Tags to forward to OptFileParse().
-        :param str opt_filename: Name of the file to parse, relative to the
-            test directory.
+        :param system_tags: Tags to forward to OptFileParse().
+        :param opt_filename: Name of the file to parse, relative to the test
+            directory.
         """
         self.opt_filename = opt_filename
         self.system_tags = system_tags
