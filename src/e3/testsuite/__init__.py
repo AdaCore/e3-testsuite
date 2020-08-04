@@ -142,6 +142,12 @@ class TestsuiteCore:
         self.test_status_counters = {s: 0 for s in TestStatus}
         self.testsuite_name = testsuite_name
 
+        self.aborted_too_many_failures = False
+        """
+        Whether the testsuite aborted because of too many consecutive test
+        failures (see the --max-consecutive-failures command-line option).
+        """
+
     def test_result_filename(self, test_name: str) -> str:
         """Return the name of the file in which the result are stored.
 
@@ -210,11 +216,14 @@ class TestsuiteCore:
                  " friendly. If no directory is provided, use the local"
                  " \"tmp\" directory")
         parser.add_argument(
-            "--max-consecutive-failures",
-            default=0,
-            help="If there are more than N consecutive failures, the testsuite"
-            " is aborted. If set to 0 (default) then the testsuite will never"
-            " be stopped",
+            "--max-consecutive-failures", "-M", metavar="N", type=int,
+            default=self.default_max_consecutive_failures,
+            help="Number of test failures (FAIL or ERROR) that trigger the"
+            " abortion of the testuite. If zero, this behavior is disabled. In"
+            " some cases, aborting the testsuite when there are just too many"
+            " failures saves time and costs: the software to test/environment"
+            " is too broken, there is no point to continue running the"
+            " testsuite."
         )
         parser.add_argument(
             "--keep-old-output-dir",
@@ -385,7 +394,18 @@ class TestsuiteCore:
 
         with open(os.path.join(self.output_dir, "tests.dot"), "w") as fd:
             fd.write(actions.as_dot())
-        self.scheduler.run(actions)
+
+        # Run the tests. Note that when the testsuite aborts because of too
+        # many consecutive test failures, we still want to produce a report and
+        # exit through regular ways, to catch KeyboardInterrupt exceptions,
+        # which e3's scheduler uses to abort the execution loop, but only in
+        # such cases. In other words, let the exception propagates if it's the
+        # user that interrupted the testsuite.
+        try:
+            self.scheduler.run(actions)
+        except KeyboardInterrupt:
+            if not self.aborted_too_many_failures:
+                raise
 
         self.dump_testsuite_result()
         if self.main.args.xunit_output:
@@ -554,7 +574,13 @@ class TestsuiteCore:
         """
         assert self.main.args
 
+        # Keep track of the number of consecutive failures seen so far if it
+        # reaches the maximum number allowed, we must abort the testsuite.
+        max_consecutive_failures = self.main.args.max_consecutive_failures
+        consecutive_failures = 0
+
         self.return_values[job.uid] = job.return_value
+
         while job.test_instance.result_queue:
             result, tb = job.test_instance.result_queue.pop()
 
@@ -610,6 +636,23 @@ class TestsuiteCore:
             self.result_tracebacks[result.test_name] = tb
             self.test_counter += 1
             self.test_status_counters[result.status] += 1
+
+            # Update the number of consecutive failures, aborting the testsuite
+            # if appropriate
+            if result.status in (TestStatus.ERROR, TestStatus.FAIL):
+                consecutive_failures += 1
+                if (
+                    max_consecutive_failures > 0
+                    and consecutive_failures >= max_consecutive_failures
+                ):
+                    self.aborted_too_many_failures = True
+                    logger.error(
+                        "Too many consecutive failures, aborting the testsuite"
+                    )
+                    raise KeyboardInterrupt
+            else:
+                consecutive_failures = 0
+
         return False
 
     def setup_result_dir(self) -> None:
@@ -727,6 +770,20 @@ class TestsuiteCore:
         """
         raise NotImplementedError
 
+    @property
+    def default_max_consecutive_failures(self) -> int:
+        """Return the default maximum number of consecutive failures.
+
+        In some cases, aborting the testsuite when there are just too many
+        failures saves time and costs: the software to test/environment is too
+        broken, there is no point to continue running the testsuite.
+
+        This property must return the number of test failures (FAIL or ERROR)
+        that trigger the abortion of the testuite. If zero, this behavior is
+        disabled.
+        """
+        raise NotImplementedError
+
 
 class Testsuite(TestsuiteCore):
     """Testsuite class.
@@ -783,3 +840,7 @@ class Testsuite(TestsuiteCore):
 
     def write_comment_file(self, comment_file: IO[str]) -> None:
         pass
+
+    @property
+    def default_max_consecutive_failures(self) -> int:
+        return 0

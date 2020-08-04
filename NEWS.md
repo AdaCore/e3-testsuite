@@ -1,6 +1,7 @@
 23.1 (Not released yet)
 =======================
 
+* Add support for the `--max-consecutive-failures` command-line option.
 * Follow symbolic links to find testcases.
 * Force the use of UTF-8 for GAIA reports.
 * Fix `ReplacePath` to work on Windows.

@@ -552,3 +552,27 @@ def test_failure_exit_code():
         Mysuite, args=["--failure-exit-code=1"], expect_failure=True
     )
     assert suite.results == {"test1": Status.PASS, "test2": Status.FAIL}
+
+
+def test_max_consecutive_failures(caplog):
+    """Check that --max-consecutive-failures works as expected."""
+
+    class MyDriver(BasicDriver):
+        def run(self, prev, slot):
+            pass
+
+        def analyze(self, prev, slot):
+            self.result.set_status(Status.FAIL)
+            self.push_result()
+
+    class Mysuite(Suite):
+        tests_subdir = "simple-tests"
+        test_driver_map = {"default": MyDriver}
+        default_driver = "default"
+
+    suite = run_testsuite(
+        Mysuite, args=["--max-consecutive-failures=1", "-j1"]
+    )
+    logs = {r.getMessage() for r in caplog.records}
+    assert len(suite.results) == 1
+    assert "Too many consecutive failures, aborting the testsuite" in logs
