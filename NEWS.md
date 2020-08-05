@@ -1,6 +1,7 @@
 23.1 (Not released yet)
 =======================
 
+* `DiffTestDriver`: do not run output refiners on baselines.
 * Add the `--show-time-info` command-line option.
 * Add support for the `--max-consecutive-failures` command-line option.
 * Follow symbolic links to find testcases.

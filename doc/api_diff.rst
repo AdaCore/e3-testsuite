@@ -182,8 +182,8 @@ Several very common subclasses are available in ``driver.diff``:
 
 Using output refiners from ``DiffTestDriver`` instances is very easy: just
 override the ``output_refiners`` property in subclasses to return a list of
-``OutputRefiner`` to apply on outputs (both actual outputs and baselines)
-before comparing them.
+``OutputRefiner`` to apply on actual outputs before comparing them with
+baselines.
 
 To complete the ``foo.py`` example above, thanks to the following overriding:
 
@@ -197,9 +197,6 @@ All refined outputs from ``foo.py`` would match the following baseline:
 .. code-block:: text
 
    <object object at [HEX-ADDR]>
-
-Note that output refining applies to baselines only when using the default
-output equality: regexp baselines are kept untransformed.
 
 
 .. _api_diff_alternative_baselines:

@@ -242,12 +242,12 @@ class DiffTestDriver(ClassicTestDriver):
             assert isinstance(self.env.options, argparse.Namespace)
             truncate_logs_threshold = self.env.options.truncate_logs
 
-        # Run output refiners
+        # Run output refiners on the actual output, not on the baseline
         refiners = (RefiningChain[str](self.output_refiners)
                     if isinstance(actual, str)
                     else RefiningChain[bytes](self.output_refiners))
         refined_actual = refiners.refine(actual)
-        refined_baseline = refiners.refine(baseline)
+        refined_baseline = baseline
 
         # When running in binary mode, make sure the diff runs on text strings
         if self.default_encoding == "binary":
