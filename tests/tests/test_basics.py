@@ -576,3 +576,27 @@ def test_max_consecutive_failures(caplog):
     logs = {r.getMessage() for r in caplog.records}
     assert len(suite.results) == 1
     assert "Too many consecutive failures, aborting the testsuite" in logs
+
+
+def test_show_time_info(caplog):
+    """Check that --show-time-info works as expected."""
+
+    class MyDriver(BasicDriver):
+        def run(self, prev, slot):
+            pass
+
+        def analyze(self, prev, slot):
+            self.result.time = 1.0
+            self.result.set_status(Status.PASS)
+            self.push_result()
+
+    class Mysuite(Suite):
+        tests_subdir = "simple-tests"
+        test_driver_map = {"default": MyDriver}
+        default_driver = "default"
+
+    suite = run_testsuite(Mysuite, args=["--show-time-info", "test1"])
+    logs = {r.getMessage() for r in caplog.records}
+    test_summaries = [line for line in logs if line.startswith("PASS")]
+    assert len(suite.results) == 1
+    assert test_summaries == ["PASS     00m01s test1"]
