@@ -257,6 +257,11 @@ class TestsuiteCore:
             " convenience for interactive use.",
         )
         parser.add_argument(
+            "--show-time-info",
+            action="store_true",
+            help="Display time information for test results, if available"
+        )
+        parser.add_argument(
             "--dump-environ",
             dest="dump_environ",
             action="store_true",
@@ -589,11 +594,22 @@ class TestsuiteCore:
             # disappeared.
             assert result.status is not None
 
+            if self.main.args.show_time_info and result.time is not None:
+                seconds = int(result.time)
+                time_info = '{:>02}m{:>02}s'.format(seconds // 60,
+                                                    seconds % 60)
+            else:
+                time_info = ''
+
             # Log the test result. If error output is requested and the test
             # failed unexpectedly, show the detailed logs.
-            log_line = '{}{: <12}{} {}{}{}'.format(
+            log_line = '{}{:<8}{} {}{:>6}{} {}{}{}'.format(
                 result.status.color(self),
                 result.status.name,
+                self.Style.RESET_ALL,
+
+                self.Style.DIM,
+                time_info,
                 self.Style.RESET_ALL,
 
                 self.Style.BRIGHT,
