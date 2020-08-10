@@ -6,9 +6,7 @@ GAIA is AdaCore's internal Web analyzer.
 from __future__ import annotations
 
 import os.path
-from typing import AnyStr, TYPE_CHECKING
-
-import yaml
+from typing import TYPE_CHECKING, Union
 
 from e3.testsuite.result import FailureReason, TestResult, TestStatus
 
@@ -68,10 +66,8 @@ def dump_gaia_report(testsuite: TestsuiteCore, output_dir: str) -> None:
     with open(
         os.path.join(output_dir, "results"), "w", encoding="utf-8"
     ) as results_fd:
-        for test_name in testsuite.results:
-            # Load the result for this testcase
-            with open(testsuite.test_result_filename(test_name), "r") as f:
-                result = yaml.safe_load(f)
+        for entry in testsuite.report_index.entries.values():
+            result = entry.load()
 
             # Add an entry for it in the "results" index file
             message = result.msg or ""
@@ -82,22 +78,28 @@ def dump_gaia_report(testsuite: TestsuiteCore, output_dir: str) -> None:
             )
 
             # If there are logs, put them in dedicated files
-            def write_log(log: AnyStr, file_ext: str) -> None:
-                filename = os.path.join(output_dir, test_name + file_ext)
-                with (
-                    open(filename, "wb")
-                    if isinstance(log, bytes) else
-                    open(filename, "w", encoding="utf-8")
-                ) as f:
-                    f.write(log)
+            def write_log(log: Union[str, bytes], file_ext: str) -> None:
+                filename = os.path.join(
+                    output_dir, result.test_name + file_ext
+                )
+                if isinstance(log, bytes):
+                    with open(filename, "wb") as bytes_f:
+                        bytes_f.write(log)
+                else:
+                    with open(filename, "w", encoding="utf-8") as str_f:
+                        str_f.write(log)
 
             if result.log:
+                assert isinstance(result.log, str)
                 write_log(result.log, ".log")
             if result.expected is not None:
+                assert isinstance(result.expected, (str, bytes))
                 write_log(result.expected, ".expected")
             if result.out is not None:
+                assert isinstance(result.out, (str, bytes))
                 write_log(result.out, ".out")
             if result.diff is not None:
+                assert isinstance(result.diff, (str, bytes))
                 write_log(result.diff, ".diff")
             if result.time is not None:
                 # Nanoseconds granularity (9 decimals for seconds) should be

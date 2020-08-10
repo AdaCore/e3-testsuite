@@ -10,7 +10,7 @@ import e3.testsuite.control as crtl
 import e3.testsuite.driver.classic as classic
 from e3.testsuite.result import TestStatus as Status
 
-from .test_basics import run_testsuite, testsuite_logs
+from .test_basics import extract_results, run_testsuite, testsuite_logs
 
 
 def test_control_interpret():
@@ -170,7 +170,7 @@ def test_classic(caplog):
     )
 
     suite = run_testsuite(Mysuite, args=["--truncate-logs=0", tests_subdir])
-    assert suite.results == {
+    assert extract_results(suite) == {
         "simple": Status.PASS,
         "catch-error-pass": Status.PASS,
         "catch-error-fail": Status.FAIL,
@@ -206,7 +206,7 @@ def test_long_logs(caplog):
     suite = run_testsuite(
         Mysuite, args=["--truncate-logs=3", "long-logs", "--gaia-output"]
     )
-    assert suite.results == {"long-logs": Status.FAIL}
+    assert extract_results(suite) == {"long-logs": Status.FAIL}
 
     with open(os.path.join("out", "new", "long-logs.log")) as f:
         content = f.read().splitlines()

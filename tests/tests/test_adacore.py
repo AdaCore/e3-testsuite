@@ -10,7 +10,7 @@ from e3.testsuite.driver.adacore import AdaCoreLegacyTestDriver as ACDriver
 import e3.testsuite.testcase_finder as testcase_finder
 from e3.testsuite.result import TestStatus as Status
 
-from .test_basics import run_testsuite, testsuite_logs
+from .test_basics import extract_results, run_testsuite, testsuite_logs
 
 
 def test_adacore():
@@ -27,7 +27,7 @@ def test_adacore():
         test_finders = [testcase_finder.AdaCoreLegacyTestFinder(ACDriver)]
 
     suite = run_testsuite(Mysuite1)
-    assert suite.results == {
+    assert extract_results(suite) == {
         # Regular test execution, exercize output refiners
         "T415-993": Status.PASS,
         # Missing non-default baseline
@@ -66,7 +66,7 @@ def test_adacore():
         test_finders = [testcase_finder.AdaCoreLegacyTestFinder(ACDriver)]
 
     suite = run_testsuite(Mysuite2, args=["-Ed/tmp/bar"])
-    assert suite.results == {"T415-999": Status.PASS}
+    assert extract_results(suite) == {"T415-999": Status.PASS}
 
 
 def test_optfile(caplog):
@@ -86,7 +86,7 @@ def test_optfile(caplog):
             self.env.test_environ = dict(os.environ)
 
     suite = run_testsuite(Mysuite)
-    assert suite.results == {
+    assert extract_results(suite) == {
         "just-cmd": Status.PASS,
         "just-py": Status.PASS,
         "both-cmd-py": Status.PASS,
@@ -151,7 +151,7 @@ def test_rewriting(caplog):
         check_baselines("xfail-diff", {"test.out": ["World"]})
 
         suite = run_testsuite(Mysuite, args=["-r"])
-        assert suite.results == {
+        assert extract_results(suite) == {
             "default-nodiff": Status.PASS,
             "default-diff": Status.FAIL,
             "default-empty": Status.FAIL,

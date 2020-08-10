@@ -8,13 +8,22 @@ classes.
 import glob
 import logging
 import os
+import warnings
 
 import yaml
 
 from e3.testsuite import TestAbort as E3TestAbort
 from e3.testsuite import Testsuite as Suite
 from e3.testsuite.driver import BasicTestDriver as BasicDriver
+from e3.testsuite.report.index import ReportIndex, ReportIndexEntry
 from e3.testsuite.result import TestResult as Result, TestStatus as Status
+
+
+def extract_results(testsuite):
+    """Extract synthetic test results from a testsuite run."""
+    return {
+        e.test_name: e.status for e in testsuite.report_index.entries.values()
+    }
 
 
 def run_testsuite(cls, args=[], expect_failure=False):
@@ -44,6 +53,8 @@ def check_results_dir(new={}, old={}):
     actual_data = {"new": {}, "old": {}}
 
     for filename in glob.glob(os.path.join("out", "*", "*.yaml")):
+        if os.path.basename(filename) == ReportIndex.INDEX_FILENAME:
+            continue
         with open(filename, "r") as f:
             result = yaml.safe_load(f)
         directory = os.path.basename(os.path.dirname(filename))
@@ -78,7 +89,7 @@ def test_basic():
 
     # Do a first testsuite run, checking the results
     suite = run_testsuite(Mysuite)
-    assert suite.results == {"test1": Status.PASS, "test2": Status.PASS}
+    assert extract_results(suite) == result1
     check_results_dir(new=result1)
 
     # Then do a second one. We expect the previous "new" directory to move to
@@ -114,7 +125,7 @@ def test_outer_testcase():
         os.path.abspath(os.path.dirname(__file__)), "simple-tests"
     )
     suite = run_testsuite(Mysuite, args=[outer_test_dir])
-    assert suite.results == {
+    assert extract_results(suite) == {
         "simple-tests__test1": Status.PASS,
         "simple-tests__test2": Status.PASS,
     }
@@ -184,7 +195,7 @@ def test_no_testcase(caplog):
 
     suite = run_testsuite(Mysuite)
     logs = testsuite_logs(caplog)
-    assert suite.results == {}
+    assert extract_results(suite) == {}
     assert any("<no test result>" in message for message in logs)
 
 
@@ -213,7 +224,10 @@ def test_abort():
             return "default"
 
     suite = run_testsuite(Mysuite)
-    assert suite.results == {"test1": Status.PASS, "test2": Status.PASS}
+    assert extract_results(suite) == {
+        "test1": Status.PASS,
+        "test2": Status.PASS,
+    }
 
 
 def test_exception_in_driver():
@@ -242,7 +256,7 @@ def test_exception_in_driver():
 
     suite = run_testsuite(Mysuite)
 
-    results = dict(suite.results)
+    results = extract_results(suite)
 
     # Expect PASS for both tests
     assert results.pop("test1") == Status.PASS
@@ -304,7 +318,10 @@ def test_dev_mode():
     suite = run_testsuite(Mysuite, ["--dev-temp=tmp"])
 
     # Check testsuite report
-    assert suite.results == {"test1": Status.PASS, "test2": Status.PASS}
+    assert extract_results(suite) == {
+        "test1": Status.PASS,
+        "test2": Status.PASS,
+    }
 
     # Check the presence and content of working directories
     for test in ["test1", "test2"]:
@@ -333,7 +350,7 @@ def test_invalid_yaml(caplog):
     # The testsuite is supposed to run to completion (valid tests have run),
     # but it ends with an error status code.
     suite = run_testsuite(Mysuite, expect_failure=True)
-    assert suite.results == {"valid": Status.PASS}
+    assert extract_results(suite) == {"valid": Status.PASS}
 
     logs = testsuite_logs(caplog)
     assert "invalid syntax for test.yaml in 'invalid_syntax'" in logs
@@ -358,7 +375,7 @@ def test_missing_driver(caplog):
 
     suite = run_testsuite(Mysuite, expect_failure=True)
     logs = testsuite_logs(caplog)
-    assert suite.results == {}
+    assert extract_results(suite) == {}
     assert "missing driver for test 'valid'" in logs
 
 
@@ -462,9 +479,10 @@ def test_comment_file():
         default_driver = "default"
 
         def write_comment_file(self, f):
+            counters = self.report_index.status_counters
             lines = sorted(
                 "{}:{}".format(status.name, counter)
-                for status, counter in self.test_status_counters.items()
+                for status, counter in counters.items()
                 if counter
             )
             f.write(" ".join(lines))
@@ -546,12 +564,18 @@ def test_failure_exit_code():
         default_driver = "default"
 
     suite = run_testsuite(Mysuite)
-    assert suite.results == {"test1": Status.PASS, "test2": Status.FAIL}
+    assert extract_results(suite) == {
+        "test1": Status.PASS,
+        "test2": Status.FAIL,
+    }
 
     suite = run_testsuite(
         Mysuite, args=["--failure-exit-code=1"], expect_failure=True
     )
-    assert suite.results == {"test1": Status.PASS, "test2": Status.FAIL}
+    assert extract_results(suite) == {
+        "test1": Status.PASS,
+        "test2": Status.FAIL,
+    }
 
 
 def test_max_consecutive_failures(caplog):
@@ -574,7 +598,7 @@ def test_max_consecutive_failures(caplog):
         Mysuite, args=["--max-consecutive-failures=1", "-j1"]
     )
     logs = {r.getMessage() for r in caplog.records}
-    assert len(suite.results) == 1
+    assert len(suite.report_index.entries) == 1
     assert "Too many consecutive failures, aborting the testsuite" in logs
 
 
@@ -598,5 +622,77 @@ def test_show_time_info(caplog):
     suite = run_testsuite(Mysuite, args=["--show-time-info", "test1"])
     logs = {r.getMessage() for r in caplog.records}
     test_summaries = [line for line in logs if line.startswith("PASS")]
-    assert len(suite.results) == 1
+    assert len(suite.report_index.entries) == 1
     assert test_summaries == ["PASS     00m01s test1"]
+
+
+def test_deprecated():
+    """Test deprecated methods."""
+
+    class MyDriver(BasicDriver):
+        def run(self, prev, slot):
+            pass
+
+        def analyze(self, prev, slot):
+            self.result.set_status(Status.PASS)
+            self.push_result()
+
+    class Mysuite(Suite):
+        tests_subdir = "simple-tests"
+        test_driver_map = {"default": MyDriver}
+
+        @property
+        def default_driver(self):
+            return "default"
+
+    def check_warning(warn_list):
+        assert len(warn_list) == 1
+        w = warn_list[0]
+        assert issubclass(w.category, DeprecationWarning)
+        assert "obsolete" in str(w.message)
+
+    suite = run_testsuite(Mysuite)
+
+    with warnings.catch_warnings(record=True) as w:
+        assert suite.test_counter == 2
+        check_warning(w)
+
+    with warnings.catch_warnings(record=True) as w:
+        expected = {s: 0 for s in Status}
+        expected[Status.PASS] = 2
+        assert suite.test_status_counters == expected
+        check_warning(w)
+
+    with warnings.catch_warnings(record=True) as w:
+        assert suite.results == {
+            "test1": Status.PASS,
+            "test2": Status.PASS,
+        }
+        check_warning(w)
+
+
+def test_read_report_index():
+    """Check that reading a report index works as expected."""
+
+    class MyDriver(BasicDriver):
+        def run(self, prev, slot):
+            pass
+
+        def analyze(self, prev, slot):
+            self.result.set_status(Status.PASS)
+            self.push_result()
+
+    class Mysuite(Suite):
+        tests_subdir = "simple-tests"
+        test_driver_map = {"default": MyDriver}
+
+        @property
+        def default_driver(self):
+            return "default"
+
+    run_testsuite(Mysuite)
+    index = ReportIndex.read(os.path.join("out", "new"))
+    assert index.entries == {
+        "test1": ReportIndexEntry(index, "test1", Status.PASS, None),
+        "test2": ReportIndexEntry(index, "test2", Status.PASS, None),
+    }

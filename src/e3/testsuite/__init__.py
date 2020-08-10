@@ -22,7 +22,9 @@ from e3.job import Job
 from e3.job.scheduler import Scheduler
 from e3.main import Main
 from e3.os.process import quote_arg
+from e3.testsuite._helpers import deprecated
 from e3.testsuite.report.gaia import dump_gaia_report
+from e3.testsuite.report.index import ReportIndex
 from e3.testsuite.report.xunit import dump_xunit_report
 from e3.testsuite.result import Log, TestResult, TestStatus
 from e3.testsuite.testcase_finder import (ParsedTest, ProbingError, TestFinder,
@@ -136,10 +138,7 @@ class TestsuiteCore:
         logger.debug("Test directory: %s", self.test_dir)
         self.consecutive_failures = 0
         self.return_values: Dict[str, Any] = {}
-        self.results: Dict[str, TestStatus] = {}
         self.result_tracebacks: Dict[str, List[str]] = {}
-        self.test_counter = 0
-        self.test_status_counters = {s: 0 for s in TestStatus}
         self.testsuite_name = testsuite_name
 
         self.aborted_too_many_failures = False
@@ -147,6 +146,47 @@ class TestsuiteCore:
         Whether the testsuite aborted because of too many consecutive test
         failures (see the --max-consecutive-failures command-line option).
         """
+
+    # Mypy does not support decorators on properties, so keep the actual
+    # implementations for deprecated properties in methods.
+
+    @deprecated(2)
+    def _test_counter(self) -> int:
+        return len(self.report_index.entries)
+
+    @deprecated(2)
+    def _test_status_counters(self) -> Dict[TestStatus, int]:
+        return self.report_index.status_counters
+
+    @deprecated(2)
+    def _results(self) -> Dict[str, TestStatus]:
+        return {
+            e.test_name: e.status for e in self.report_index.entries.values()
+        }
+
+    @property
+    def test_counter(self) -> int:
+        """Return the number of test results in the report.
+
+        Warning: this method is obsolete and will be removed in the future.
+        """
+        return self._test_counter()
+
+    @property
+    def test_status_counters(self) -> Dict[TestStatus, int]:
+        """Return test result counts per test status.
+
+        Warning: this method is obsolete and will be removed in the future.
+        """
+        return self._test_status_counters()
+
+    @property
+    def results(self) -> Dict[str, TestStatus]:
+        """Return a mapping from test names to results.
+
+        Warning: this method is obsolete and will be removed in the future.
+        """
+        return self._results()
 
     def test_result_filename(self, test_name: str) -> str:
         """Return the name of the file in which the result are stored.
@@ -362,8 +402,10 @@ class TestsuiteCore:
             self.working_dir = tempfile.mkdtemp(
                 "", "tmp", os.path.abspath(self.main.args.temp_dir))
 
-        # Create the new output directory that will hold the results
+        # Create the new output directory that will hold the results and create
+        # an index for it.
         self.setup_result_dir()
+        self.report_index = ReportIndex(self.output_dir)
 
         # Store in global env: target information and common paths
         self.env.output_dir = self.output_dir
@@ -412,6 +454,7 @@ class TestsuiteCore:
             if not self.aborted_too_many_failures:
                 raise
 
+        self.report_index.write()
         self.dump_testsuite_result()
         if self.main.args.xunit_output:
             dump_xunit_report(self, self.main.args.xunit_output)
@@ -425,7 +468,9 @@ class TestsuiteCore:
         # issue, the failure status code from the --failure-exit-code=N option
         # when there is a least one testcase failure, or 0.
         statuses = {
-            s for s, count in self.test_status_counters.items() if count
+            s
+            for s, count in self.report_index.status_counters.items()
+            if count
         }
         if self.has_error:
             return 1
@@ -557,10 +602,12 @@ class TestsuiteCore:
         def sort_key(couple: Tuple[TestStatus, int]) -> Any:
             status, _ = couple
             return status.value
-        stats = sorted(((status, count)
-                        for status, count in self.test_status_counters.items()
-                        if count),
-                       key=sort_key)
+        stats = sorted(
+            ((status, count)
+             for status, count in self.report_index.status_counters.items()
+             if count),
+            key=sort_key
+        )
         for status, count in stats:
             lines.append('  {}{: <12}{} {}'.format(
                 status.color(self), status.name, self.Style.RESET_ALL, count))
@@ -635,7 +682,7 @@ class TestsuiteCore:
             def indented_tb(tb: List[str]) -> str:
                 return "".join("  {}".format(line) for line in tb)
 
-            assert result.test_name not in self.results, (
+            assert result.test_name not in self.report_index.entries, (
                 "cannot push twice results for {}"
                 "\nFirst push happened at:"
                 "\n{}"
@@ -648,10 +695,8 @@ class TestsuiteCore:
             )
             with open(self.test_result_filename(result.test_name), "w") as fd:
                 yaml.dump(result, fd)
-            self.results[result.test_name] = result.status
+            self.report_index.add_result(result)
             self.result_tracebacks[result.test_name] = tb
-            self.test_counter += 1
-            self.test_status_counters[result.status] += 1
 
             # Update the number of consecutive failures, aborting the testsuite
             # if appropriate
