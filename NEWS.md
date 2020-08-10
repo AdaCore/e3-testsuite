@@ -1,6 +1,7 @@
 23.1 (Not released yet)
 =======================
 
+* `AdaCoreLegacyTestDriver` enhance support for generated test scripts.
 * Add a lightweight report index.
 * `DiffTestDriver`: do not run output refiners on baselines.
 * Add the `--show-time-info` command-line option.
