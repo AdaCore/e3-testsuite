@@ -58,14 +58,6 @@ class AdaCoreLegacyTestDriver(DiffTestDriver):
         super().set_up()
         assert self.test_control.opt_results is not None
 
-        # Make sure the test script is present
-        script = self.test_control.opt_results["CMD"]
-        script_abs = self.test_dir(script)
-        if not os.path.isfile(script_abs):
-            raise TestAbortWithError(
-                "cannot find script file {}".format(script)
-            )
-
         # If we have a non-standard output baseline file, make sure it is
         # present.
         baseline = self.test_control.opt_results["OUT"]
@@ -81,7 +73,6 @@ class AdaCoreLegacyTestDriver(DiffTestDriver):
         # Copy test material to $working_dir/src and make sure we have a
         # baseline file.
         sync_tree(self.test_dir(), self.working_dir("src"), delete=True)
-        self.script_file = self.working_dir("src", script)
         self._baseline_file = self.working_dir("src", baseline)
         if not os.path.isfile(self._baseline_file):
             with open(self._baseline_file, "w"):
@@ -127,6 +118,14 @@ class AdaCoreLegacyTestDriver(DiffTestDriver):
         # Command line computation depends on the kind of script (Python or
         # shell).
         assert isinstance(self.env.discs, list)
+
+        # Make sure the test script is present in the working directory
+        script_filename = self.test_control.opt_results["CMD"]
+        self.script_file = self.working_dir("src", script_filename)
+        if not os.path.isfile(self.script_file):
+            raise TestAbortWithError(
+                "cannot find script file {}".format(script_filename)
+            )
 
         _, ext = os.path.splitext(self.script_file)
         if ext == ".py":

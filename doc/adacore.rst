@@ -119,7 +119,8 @@ driver, so we will stick here to a summary, with a few pointers to go further:
 * On Unix systems, this driver has a very crude conversion of Windows batch
   script to Bourne-compatible scripts: text substitution remove some ``.exe``
   extensions, replaces ``%VAR%`` environment variable references with ``$VAR``,
-  etc. See ``AdaCoreLegacyTestDriver.get_script_command_line``.
+  etc. See ``AdaCoreLegacyTestDriver.get_script_command_line``. Note that
+  subclasses can override this method to automatically generate a test script.
 
 Curious readers are invited to read the sources to know the details: doing so
 is necessary anyway to override specific behaviors so that this driver fits the
