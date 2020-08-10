@@ -5,8 +5,6 @@ from __future__ import annotations
 import xml.etree.ElementTree as etree
 from typing import TYPE_CHECKING
 
-import yaml
-
 from e3.testsuite.result import TestStatus
 
 # Import TestsuiteCore only for typing, as this creates a circular import
@@ -47,9 +45,8 @@ def dump_xunit_report(ts: TestsuiteCore, filename: str) -> None:
                          "errors": "error"}
 
     # Now create a <testcase> element for each test
-    for test_name in sorted(ts.results):
-        with open(ts.test_result_filename(test_name), "rb") as f:
-            result = yaml.safe_load(f)
+    for test_name, entry in sorted(ts.report_index.entries.items()):
+        result = entry.load()
 
         # The only class involved in testcases (that we know of in this
         # testsuite framework) is the TestDriver subclass, but this is not
@@ -82,11 +79,12 @@ def dump_xunit_report(ts: TestsuiteCore, filename: str) -> None:
             if counter_key in ("errors", "failures"):
                 status_elt.set("type", "error")
 
+            assert isinstance(result.log, str)
             status_elt.text = result.log
 
         elif result.log:
             system_out = etree.Element("system-out")
-            system_out.text = result.log
+            system_out.text = str(result.log)
             testcase.append(system_out)
 
     # Include counters in <testsuite> and <testsuites> elements

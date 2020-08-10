@@ -12,7 +12,7 @@ import e3.testsuite.driver.adacore as adacore
 import e3.testsuite.driver.diff as diff
 from e3.testsuite.result import TestStatus as Status
 
-from .test_basics import run_testsuite
+from .test_basics import extract_results, run_testsuite
 
 
 class DiffScriptDriver(diff.DiffTestDriver):
@@ -46,7 +46,7 @@ def test_diff():
         test_driver_map = {"diff-script-driver": DiffScriptDriver}
 
     suite = run_testsuite(Mysuite, args=["-E"])
-    assert suite.results == {
+    assert extract_results(suite) == {
         "plain-pass": Status.PASS,
         "plain-fail": Status.FAIL,
         "binary": Status.PASS,
@@ -105,7 +105,7 @@ def test_diff_rewriting():
 
         # Run the testsuite in rewrite mode
         suite = run_testsuite(Mysuite, args=["-rE"])
-        assert suite.results == {
+        assert extract_results(suite) == {
             "adacore": Status.FAIL,
             "plain": Status.FAIL,
             "regexp": Status.FAIL,
@@ -141,7 +141,7 @@ def test_double_diff():
         test_driver_map = {"default": MyDriver}
 
     suite = run_testsuite(Mysuite, args=["test1"])
-    assert suite.results == {"test1": Status.FAIL}
+    assert extract_results(suite) == {"test1": Status.FAIL}
 
     # When multiple diff failures are involved, we expect .expected/.out to be
     # empty, as this formalism assumes that a single output comparison. We
@@ -165,7 +165,7 @@ def test_failure_reason():
     suite = run_testsuite(
         Mysuite, args=["plain-pass", "plain-fail", "--gaia-output"]
     )
-    assert suite.results == {
+    assert extract_results(suite) == {
         "plain-pass": Status.PASS,
         "plain-fail": Status.FAIL,
     }

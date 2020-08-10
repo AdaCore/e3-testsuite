@@ -1,6 +1,7 @@
 23.1 (Not released yet)
 =======================
 
+* Add a lightweight report index.
 * `DiffTestDriver`: do not run output refiners on baselines.
 * Add the `--show-time-info` command-line option.
 * Add support for the `--max-consecutive-failures` command-line option.
