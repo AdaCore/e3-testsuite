@@ -75,7 +75,7 @@ class AdaCoreLegacyTestDriver(DiffTestDriver):
             and not os.path.isfile(self._original_baseline_file)
         ):
             raise TestAbortWithError(
-                "cannot find output file {}".format(script)
+                "cannot find output file {}".format(baseline)
             )
 
         # Copy test material to $working_dir/src and make sure we have a
