@@ -12,7 +12,7 @@ you want to install it from the source, run the following command in the root
 directory:
 
 ```shell
-python setup.py install
+pip install .
 ```
 
 
