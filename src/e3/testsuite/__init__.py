@@ -352,7 +352,8 @@ class TestsuiteCore:
         assert self.main.args is not None
 
         # If there is a chance for the logging to end up in a non-tty stream,
-        # disable colors.
+        # disable colors. If not, be user-friendly and automatically show error
+        # outputs.
         self.Fore = Fore
         self.Style = Style
         enable_colors = True
@@ -364,6 +365,8 @@ class TestsuiteCore:
             enable_colors = False
             self.Fore = DummyColors()
             self.Style = DummyColors()
+        else:
+            self.main.args.show_error_output = True
 
         self.env = BaseEnv.from_env()
         self.env.enable_colors = enable_colors

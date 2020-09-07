@@ -1,6 +1,8 @@
 23.1 (Not released yet)
 =======================
 
+* Enable the display of error outputs (`-E/--show-error-output`) by default on
+  TTYs.
 * `AdaCoreLegacyTestDriver` enhance support for generated test scripts.
 * Add a lightweight report index.
 * `DiffTestDriver`: do not run output refiners on baselines.
