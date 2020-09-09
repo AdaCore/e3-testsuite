@@ -24,6 +24,7 @@ from e3.main import Main
 from e3.os.process import quote_arg
 from e3.testsuite._helpers import deprecated
 from e3.testsuite.report.gaia import dump_gaia_report
+from e3.testsuite.report.display import summary_line
 from e3.testsuite.report.index import ReportIndex
 from e3.testsuite.report.xunit import dump_xunit_report
 from e3.testsuite.result import Log, TestResult, TestStatus
@@ -626,30 +627,11 @@ class TestsuiteCore:
             # disappeared.
             assert result.status is not None
 
-            if self.main.args.show_time_info and result.time is not None:
-                seconds = int(result.time)
-                time_info = '{:>02}m{:>02}s'.format(seconds // 60,
-                                                    seconds % 60)
-            else:
-                time_info = ''
-
             # Log the test result. If error output is requested and the test
             # failed unexpectedly, show the detailed logs.
-            log_line = '{}{:<8}{} {}{:>6}{} {}{}{}'.format(
-                result.status.color(self.colors),
-                result.status.name,
-                self.Style.RESET_ALL,
-
-                self.Style.DIM,
-                time_info,
-                self.Style.RESET_ALL,
-
-                self.Style.BRIGHT,
-                result.test_name,
-                self.Style.RESET_ALL)
-            if result.msg:
-                log_line += ': {}{}{}'.format(self.Style.DIM, result.msg,
-                                              self.Style.RESET_ALL)
+            log_line = summary_line(result,
+                                    self.colors,
+                                    self.main.args.show_time_info)
             if (
                 self.main.args.show_error_output
                 and result.status not in (TestStatus.PASS, TestStatus.XFAIL,
