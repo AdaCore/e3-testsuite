@@ -10,7 +10,7 @@ import e3.testsuite.control as crtl
 import e3.testsuite.driver.classic as classic
 from e3.testsuite.result import TestStatus as Status
 
-from .test_basics import extract_results, run_testsuite, testsuite_logs
+from .utils import extract_results, run_testsuite, testsuite_logs
 
 
 def test_control_interpret():

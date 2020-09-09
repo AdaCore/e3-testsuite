@@ -18,28 +18,7 @@ from e3.testsuite.driver import BasicTestDriver as BasicDriver
 from e3.testsuite.report.index import ReportIndex, ReportIndexEntry
 from e3.testsuite.result import TestResult as Result, TestStatus as Status
 
-
-def extract_results(testsuite):
-    """Extract synthetic test results from a testsuite run."""
-    return {
-        e.test_name: e.status for e in testsuite.report_index.entries.values()
-    }
-
-
-def run_testsuite(cls, args=[], expect_failure=False):
-    """Instantiate a Testsuite subclass and run it."""
-    suite = cls()
-    status = suite.testsuite_main(args)
-    if expect_failure:
-        assert status != 0
-    else:
-        assert status == 0
-    return suite
-
-
-def testsuite_logs(caplog):
-    """Helper to extract messages of testsuite log records."""
-    return {r.getMessage() for r in caplog.records if r.name == "testsuite"}
+from .utils import extract_results, run_testsuite, testsuite_logs
 
 
 def check_results_dir(new={}, old={}):

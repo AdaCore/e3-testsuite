@@ -1,31 +1,9 @@
 """Tests for the "e3-testsuite-report" script."""
 
-import yaml
-
 from e3.testsuite.report.display import main
-from e3.testsuite.report.index import ReportIndex
-from e3.testsuite.result import Log, TestResult as Result, TestStatus as Status
+from e3.testsuite.result import TestStatus as Status
 
-
-def create_report(results, tmp_path):
-    """Create a report index in "tmp_path" for the given results."""
-    index = ReportIndex(tmp_path)
-    for r in results:
-        yaml_filename = tmp_path / "{}.yaml".format(r.test_name)
-        with open(yaml_filename, "w") as f:
-            yaml.dump(r, f)
-        index.add_result(r)
-    index.write()
-    return index
-
-
-def create_result(name, status, msg="", log="", diff=None, time=None):
-    result = Result(name, status=status, msg=msg)
-    result.log += log
-    if diff is not None:
-        result.diff = Log(diff)
-    result.time = time
-    return result
+from .utils import create_report, create_result
 
 
 def run(results, argv, tmp_path, capsys):
