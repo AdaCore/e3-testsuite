@@ -10,8 +10,8 @@ import re
 import sys
 import tempfile
 import traceback
-from typing import (Any, AnyStr, Callable, Dict, FrozenSet, IO, List,
-                    Optional, Pattern, TYPE_CHECKING, Tuple, Type, cast)
+from typing import (Any, Callable, Dict, FrozenSet, IO, List, Optional,
+                    Pattern, TYPE_CHECKING, Tuple, Type, cast)
 
 import yaml
 
@@ -29,8 +29,7 @@ from e3.testsuite.report.xunit import dump_xunit_report
 from e3.testsuite.result import Log, TestResult, TestStatus
 from e3.testsuite.testcase_finder import (ParsedTest, ProbingError, TestFinder,
                                           YAMLTestFinder)
-
-from colorama import Fore, Style
+from e3.testsuite.utils import ColorConfig, isatty
 
 
 if TYPE_CHECKING:  # no cover
@@ -44,23 +43,6 @@ class TestAbort(Exception):
     """Raise this to abort silently the execution of a test fragment."""
 
     pass
-
-
-def isatty(stream: IO[AnyStr]) -> bool:
-    """Return whether stream is a TTY.
-
-    This is a safe predicate: it works if stream is None or if it does not even
-    support TTY detection: in these cases, be conservative (consider it's not a
-    TTY).
-    """
-    return bool(stream) and bool(getattr(stream, 'isatty')) and stream.isatty()
-
-
-class DummyColors:
-    """Stub to replace colorama's Fore/Style when colors are disabled."""
-
-    def __getattr__(self, name: str) -> str:
-        return ''
 
 
 class TestFragment(Job):
@@ -354,19 +336,18 @@ class TestsuiteCore:
         # If there is a chance for the logging to end up in a non-tty stream,
         # disable colors. If not, be user-friendly and automatically show error
         # outputs.
-        self.Fore = Fore
-        self.Style = Style
-        enable_colors = True
         if (
             self.main.args.log_file
             or not isatty(sys.stdout)
             or not isatty(sys.stderr)
         ):
             enable_colors = False
-            self.Fore = DummyColors()
-            self.Style = DummyColors()
         else:
+            enable_colors = True
             self.main.args.show_error_output = True
+        self.colors = ColorConfig(enable_colors)
+        self.Fore = self.colors.Fore
+        self.Style = self.colors.Style
 
         self.env = BaseEnv.from_env()
         self.env.enable_colors = enable_colors
@@ -613,7 +594,8 @@ class TestsuiteCore:
         )
         for status, count in stats:
             lines.append('  {}{: <12}{} {}'.format(
-                status.color(self), status.name, self.Style.RESET_ALL, count))
+                status.color(self.colors), status.name,
+                self.Style.RESET_ALL, count))
         if not stats:
             lines.append('  <no test result>')
         logger.info('\n'.join(lines))
@@ -654,7 +636,7 @@ class TestsuiteCore:
             # Log the test result. If error output is requested and the test
             # failed unexpectedly, show the detailed logs.
             log_line = '{}{:<8}{} {}{:>6}{} {}{}{}'.format(
-                result.status.color(self),
+                result.status.color(self.colors),
                 result.status.name,
                 self.Style.RESET_ALL,
 

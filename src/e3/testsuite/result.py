@@ -5,15 +5,11 @@ from __future__ import annotations
 import binascii
 from enum import Enum, auto
 import logging
-from typing import (Any, AnyStr, Dict, Iterator, Generic, Optional, Set,
-                    TYPE_CHECKING, cast)
+from typing import Any, AnyStr, Dict, Iterator, Generic, Optional, Set, cast
 
 import yaml
 
-
-# Import TestsuiteCore only for typing, as this creates a circular import
-if TYPE_CHECKING:  # no cover
-    from e3.testsuite import TestsuiteCore
+from e3.testsuite.utils import ColorConfig
 
 
 class TestStatus(Enum):
@@ -63,13 +59,13 @@ class TestStatus(Enum):
     # This is equivalent to DejaGnu's UNRESOLVED test output.
     ERROR = auto()
 
-    def color(self, testsuite: TestsuiteCore) -> str:
+    def color(self, colors: ColorConfig) -> str:
         """Return the ANSI color code for this test status.
 
         This returns an empty string if colors are disabled.
         """
-        Fore = testsuite.Fore
-        Style = testsuite.Style
+        Fore = colors.Fore
+        Style = colors.Style
         return {
             'PASS': Fore.GREEN,
             'FAIL': Fore.RED,

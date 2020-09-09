@@ -7,7 +7,7 @@ from typing import Any, Dict, List, Optional, Union
 import e3.collection.dag
 from e3.fs import sync_tree
 from e3.os.process import get_rlimit, quote_arg
-from e3.testsuite import DummyColors
+from e3.testsuite.utils import DummyColors
 from e3.testsuite.control import (TestControl, TestControlCreator,
                                   YAMLTestControlCreator)
 from e3.testsuite.driver import TestDriver
