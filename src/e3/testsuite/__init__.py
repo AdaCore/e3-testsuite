@@ -343,7 +343,7 @@ class TestsuiteCore:
             or not isatty(sys.stderr)
         ):
             enable_colors = False
-        else:
+        else:  # interactive-only
             enable_colors = True
             self.main.args.show_error_output = True
         self.colors = ColorConfig(enable_colors)
@@ -436,7 +436,7 @@ class TestsuiteCore:
         try:
             self.scheduler.run(actions)
         except KeyboardInterrupt:
-            if not self.aborted_too_many_failures:
+            if not self.aborted_too_many_failures:  # interactive-only
                 raise
 
         self.report_index.write()
@@ -830,7 +830,7 @@ class Testsuite(TestsuiteCore):
 
     @property
     def test_driver_map(self) -> Dict[str, Type[TestDriver]]:
-        return {}
+        raise NotImplementedError
 
     @property
     def default_driver(self) -> Optional[str]:
