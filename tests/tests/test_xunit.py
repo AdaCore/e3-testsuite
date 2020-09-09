@@ -6,7 +6,7 @@ from e3.testsuite import Testsuite as Suite
 from e3.testsuite.driver import BasicTestDriver as BasicDriver
 from e3.testsuite.result import TestStatus as Status
 
-from .test_basics import run_testsuite
+from .utils import run_testsuite
 
 
 def test_basic():

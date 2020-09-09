@@ -12,7 +12,7 @@ import e3.testsuite.driver.adacore as adacore
 import e3.testsuite.driver.diff as diff
 from e3.testsuite.result import TestStatus as Status
 
-from .test_basics import extract_results, run_testsuite
+from .utils import extract_results, run_testsuite
 
 
 class DiffScriptDriver(diff.DiffTestDriver):

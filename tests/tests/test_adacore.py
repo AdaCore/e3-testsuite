@@ -10,7 +10,7 @@ from e3.testsuite.driver.adacore import AdaCoreLegacyTestDriver as ACDriver
 import e3.testsuite.testcase_finder as testcase_finder
 from e3.testsuite.result import TestStatus as Status
 
-from .test_basics import extract_results, run_testsuite, testsuite_logs
+from .utils import extract_results, run_testsuite, testsuite_logs
 
 
 def test_adacore():
