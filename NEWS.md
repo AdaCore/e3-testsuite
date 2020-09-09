@@ -1,6 +1,7 @@
 23.1 (Not released yet)
 =======================
 
+* `e3-testsuite-report`: new script to display results on the terminal.
 * Enable the display of error outputs (`-E/--show-error-output`) by default on
   TTYs.
 * `AdaCoreLegacyTestDriver` enhance support for generated test scripts.
