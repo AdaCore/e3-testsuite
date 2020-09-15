@@ -1,0 +1,3 @@
+driver: diff-script-driver
+process_args: [-i]
+encoding: iso-8859-1

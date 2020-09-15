@@ -156,12 +156,17 @@ class DiffTestDriver(ClassicTestDriver):
         """
         filename, is_regexp = self.baseline_file
         filename = self.test_dir(filename)
-        is_binary = self.default_encoding == "binary"
-        mode = "rb" if is_binary else "rt"
+        baseline: Union[str, bytes]
 
         try:
-            with open(filename, mode) as f:
-                baseline = f.read()
+            if self.default_encoding == "binary":
+                with open(filename, "rb") as text_f:
+                    baseline = text_f.read()
+            else:
+                with open(
+                    filename, "r", encoding=self.default_encoding
+                ) as bin_f:
+                    baseline = bin_f.read()
         except Exception as exc:
             raise TestAbortWithError(
                 "cannot read baseline file ({}: {})".format(
@@ -298,7 +303,8 @@ class DiffTestDriver(ClassicTestDriver):
             and getattr(self.env, "rewrite_baselines", False)
         ):
             if isinstance(refined_actual, str):
-                with open(baseline_file, "w") as f:
+                with open(baseline_file, "w",
+                          encoding=self.default_encoding) as f:
                     f.write(refined_actual)
             else:
                 assert isinstance(refined_actual, bytes)

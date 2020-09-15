@@ -92,8 +92,10 @@ def test_diff_rewriting():
                 self.env.discs = []
                 self.env.test_environ = dict(os.environ)
 
-        def check_test_out(test, expected_lines):
-            with open(os.path.join(tests_copy, test, "test.out")) as f:
+        def check_test_out(test, expected_lines, encoding="utf-8"):
+            with open(
+                os.path.join(tests_copy, test, "test.out"), encoding=encoding
+            ) as f:
                 lines = [line.rstrip() for line in f]
             assert lines == expected_lines
 
@@ -102,6 +104,8 @@ def test_diff_rewriting():
         check_test_out("plain", ["hello", "world"])
         check_test_out("regexp", ["h.l+o", "world"])
         check_test_out("xfail", ["hello", "world"])
+        check_test_out("iso-8859-1", ["héllo"], encoding="utf-8")
+        check_test_out("bad-utf-8", ["héllo"], encoding="utf-8")
 
         # Run the testsuite in rewrite mode
         suite = run_testsuite(Mysuite, args=["-rE"])
@@ -110,6 +114,8 @@ def test_diff_rewriting():
             "plain": Status.FAIL,
             "regexp": Status.FAIL,
             "xfail": Status.XFAIL,
+            "iso-8859-1": Status.FAIL,
+            "bad-utf-8": Status.ERROR,
         }
 
         # Check that non-regexp baselines were updated, except when a failure
@@ -118,6 +124,8 @@ def test_diff_rewriting():
         check_test_out("plain", ["helloo", "world", "!"])
         check_test_out("regexp", ["h.l+o", "world"])
         check_test_out("xfail", ["hello", "world"])
+        check_test_out("iso-8859-1", ["héllo"], encoding="iso-8859-1")
+        check_test_out("bad-utf-8", ["héllo"], encoding="utf-8")
 
 
 def test_double_diff():
