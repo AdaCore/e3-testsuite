@@ -1,6 +1,7 @@
 23.1 (Not released yet)
 =======================
 
+* `DiffTestDriver`: fix handling of encodings to read/write baselines.
 * `e3-find-skipped-tests`: new script to look for always skipped tests.
 * `e3-testsuite-report`: new script to display results on the terminal.
 * Enable the display of error outputs (`-E/--show-error-output`) by default on
