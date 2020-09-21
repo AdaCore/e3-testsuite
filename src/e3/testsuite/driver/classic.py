@@ -4,7 +4,7 @@ import subprocess
 from typing import Any, Dict, List, Optional, Union
 
 import e3.collection.dag
-from e3.fs import sync_tree
+from e3.fs import rm, sync_tree
 from e3.os.process import get_rlimit, quote_arg
 from e3.testsuite.utils import DummyColors
 from e3.testsuite.control import (TestControl, TestControlCreator,
@@ -311,10 +311,13 @@ class ClassicTestDriver(TestDriver):
         """Run finalization operations after a test has run.
 
         Subclasses can override this to run clean-ups after testcase execution.
+        By default, this method removes the working directory (unless
+        --disable-cleanup/--dev-temp is passed).
 
-        See set_up's docstring for the rationale.
+        See set_up's docstring for the rationale behind this API.
         """
-        pass
+        if self.working_dir_cleanup_enabled:
+            rm(self.working_dir(), True)
 
     def run_wrapper(self, prev: Dict[str, Any], slot: int) -> None:
         # Make the slot (unique identifier for active jobs at a specific time)

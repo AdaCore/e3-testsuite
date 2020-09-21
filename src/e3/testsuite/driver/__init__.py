@@ -117,6 +117,18 @@ class TestDriver(object, metaclass=abc.ABCMeta):
         """
         raise NotImplementedError
 
+    @property
+    def working_dir_cleanup_enabled(self) -> bool:
+        """
+        Return whether test drivers should cleanup their working directory.
+
+        Unless this returns False, test drivers should delete their working
+        directory when the test has completed, so that temporaries for the
+        whole testsuite are removed incrementally. This is necessary to avoid
+        creating huge temporary directories when executing big testsuites.
+        """
+        return self.testsuite_options.enable_cleanup
+
 
 class BasicTestDriver(TestDriver, metaclass=abc.ABCMeta):
     def add_test(self, dag: e3.collection.dag.DAG) -> None:
