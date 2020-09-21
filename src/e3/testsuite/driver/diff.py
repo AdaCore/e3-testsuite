@@ -1,4 +1,3 @@
-import argparse
 import os
 import re
 from typing import AnyStr, Generic, List, Optional, Pattern, Tuple, Union
@@ -244,8 +243,7 @@ class DiffTestDriver(ClassicTestDriver):
             ignore_white_chars = self.diff_ignore_white_chars
 
         if truncate_logs_threshold is None:
-            assert isinstance(self.env.options, argparse.Namespace)
-            truncate_logs_threshold = self.env.options.truncate_logs
+            truncate_logs_threshold = self.testsuite_options.truncate_logs
 
         # Run output refiners on the actual output, not on the baseline
         refiners = (RefiningChain[str](self.output_refiners)
@@ -359,8 +357,7 @@ class DiffTestDriver(ClassicTestDriver):
             regexp = re.compile(regexp)
 
         if truncate_logs_threshold is None:
-            assert isinstance(self.env.options, argparse.Namespace)
-            truncate_logs_threshold = self.env.options.truncate_logs
+            truncate_logs_threshold = self.testsuite_options.truncate_logs
 
         # Run output refiners. Code is more complex than it should be to
         # satisfy Mypy's constraints.

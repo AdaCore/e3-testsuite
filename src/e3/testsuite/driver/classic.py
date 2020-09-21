@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import argparse
 import subprocess
 from typing import Any, Dict, List, Optional, Union
 
@@ -173,8 +172,7 @@ class ClassicTestDriver(TestDriver):
             timeout = self.default_process_timeout
 
         if truncate_logs_threshold is None:
-            assert isinstance(self.env.options, argparse.Namespace)
-            truncate_logs_threshold = self.env.options.truncate_logs
+            truncate_logs_threshold = self.testsuite_options.truncate_logs
 
         # Run the subprocess and log it
         def format_header(label: str, value: Any) -> str:

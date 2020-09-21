@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import abc
+import argparse
 import os.path
 import traceback
 from typing import Any, Callable, Dict, List, Optional, Tuple
@@ -17,7 +18,7 @@ class TestDriver(object, metaclass=abc.ABCMeta):
     All drivers declared in a testsuite should inherit from this class
     """
 
-    def __init__(self, env: e3.env.BaseEnv, test_env: dict) -> None:
+    def __init__(self, env: e3.env.BaseEnv, test_env: Dict[str, Any]) -> None:
         """Initialize a TestDriver instance.
 
         :param env: The testsuite environment. This mirrors the
@@ -34,12 +35,17 @@ class TestDriver(object, metaclass=abc.ABCMeta):
               that this test driver is free to create (if needed) in order to
               run the testcase.
         """
-        self.env = env
-        self.test_env = test_env
-        self.test_name = test_env["test_name"]
+        self.env: e3.env.BaseEnv = env
+        assert isinstance(env.options, argparse.Namespace)
+        self.testsuite_options: argparse.Namespace = env.options
+
+        self.test_env: Dict[str, Any] = test_env
+        self.test_name: str = test_env["test_name"]
 
         # Initialize test result
-        self.result = TestResult(name=self.test_name, env=self.test_env)
+        self.result: TestResult = TestResult(
+            name=self.test_name, env=self.test_env
+        )
 
         # Queue used to push result to the testsuite. Each queue item is a
         # couple that contains the TestResult instance and a string traceback
