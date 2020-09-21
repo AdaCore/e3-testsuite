@@ -1,6 +1,8 @@
 23.1 (Not released yet)
 =======================
 
+* `ClassicTestDriver`: make `tear_down` delete the working directory by
+  default.
 * `DiffTestDriver`: fix handling of encodings to read/write baselines.
 * `e3-find-skipped-tests`: new script to look for always skipped tests.
 * `e3-testsuite-report`: new script to display results on the terminal.
