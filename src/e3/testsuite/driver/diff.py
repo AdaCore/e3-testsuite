@@ -124,6 +124,30 @@ class PatternSubstitute(OutputRefiner, Generic[AnyStr]):
         return self.regexp.sub(self.replacement, output)
 
 
+class LineByLine(OutputRefiner[AnyStr]):
+    """Wrapper to apply an output refine line by line."""
+
+    def __init__(self, refiner: OutputRefiner) -> None:
+        """
+        Initialize a LineByLine instance.
+
+        :param refiner: Refiner to apply on each input line.
+        """
+        self.refiner = refiner
+
+    def refine(self, output: AnyStr) -> AnyStr:
+        if isinstance(output, str):
+            return "".join(
+                self.refiner.refine(line)
+                for line in output.splitlines(keepends=True)
+            )
+        else:
+            return b"".join(
+                self.refiner.refine(line)
+                for line in output.splitlines(keepends=True)
+            )
+
+
 class DiffTestDriver(ClassicTestDriver):
     """Test driver to compute test output against a baseline."""
 

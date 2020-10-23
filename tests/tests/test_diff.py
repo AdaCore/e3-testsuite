@@ -185,3 +185,19 @@ def test_failure_reason():
         ["plain-fail", "DIFF", "unexpected output"],
         ["plain-pass", "OK", ""],
     ]
+
+
+def test_line_by_line():
+    output = "first line\nssecond line\n"
+    subst = diff.PatternSubstitute("[^ ]*second", "some-content")
+    lbl_subst = diff.LineByLine(subst)
+
+    assert subst.refine(output) == "first some-content line\n"
+    assert lbl_subst.refine(output) == "first line\nsome-content line\n"
+
+    output = b"first line\nssecond line\n"
+    subst = diff.PatternSubstitute(b"[^ ]*second", b"some-content")
+    lbl_subst = diff.LineByLine(subst)
+
+    assert subst.refine(output) == b"first some-content line\n"
+    assert lbl_subst.refine(output) == b"first line\nsome-content line\n"
