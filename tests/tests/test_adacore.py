@@ -26,7 +26,7 @@ def test_adacore():
 
         test_finders = [testcase_finder.AdaCoreLegacyTestFinder(ACDriver)]
 
-    suite = run_testsuite(Mysuite1)
+    suite = run_testsuite(Mysuite1, ["-E"])
     assert extract_results(suite) == {
         # Regular test execution, exercize output refiners
         "T415-993": Status.PASS,
@@ -42,6 +42,8 @@ def test_adacore():
         "T415-998": Status.FAIL,
         # Regular test execution and successful diff comparison
         "T415-999": Status.PASS,
+        # Regular test execution and successful diff comparison
+        "TA23-999": Status.PASS,
         # Regular test execution and failing diff comparison (test.out present)
         "Z999-999": Status.XFAIL,
     }
