@@ -1,6 +1,7 @@
 23.1 (Not released yet)
 =======================
 
+* `AdaCoreLegacyTestDriver`: fix working directory substitution.
 * `LineByLine`: new output refiner combinator, refines each line separately.
 * `ClassicTestDriver`: make `tear_down` delete the working directory by
   default.

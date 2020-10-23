@@ -8,8 +8,8 @@ from typing import Dict, List, Pattern, Tuple
 
 from e3.fs import cp, sync_tree
 from e3.testsuite.driver.classic import TestAbortWithError
-from e3.testsuite.driver.diff import (DiffTestDriver, OutputRefiner,
-                                      PatternSubstitute)
+from e3.testsuite.driver.diff import (DiffTestDriver, LineByLine,
+                                      OutputRefiner, PatternSubstitute)
 from e3.testsuite.control import AdaCoreLegacyTestControlCreator
 
 
@@ -192,11 +192,13 @@ class AdaCoreLegacyTestDriver(DiffTestDriver):
             PatternSubstitute(rb"(\.exe\b|\015)", rb""),
 
             # Remove occurences of the "src" working dir subdirectory
-            PatternSubstitute(
-                rb"[^ '\"]*"
-                + os.path.basename(self.working_dir()).encode("ascii")
-                + rb"/src/",
-                rb""
+            LineByLine(
+                PatternSubstitute(
+                    rb"[^ '\"]*"
+                    + os.path.basename(self.working_dir()).encode("ascii")
+                    + rb"/src/",
+                    rb""
+                )
             ),
         ]
 
