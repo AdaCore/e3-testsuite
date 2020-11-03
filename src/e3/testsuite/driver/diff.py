@@ -108,7 +108,9 @@ class ReplacePath(RefiningChain[str]):
 class PatternSubstitute(OutputRefiner, Generic[AnyStr]):
     """Replace patterns in outputs."""
 
-    def __init__(self, pattern: AnyStr, replacement: AnyStr = None) -> None:
+    def __init__(self,
+                 pattern: AnyStr,
+                 replacement: Optional[AnyStr] = None) -> None:
         """
         Initialize a PatternSubstitute instance.
 

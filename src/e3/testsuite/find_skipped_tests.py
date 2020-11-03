@@ -1,5 +1,5 @@
 import argparse
-from typing import List, Set
+from typing import List, Optional, Set
 
 from e3.testsuite.report.index import ReportIndex
 from e3.testsuite.result import TestStatus
@@ -27,7 +27,7 @@ def always_skipped_tests(reports: List[ReportIndex]) -> Set[str]:
     return skipped_once - not_skipped_once
 
 
-def main(argv: List[str] = None) -> None:
+def main(argv: Optional[List[str]] = None) -> None:
     args = args_parser.parse_args(argv)
     tests = always_skipped_tests([ReportIndex.read(d) for d in args.reports])
     if tests:
