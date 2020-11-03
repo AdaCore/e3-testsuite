@@ -151,16 +151,24 @@ and after testsuite reports were emitted can override the
 
    class MyTestsuite(Testsuite):
        def set_up(self):
-           # Do whatever is required before running testcases.
+           # Let the base class' set_up method do its job
+           super().set_up()
+
+           # Then do whatever is required before running testcases.
            # Note that by the time this is executed, command-line
            # options are parsed and the environment (self.env)
            # is fully initialized.
-           pass
+
+           # ...
 
        def tear_down(self):
            # Do whatever is required to after the testsuite has
            # run to completion.
-           pass
+
+           # ...
+
+           # Then let the base class' tear_down method do its job
+           super().tear_down()
 
 
 Overriding tests subdirectory
