@@ -176,6 +176,7 @@ involved server initialization.
 
    class BaseDriver(ClassicTestDriver):
        def set_up(self):
+           super().set_up()
            self.start_server()
 
        def run(self):
@@ -183,6 +184,7 @@ involved server initialization.
 
        def tear_down(self):
            self.stop_server()
+           super().tear_down()
 
    class FixturesDriver(BaseDriver):
        def set_up(self):
