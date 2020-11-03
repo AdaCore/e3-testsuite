@@ -1,5 +1,5 @@
-23.1 (Not released yet)
-=======================
+24.0 (2020-11-03)
+=================
 
 * `AdaCoreLegacyTestDriver`: fix working directory substitution.
 * `LineByLine`: new output refiner combinator, refines each line separately.
