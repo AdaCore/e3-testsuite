@@ -1,3 +1,8 @@
+25.0 (Not released yet)
+=======================
+
+* Make the default testsuite failure exit code customizable.
+
 24.0 (2020-11-03)
 =================
 
