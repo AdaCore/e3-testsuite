@@ -13,10 +13,15 @@ def extract_results(testsuite):
     }
 
 
+def run_testsuite_status(cls, args=[]):
+    """Instantiate a Testsuite subclass, run it and return it and its sttus."""
+    suite = cls()
+    return (suite, suite.testsuite_main(args))
+
+
 def run_testsuite(cls, args=[], expect_failure=False):
     """Instantiate a Testsuite subclass and run it."""
-    suite = cls()
-    status = suite.testsuite_main(args)
+    suite, status = run_testsuite_status(cls, args)
     if expect_failure:
         assert status != 0
     else:
