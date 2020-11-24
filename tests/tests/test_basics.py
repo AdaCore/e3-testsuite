@@ -542,19 +542,19 @@ def test_failure_exit_code():
         test_driver_map = {"default": MyDriver}
         default_driver = "default"
 
-    suite = run_testsuite(Mysuite)
-    assert extract_results(suite) == {
-        "test1": Status.PASS,
-        "test2": Status.FAIL,
-    }
+    class Mysuite2(Mysuite):
+        default_failure_exit_code = 1
 
-    suite = run_testsuite(
-        Mysuite, args=["--failure-exit-code=1"], expect_failure=True
-    )
-    assert extract_results(suite) == {
-        "test1": Status.PASS,
-        "test2": Status.FAIL,
-    }
+    def check(cls, args, expect_failure):
+        suite = run_testsuite(cls, args=args, expect_failure=expect_failure)
+        assert extract_results(suite) == {
+            "test1": Status.PASS,
+            "test2": Status.FAIL,
+        }
+
+    check(Mysuite, [], False)
+    check(Mysuite, ["--failure-exit-code=1"], True)
+    check(Mysuite2, [], True)
 
 
 def test_max_consecutive_failures(caplog):

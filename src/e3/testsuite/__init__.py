@@ -317,12 +317,13 @@ class TestsuiteCore:
             " or the end of such outputs. If 0, never truncate logs."
         )
         parser.add_argument(
-            "--failure-exit-code", metavar="N", type=int, default=0,
+            "--failure-exit-code", metavar="N", type=int,
+            default=self.default_failure_exit_code,
             help="Exit code the testsuite must use when at least one test"
-            " result shows a failure/error. By default, this is 0. This option"
-            " is useful when running a testsuite in a continuous integration"
-            " setup, as this can make the testing process stop when there is"
-            " a regression."
+            " result shows a failure/error. By default, this is"
+            f" {self.default_failure_exit_code}. This option is useful when"
+            " running a testsuite in a continuous integration setup, as this"
+            " can make the testing process stop when there is a regression."
         )
         parser.add_argument(
             "sublist", metavar="tests", nargs="*", default=[], help="test"
@@ -812,6 +813,11 @@ class TestsuiteCore:
         """
         raise NotImplementedError
 
+    @property
+    def default_failure_exit_code(self) -> int:
+        """Return the default exit code when at least one test fails."""
+        raise NotImplementedError
+
 
 class Testsuite(TestsuiteCore):
     """Testsuite class.
@@ -871,4 +877,8 @@ class Testsuite(TestsuiteCore):
 
     @property
     def default_max_consecutive_failures(self) -> int:
+        return 0
+
+    @property
+    def default_failure_exit_code(self) -> int:
         return 0
