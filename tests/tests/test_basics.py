@@ -18,7 +18,12 @@ from e3.testsuite.driver import BasicTestDriver as BasicDriver
 from e3.testsuite.report.index import ReportIndex, ReportIndexEntry
 from e3.testsuite.result import TestResult as Result, TestStatus as Status
 
-from .utils import extract_results, run_testsuite, testsuite_logs
+from .utils import (
+    extract_results,
+    run_testsuite,
+    run_testsuite_status,
+    testsuite_logs,
+)
 
 
 def check_results_dir(new={}, old={}):
@@ -543,18 +548,20 @@ def test_failure_exit_code():
         default_driver = "default"
 
     class Mysuite2(Mysuite):
-        default_failure_exit_code = 1
+        default_failure_exit_code = 2
 
-    def check(cls, args, expect_failure):
-        suite = run_testsuite(cls, args=args, expect_failure=expect_failure)
+    def check(cls, args, expected_status):
+        suite, status = run_testsuite_status(cls, args)
         assert extract_results(suite) == {
             "test1": Status.PASS,
             "test2": Status.FAIL,
         }
+        assert status == expected_status
 
-    check(Mysuite, [], False)
-    check(Mysuite, ["--failure-exit-code=1"], True)
-    check(Mysuite2, [], True)
+    check(Mysuite, [], 0)
+    check(Mysuite, ["--failure-exit-code=1"], 1)
+    check(Mysuite2, [], 2)
+    check(Mysuite2, ["--failure-exit-code=1"], 1)
 
 
 def test_max_consecutive_failures(caplog):
