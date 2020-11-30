@@ -217,7 +217,7 @@ class TestsuiteCore:
         :return: The testsuite status code (0 for success, a positive for
             failure).
         """
-        self.main = Main(platform_args=self.enable_cross_support)
+        self.main = Main(platform_args=True)
 
         # Add common options
         parser = self.main.argument_parser
@@ -704,16 +704,6 @@ class TestsuiteCore:
     # overriden.
 
     @property
-    def enable_cross_support(self) -> bool:
-        """
-        Return whether this testsuite has support for cross toolchains.
-
-        If cross support is enabled, the testsuite will have
-        --target/--build/--host command-line arguments.
-        """
-        raise NotImplementedError
-
-    @property
     def tests_subdir(self) -> str:
         """
         Return the subdirectory in which tests are looked for.
@@ -825,10 +815,6 @@ class Testsuite(TestsuiteCore):
     When implementing a new testsuite you should create a class that
     inherit from this class.
     """
-
-    @property
-    def enable_cross_support(self) -> bool:
-        return False
 
     @property
     def tests_subdir(self) -> str:
