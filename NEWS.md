@@ -1,6 +1,7 @@
 25.0 (Not released yet)
 =======================
 
+* Always enable "cross" support for testsuites.
 * Make the default testsuite failure exit code customizable.
 
 24.0 (2020-11-03)
