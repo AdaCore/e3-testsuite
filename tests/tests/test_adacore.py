@@ -28,6 +28,8 @@ def test_adacore():
 
     suite = run_testsuite(Mysuite1, ["-E"])
     assert extract_results(suite) == {
+        # Check that test.sh are picked up
+        "0000-097": Status.PASS,
         # Regular test execution, exercize output refiners
         "T415-993": Status.PASS,
         # Missing non-default baseline

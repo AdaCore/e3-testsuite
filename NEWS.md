@@ -1,6 +1,7 @@
 25.0 (Not released yet)
 =======================
 
+* `AdaCoreLegacyTestControlCreator`: also check for shell scripts (`test.sh`).
 * Always enable "cross" support for testsuites.
 * Make the default testsuite failure exit code customizable.
 
