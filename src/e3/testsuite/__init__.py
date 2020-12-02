@@ -470,11 +470,13 @@ class TestsuiteCore:
 
         :param sublist: A list of tests scenarios or patterns.
         """
-        # Use a mapping: absolute test directory -> ParsedTest when building
-        # the result, as several patterns in "sublist" may yield the same
-        # testcase.
+        # Use a mapping: test name -> ParsedTest when building the result, as
+        # several patterns in "sublist" may yield the same testcase.
         testcases: Dict[str, ParsedTest] = {}
         test_finders = self.test_finders
+
+        def add_testcase(test: ParsedTest) -> None:
+            testcases[test.test_name] = test
 
         def helper(spec: str) -> None:
             pattern: Optional[Pattern[str]] = None
@@ -510,13 +512,19 @@ class TestsuiteCore:
                 dirpath = os.path.abspath(dirpath)
                 for tf in test_finders:
                     try:
-                        test = tf.probe(self, dirpath, dirnames, filenames)
+                        test_or_list = tf.probe(
+                            self, dirpath, dirnames, filenames
+                        )
                     except ProbingError as exc:
                         self.has_error = True
                         logger.error(str(exc))
                         break
-                    if test is not None:
-                        testcases[test.test_dir] = test
+                    if isinstance(test_or_list, list):
+                        for t in test_or_list:
+                            add_testcase(t)
+                        break
+                    elif test_or_list is not None:
+                        add_testcase(test_or_list)
                         break
 
         # If specific tests are requested, only look for them. Otherwise, just

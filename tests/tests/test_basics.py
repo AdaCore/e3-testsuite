@@ -17,6 +17,7 @@ from e3.testsuite import Testsuite as Suite
 from e3.testsuite.driver import BasicTestDriver as BasicDriver
 from e3.testsuite.report.index import ReportIndex, ReportIndexEntry
 from e3.testsuite.result import TestResult as Result, TestStatus as Status
+from e3.testsuite.testcase_finder import TestFinder as Finder, ParsedTest
 
 from .utils import (
     extract_results,
@@ -681,4 +682,54 @@ def test_read_report_index():
     assert index.entries == {
         "test1": ReportIndexEntry(index, "test1", Status.PASS, None),
         "test2": ReportIndexEntry(index, "test2", Status.PASS, None),
+    }
+
+
+def test_multiple_tests_per_dir():
+    """Test a test finder that returns multiple tests per directory."""
+
+    class CustomTestFinder(Finder):
+        def probe(self, testsuite, dirpath, dirnames, filenames):
+            result = []
+            for f in filenames:
+                if not f.endswith(".txt"):
+                    continue
+                f = f[:-4]
+                result.append(
+                    ParsedTest(
+                        test_name=testsuite.test_name(
+                            os.path.join(dirpath, f)
+                        ),
+                        driver_cls=MyDriver,
+                        test_env={},
+                        test_dir=dirpath,
+                    )
+                )
+            return result
+
+    class MyDriver(BasicDriver):
+        def run(self, prev, slot):
+            pass
+
+        def analyze(self, prev, slot):
+            self.result.set_status(Status.PASS)
+            self.push_result()
+
+    class Mysuite(Suite):
+        tests_subdir = "txt-tests"
+        test_driver_map = {"default": MyDriver}
+
+        test_finders = [CustomTestFinder()]
+
+        @property
+        def default_driver(self):
+            return "default"
+
+    suite = run_testsuite(Mysuite)
+    assert suite.results == {
+        "bar__x": Status.PASS,
+        "bar__y": Status.PASS,
+        "foo__a": Status.PASS,
+        "foo__b": Status.PASS,
+        "foo__c": Status.PASS,
     }
