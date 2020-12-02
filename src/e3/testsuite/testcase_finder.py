@@ -3,7 +3,7 @@ from __future__ import annotations
 import collections.abc
 import os.path
 import re
-from typing import List, Optional, TYPE_CHECKING, Type
+from typing import List, Optional, TYPE_CHECKING, Type, Union
 
 from e3.env import Env
 import e3.yaml
@@ -38,6 +38,9 @@ class ParsedTest:
         self.test_dir = test_dir
 
 
+TestFinderResult = Union[Optional[ParsedTest], List[ParsedTest]]
+
+
 class ProbingError(Exception):
     """Exception raised in TestFinder.probe when a test is misformatted."""
 
@@ -51,7 +54,7 @@ class TestFinder:
               testsuite: TestsuiteCore,
               dirpath: str,
               dirnames: List[str],
-              filenames: List[str]) -> Optional[ParsedTest]:
+              filenames: List[str]) -> TestFinderResult:
         """Return a test if the "dirpath" directory contains a testcase.
 
         Raise a ProbingError if anything is wrong.
@@ -78,7 +81,7 @@ class YAMLTestFinder(TestFinder):
               testsuite: TestsuiteCore,
               dirpath: str,
               dirnames: List[str],
-              filenames: List[str]) -> Optional[ParsedTest]:
+              filenames: List[str]) -> TestFinderResult:
         # There is a testcase iff there is a "test.yaml" file
         if "test.yaml" not in filenames:
             return None
@@ -134,7 +137,7 @@ class AdaCoreLegacyTestFinder(TestFinder):
               testsuite: TestsuiteCore,
               dirpath: str,
               dirnames: List[str],
-              filenames: List[str]) -> Optional[ParsedTest]:
+              filenames: List[str]) -> TestFinderResult:
         # There is a testcase iff the test directory name is a valid TN
         dirname = os.path.basename(dirpath)
         if not self.TN_RE.match(dirname):

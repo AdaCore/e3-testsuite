@@ -14,7 +14,9 @@ required to create a testcase, it contains the following attributes:
 
 ``test_name``
    Name for this testcase, generally computed from ``test_dir`` using
-   ``Testsuite.test_name`` (see :ref:`api_testsuite_test_name`).
+   ``Testsuite.test_name`` (see :ref:`api_testsuite_test_name`). Only one
+   testcase can have a specific name, or put differently: test names are
+   unique.
 
 ``driver_cls``
    ``TestDriver`` subclass to instantiate for this testcase. When left to
@@ -47,9 +49,15 @@ be a testcase. The semantics for ``probe`` arguments are:
 
 When called, ``TestFinder.probe`` overriding methods are supposed to look at
 ``dirpath``, ``dirnames`` and ``filenames`` to determine whether this directory
-is actually a testcase. If it is, they must return a ``ParsedTest`` instance,
-that will later be used to instantiate a ``TestDriver`` for this testcase.
-Otherwise, they must return ``None`` (meaning: no testcase here).
+contains testcases. It must return a list of ``ParsedTest`` instances: each one
+will later be used to instantiate a ``TestDriver`` subclass for this testcase.
+
+.. note::
+
+   For backwards compatibility, ``probe`` methods can return ``None`` instead
+   of an empty list when there is no testcase, and can return directly a
+   ``ParsedTest`` instance instead of a list of one element when the probed
+   directory contains exactly one testcase.
 
 The default ``TestFinder`` instance that testsuites use come from the
 ``e3.testsuite.testcase_finder.YAMLTestFinder`` class. Its probe method is very
