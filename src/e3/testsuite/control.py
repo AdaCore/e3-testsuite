@@ -170,12 +170,12 @@ class AdaCoreLegacyTestControlCreator(TestControlCreator):
             configuration.
         """
         # Use "test.cmd" by default. If it does not exist while there is a
-        # "test.py" file, use that instead.
-        if (
-            not os.path.isfile(driver.test_dir("test.cmd"))
-            and os.path.isfile(driver.test_dir("test.py"))
-        ):
-            return "test.py"
+        # "test.py" or a "test.sh" file, use that instead.
+        if not os.path.isfile(driver.test_dir("test.cmd")):
+            if os.path.isfile(driver.test_dir("test.py")):
+                return "test.py"
+            elif os.path.isfile(driver.test_dir("test.sh")):
+                return "test.sh"
         return "test.cmd"
 
     def default_opt_results(self,
