@@ -189,6 +189,7 @@ To complete the ``foo.py`` example above, thanks to the following overriding:
 
 .. code-block:: python
 
+   @property
    def output_refiners(self):
        return [PatternSubstitute("0x[0-9a-f]+", "[HEX-ADDR]")]
 
@@ -197,6 +198,23 @@ All refined outputs from ``foo.py`` would match the following baseline:
 .. code-block:: text
 
    <object object at [HEX-ADDR]>
+
+Note that even though refiners only apply to actual outputs by default, it is
+possible to also apply them to baselines. To do this, override the
+``refine_baseline`` property:
+
+.. code-block:: python
+
+   @property
+   def refine_baseline(self):
+       return True
+
+This behavior is disabled by default because a very common refinment is to
+remove occurences of the working directory from the test output. In that case,
+baselines that contain the working directory (for instance
+``/home/user/my-testsuite/tmp/my-test``) will be refined as expected with the
+setup of the original testcase author, but will not on another setup (for
+instance when the working directory is ``/tmp/testsuite-tmp-dir``).
 
 
 .. _api_diff_alternative_baselines:
