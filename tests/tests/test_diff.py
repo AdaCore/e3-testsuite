@@ -23,12 +23,23 @@ class DiffScriptDriver(diff.DiffTestDriver):
     )
 
     @property
+    def refine_baseline(self):
+        return self.test_env.get("refine_baseline", False)
+
+    @property
     def output_refiners(self):
-        path_substitutions = self.test_env.get("path_substitutions", [])
-        return super(DiffScriptDriver, self).output_refiners + [
-            diff.ReplacePath(self.working_dir(path), replacement)
-            for path, replacement in path_substitutions
-        ]
+        result = super().output_refiners
+
+        for path, replacement in self.test_env.get("path_substitutions", []):
+            result += [diff.ReplacePath(self.working_dir(path), replacement)]
+
+        if self.refine_baseline:
+            result += [
+                diff.Substitute("baseline_to_refine", "refined"),
+                diff.Substitute("actual_to_refine", "refined"),
+            ]
+
+        return result
 
     def set_up(self):
         super(DiffScriptDriver, self).set_up()
@@ -62,6 +73,7 @@ def test_diff():
         "line-endings": Status.PASS,
         "line-endings-binary": Status.PASS,
         "line-endings-strict": Status.FAIL,
+        "refine-baseline": Status.PASS,
     }
 
 

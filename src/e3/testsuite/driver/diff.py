@@ -216,6 +216,11 @@ class DiffTestDriver(ClassicTestDriver):
         )
 
     @property
+    def refine_baseline(self) -> bool:
+        """Whether to apply output refiners to the output baseline."""
+        return True
+
+    @property
     def diff_ignore_white_chars(self) -> bool:
         """
         Whether to ignore white characters in diff computations.
@@ -276,7 +281,11 @@ class DiffTestDriver(ClassicTestDriver):
                     if isinstance(actual, str)
                     else RefiningChain[bytes](self.output_refiners))
         refined_actual = refiners.refine(actual)
-        refined_baseline = baseline
+        refined_baseline = (
+            refiners.refine(baseline)
+            if self.refine_baseline
+            else baseline
+        )
 
         # When running in binary mode, make sure the diff runs on text strings
         if self.default_encoding == "binary":
