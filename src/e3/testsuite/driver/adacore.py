@@ -128,14 +128,18 @@ class AdaCoreLegacyTestDriver(DiffTestDriver):
             )
 
         _, ext = os.path.splitext(self.script_file)
+
+        # Some tests have a _suffix in their extension. Using .startwith
+        # ensures we don't treat ".cmd_x86" as ".sh".
+        is_cmd = ext.startswith(".cmd")
+        must_convert = is_cmd and (
+            self.env.host.os.name != "windows" or "FORCE_SH" in self.env.discs
+        )
+
         if ext == ".py":
             return [sys.executable, self.script_file]
 
-        elif (
-            ext == ".sh"
-            or self.env.host.os.name != "windows"
-            or "FORCE_SH" in self.env.discs
-        ):
+        elif not is_cmd or must_convert:
             # If running a Bourne shell script, not running on Windows, or if
             # specifically asked to use a Bourne shell, create a shell script
             # to run instead of the given test script.
@@ -154,14 +158,16 @@ class AdaCoreLegacyTestDriver(DiffTestDriver):
             if support_dir and os.path.isfile(support_script):
                 new_script.append(". $TEST_SUPPORT_DIR/support.sh")
 
-            # Read all lines in the original test script. Get rid of potential
-            # whitespaces and CR at the end of each line, and convert the "cmd"
-            # syntax to Bourne shell.
+            # Read all lines in the original test script
             with open(self.script_file) as f:
+                # Get rid of potential whitespaces and CR at the end of
+                # each line.
                 for line in f:
                     line = line.rstrip()
-                    for pattern, replacement in self.cmd_substitutions:
-                        line = pattern.sub(replacement, line)
+                    if must_convert:
+                        # convert the "cmd" syntax to Bourne shell
+                        for pattern, replacement in self.cmd_substitutions:
+                            line = pattern.sub(replacement, line)
                     new_script.append(line)
 
             # Write the shell script and schedule its execution with "bash"

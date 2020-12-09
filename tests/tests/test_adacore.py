@@ -30,6 +30,10 @@ def test_adacore():
     assert extract_results(suite) == {
         # Check that test.sh are picked up
         "0000-097": Status.PASS,
+        # Check that test.sh aren't converted from cmd to Bourne syntax
+        "3807-001": Status.PASS,
+        # Check that test.cmd_suffix tests are converted
+        "DB15-019": Status.PASS,
         # Regular test execution, exercize output refiners
         "T415-993": Status.PASS,
         # Missing non-default baseline
