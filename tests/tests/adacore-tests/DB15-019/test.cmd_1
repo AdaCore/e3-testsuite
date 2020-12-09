@@ -1,0 +1,5 @@
+# Naming the test test.cmd_1 used to result in the cmd script not being
+# converted to shell syntax. The `ls` call would then fail because `test`
+# didn't exist.
+touch -- -o test.exe
+ls test
