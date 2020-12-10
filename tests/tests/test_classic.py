@@ -198,6 +198,9 @@ def test_classic(caplog):
     )
     assert log in testsuite_logs(caplog)
 
+    # Check that XPASS result prints the XFAIL message
+    assert suite.report_index.entries["xpassed"].msg == "XFAIL message"
+
 
 def test_long_logs(caplog):
     """Check that long logs are truncated as requested."""

@@ -2,4 +2,4 @@ driver: script-driver
 process:
     args: []
 control:
-    - [XFAIL, "True"]
+    - [XFAIL, "True", "XFAIL message"]
