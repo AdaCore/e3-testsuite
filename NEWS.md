@@ -1,6 +1,7 @@
 25.0 (Not released yet)
 =======================
 
+* `ClassicTestDriver`: use XFAIL message for XPASS result.
 * `DiffTestDriver`: make it possible to refine baselines.
 * Allow multiple testcases per test directory.
 * `AdaCoreLegacyTestControlCreator`: also check for shell scripts (`test.sh`).
