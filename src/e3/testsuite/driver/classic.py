@@ -253,7 +253,7 @@ class ClassicTestDriver(TestDriver):
         assert not self.test_control.skip
 
         if self.test_control.xfail:
-            self.result.set_status(TestStatus.XPASS)
+            self.result.set_status(TestStatus.XPASS, self.test_control.message)
         else:
             self.result.set_status(TestStatus.PASS)
         self.push_result()
