@@ -412,6 +412,36 @@ def test_invalid_driver():
     )
 
 
+def test_duplicate_name():
+    """Check duplicate test names are properly reported."""
+
+    class MyDriver(BasicDriver):
+        def run(self, prev, slot):
+            self.result.log += "Work is being done..."
+
+        def analyze(self, prev, slot):
+            self.result.set_status(Status.PASS, "all good")
+            self.push_result()
+
+    class Mysuite(Suite):
+        tests_subdir = "simple-tests"
+        test_driver_map = {"default": MyDriver}
+        default_driver = "default"
+
+        def test_name(self, test_dir):
+            return "foo"
+
+    suite = run_testsuite(Mysuite, args=["-E"])
+    assert len(suite.report_index.entries) == 2
+    assert suite.report_index.entries["foo"].status == Status.PASS
+    check_result_from_prefix(
+        suite,
+        "foo__except",
+        Status.ERROR,
+        "duplicate test name: foo",
+    )
+
+
 def test_show_error_output(caplog):
     """Check that --show-error-output works as expected."""
 

@@ -472,7 +472,14 @@ class TestsuiteCore:
         test_finders = self.test_finders
 
         def add_testcase(test: ParsedTest) -> None:
-            testcases[test.test_name] = test
+            if test.test_name in testcases:
+                self.add_test_error(
+                    test_name=test.test_name,
+                    message=f"duplicate test name: {test.test_name}",
+                    tb=None,
+                )
+            else:
+                testcases[test.test_name] = test
 
         def helper(spec: str) -> None:
             pattern: Optional[Pattern[str]] = None
