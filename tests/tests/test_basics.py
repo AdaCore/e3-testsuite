@@ -20,6 +20,7 @@ from e3.testsuite.result import TestResult as Result, TestStatus as Status
 from e3.testsuite.testcase_finder import TestFinder as Finder, ParsedTest
 
 from .utils import (
+    check_result_from_prefix,
     extract_results,
     run_testsuite,
     run_testsuite_status,
@@ -316,7 +317,7 @@ def test_dev_mode():
         assert content == test
 
 
-def test_invalid_yaml(caplog):
+def test_invalid_yaml():
     """Check that invalid test.yaml files are properly reported."""
 
     class MyDriver(BasicDriver):
@@ -334,16 +335,33 @@ def test_invalid_yaml(caplog):
 
     # The testsuite is supposed to run to completion (valid tests have run),
     # but it ends with an error status code.
-    suite = run_testsuite(Mysuite, expect_failure=True)
-    assert extract_results(suite) == {"valid": Status.PASS}
+    suite = run_testsuite(Mysuite)
+    results = suite.report_index.entries
 
-    logs = testsuite_logs(caplog)
-    assert "invalid syntax for test.yaml in 'invalid_syntax'" in logs
-    assert "invalid format for test.yaml in 'invalid_structure'" in logs
-    assert "cannot find driver for test 'invalid_driver'" in logs
+    assert len(results) == 4
+    assert results["valid"].status == Status.PASS
+
+    check_result_from_prefix(
+        suite,
+        "invalid_syntax__except",
+        Status.ERROR,
+        "invalid syntax for test.yaml",
+    )
+    check_result_from_prefix(
+        suite,
+        "invalid_structure__except",
+        Status.ERROR,
+        "invalid format for test.yaml",
+    )
+    check_result_from_prefix(
+        suite,
+        "invalid_driver__except",
+        Status.ERROR,
+        "cannot find driver",
+    )
 
 
-def test_missing_driver(caplog):
+def test_missing_driver():
     """Check that missing drivers in test.yaml files are properly reported."""
 
     class MyDriver(BasicDriver):
@@ -358,17 +376,26 @@ def test_missing_driver(caplog):
         tests_subdir = "invalid-yaml-tests"
         test_driver_map = {"my_driver": MyDriver}
 
-    suite = run_testsuite(Mysuite, expect_failure=True)
-    logs = testsuite_logs(caplog)
-    assert extract_results(suite) == {}
-    assert "missing driver for test 'valid'" in logs
+    suite = run_testsuite(Mysuite)
+    check_result_from_prefix(
+        suite,
+        "valid__except",
+        Status.ERROR,
+        "missing test driver",
+    )
 
 
-def test_invalid_driver(caplog):
+def test_invalid_driver():
     """Check that faulty driver classes are properly reported."""
 
     class MyDriver(BasicDriver):
         def __init__(self, *args, **kwargs):
+            raise NotImplementedError("__init__ not implemented")
+
+        def analyze(self):
+            raise NotImplementedError
+
+        def run(self):
             raise NotImplementedError
 
     class Mysuite(Suite):
@@ -376,9 +403,13 @@ def test_invalid_driver(caplog):
         test_driver_map = {"default": MyDriver}
         default_driver = "default"
 
-    run_testsuite(Mysuite, expect_failure=True)
-    logs = testsuite_logs(caplog)
-    assert any("Traceback:" in message for message in logs)
+    suite = run_testsuite(Mysuite, args=["-E"])
+    check_result_from_prefix(
+        suite,
+        "test1__except",
+        Status.ERROR,
+        "__init__ not implemented",
+    )
 
 
 def test_show_error_output(caplog):

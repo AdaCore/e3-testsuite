@@ -92,18 +92,14 @@ class YAMLTestFinder(TestFinder):
         try:
             test_env = e3.yaml.load_with_config(yaml_file, Env().to_dict())
         except e3.yaml.YamlError:
-            raise ProbingError(
-                "invalid syntax for test.yaml in '{}'".format(test_name)
-            )
+            raise ProbingError("invalid syntax for test.yaml")
 
         # Ensure that the test_env act like a dictionary. We still accept None
         # as it's a shortcut for "just use default driver" configuration files.
         if test_env is None:
             test_env = {}
         elif not isinstance(test_env, collections.abc.Mapping):
-            raise ProbingError(
-                "invalid format for test.yaml in '{}'".format(test_name)
-            )
+            raise ProbingError("invalid format for test.yaml")
 
         driver_name = test_env.get("driver")
         if driver_name is None:
@@ -112,9 +108,7 @@ class YAMLTestFinder(TestFinder):
             try:
                 driver_cls = testsuite.test_driver_map[driver_name]
             except KeyError:
-                raise ProbingError(
-                    "cannot find driver for test '{}'".format(test_name)
-                )
+                raise ProbingError("cannot find driver")
 
         return ParsedTest(test_name, driver_cls, test_env, dirpath)
 
