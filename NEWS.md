@@ -1,6 +1,7 @@
 25.0 (Not released yet)
 =======================
 
+* Protect test probing against duplicate test names.
 * Emit `ERROR` test results for trouble in test detection/parsing.
 * `ClassicTestDriver`: use XFAIL message for XPASS result.
 * `AdaCoreLegacyTestDriver`: stop altering shell scripts.
