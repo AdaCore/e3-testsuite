@@ -402,7 +402,6 @@ class TestsuiteCore:
         self.set_up()
 
         # Retrieve the list of test
-        self.has_error = False
         self.test_list = self.get_test_list(self.main.args.sublist)
 
         # Launch the mainloop
@@ -421,8 +420,7 @@ class TestsuiteCore:
         )
         actions = DAG()
         for parsed_test in self.test_list:
-            if not self.add_test(actions, parsed_test):
-                self.has_error = True
+            self.add_test(actions, parsed_test)
         actions.check()
 
         with open(os.path.join(self.output_dir, "tests.dot"), "w") as fd:
@@ -458,9 +456,7 @@ class TestsuiteCore:
             for s, count in self.report_index.status_counters.items()
             if count
         }
-        if self.has_error:
-            return 1
-        elif TestStatus.FAIL in statuses or TestStatus.ERROR in statuses:
+        if TestStatus.FAIL in statuses or TestStatus.ERROR in statuses:
             return self.main.args.failure_exit_code
         else:
             return 0
@@ -516,8 +512,11 @@ class TestsuiteCore:
                             self, dirpath, dirnames, filenames
                         )
                     except ProbingError as exc:
-                        self.has_error = True
-                        logger.error(str(exc))
+                        self.add_test_error(
+                            test_name=self.test_name(dirpath),
+                            message=str(exc),
+                            tb=traceback.format_exc(),
+                        )
                         break
                     if isinstance(test_or_list, list):
                         for t in test_or_list:
@@ -540,12 +539,11 @@ class TestsuiteCore:
         logger.debug("tests:\n  " + "\n  ".join(t.test_dir for t in result))
         return result
 
-    def add_test(self, actions: DAG, parsed_test: ParsedTest) -> bool:
+    def add_test(self, actions: DAG, parsed_test: ParsedTest) -> None:
         """Register a test to run.
 
         :param actions: The dag of actions for the testsuite.
         :param parsed_test: Test to instantiate.
-        :return: Whether the test was successfully registered.
         """
         test_name = parsed_test.test_name
 
@@ -563,8 +561,11 @@ class TestsuiteCore:
             if self.default_driver:
                 driver = self.test_driver_map[self.default_driver]
             else:
-                logger.error("missing driver for test '{}'".format(test_name))
-                return False
+                self.add_test_error(
+                    test_name=test_name,
+                    message="missing test driver",
+                )
+                return
 
         # Finally run the driver instantiation
         try:
@@ -574,13 +575,11 @@ class TestsuiteCore:
             instance.add_test(actions)
 
         except Exception as e:
-            error_msg = str(e)
-            error_msg += "\nTraceback:\n"
-            error_msg += "\n".join(traceback.format_tb(sys.exc_info()[2]))
-            logger.error(error_msg)
-            return False
-
-        return True
+            self.add_test_error(
+                test_name=test_name,
+                message=str(e),
+                tb=traceback.format_exc(),
+            )
 
     def dump_testsuite_result(self) -> None:
         """Log a summary of test results.
@@ -631,48 +630,7 @@ class TestsuiteCore:
         while job.test_instance.result_queue:
             result, tb = job.test_instance.result_queue.pop()
 
-            # The test results that reach this point are special: there were
-            # serialized/deserialized through YAML, so the Log layer
-            # disappeared.
-            assert result.status is not None
-
-            # Log the test result. If error output is requested and the test
-            # failed unexpectedly, show the detailed logs.
-            log_line = summary_line(result,
-                                    self.colors,
-                                    self.main.args.show_time_info)
-            if (
-                self.main.args.show_error_output
-                and result.status not in (TestStatus.PASS, TestStatus.XFAIL,
-                                          TestStatus.XPASS, TestStatus.SKIP)
-            ):
-                def format_log(log: Log) -> str:
-                    return "\n" + str(log) + self.Style.RESET_ALL
-
-                if result.diff:
-                    log_line += format_log(result.diff)
-                else:
-                    log_line += format_log(result.log)
-            logger.info(log_line)
-
-            def indented_tb(tb: List[str]) -> str:
-                return "".join("  {}".format(line) for line in tb)
-
-            assert result.test_name not in self.report_index.entries, (
-                "cannot push twice results for {}"
-                "\nFirst push happened at:"
-                "\n{}"
-                "\nThis one happened at:"
-                "\n{}".format(
-                    result.test_name,
-                    indented_tb(self.result_tracebacks[result.test_name]),
-                    indented_tb(tb),
-                )
-            )
-            with open(self.test_result_filename(result.test_name), "w") as fd:
-                yaml.dump(result, fd)
-            self.report_index.add_result(result)
-            self.result_tracebacks[result.test_name] = tb
+            self.add_result(result, tb)
 
             # Update the number of consecutive failures, aborting the testsuite
             # if appropriate
@@ -691,6 +649,74 @@ class TestsuiteCore:
                 consecutive_failures = 0
 
         return False
+
+    def add_result(self, result: TestResult, tb: List[str]) -> None:
+        """Add a test result to the result index and log it.
+
+        :param result: Test result to add.
+        :param tb: Traceback for the code that created this result, for
+            debugging purposes.
+        """
+        assert self.main.args
+
+        # The test results that reach this point are special: there were
+        # serialized/deserialized through YAML, so the Log layer disappeared.
+        assert result.status is not None
+
+        # Log the test result. If error output is requested and the test
+        # failed unexpectedly, show the detailed logs.
+        log_line = summary_line(
+            result, self.colors, self.main.args.show_time_info
+        )
+        if (
+            self.main.args.show_error_output
+            and result.status not in (TestStatus.PASS, TestStatus.XFAIL,
+                                      TestStatus.XPASS, TestStatus.SKIP)
+        ):
+            def format_log(log: Log) -> str:
+                return "\n" + str(log) + self.Style.RESET_ALL
+
+            if result.diff:
+                log_line += format_log(result.diff)
+            else:
+                log_line += format_log(result.log)
+        logger.info(log_line)
+
+        def indented_tb(tb: List[str]) -> str:
+            return "".join("  {}".format(line) for line in tb)
+
+        assert result.test_name not in self.report_index.entries, (
+            f"cannot push twice results for {result.test_name}"
+            f"\nFirst push happened at:"
+            f"\n{indented_tb(self.result_tracebacks[result.test_name])}"
+            f"\nThis one happened at:"
+            f"\n{indented_tb(tb)}"
+        )
+        with open(self.test_result_filename(result.test_name), "w") as fd:
+            yaml.dump(result, fd)
+        self.report_index.add_result(result)
+        self.result_tracebacks[result.test_name] = tb
+
+    def add_test_error(self,
+                       test_name: str,
+                       message: str,
+                       tb: Optional[str] = None) -> None:
+        """Create and add an ERROR test status.
+
+        :param test_name: Prefix for the test result to create. This adds a
+            suffix to avoid clashes.
+        :param str message: Error message.
+        :param tb: Optional traceback for the error.
+        """
+        result = TestResult(
+            f"{test_name}__except{len(self.report_index.entries)}",
+            env={},
+            status=TestStatus.ERROR,
+            msg=message,
+        )
+        if tb:
+            result.log += tb
+        self.add_result(result, traceback.format_stack())
 
     def setup_result_dir(self) -> None:
         """Create the output directory in which the results are stored."""

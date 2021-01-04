@@ -6,6 +6,18 @@ from e3.testsuite.report.index import ReportIndex
 from e3.testsuite.result import Log, TestResult as Result
 
 
+def check_result_from_prefix(suite, prefix, status, msg):
+    """Check the content of a result from its name prefix."""
+    matches = []
+    for key, value in suite.report_index.entries.items():
+        if key.startswith(prefix):
+            matches.append(value)
+    assert len(matches) == 1, "Exactly one entry matching expected"
+    result = matches[0]
+    assert result.status == status
+    assert result.msg == msg
+
+
 def extract_results(testsuite):
     """Extract synthetic test results from a testsuite run."""
     return {
