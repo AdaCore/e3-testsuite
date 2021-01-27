@@ -14,7 +14,18 @@ jobs:
                 # (T608-018).
         runs-on: ${{ matrix.os }}
         steps:
-            - uses: actions/checkout@v1
+            - name: Get e3-testsuite
+              uses: actions/checkout@v2
+              with:
+                path: e3-testsuite
+
+            # Clone e3-core just near e3-testsuite so that our Mypy
+            # configuration helps Mypy to find type hints for e3-core.
+            - name: Get e3-core
+              uses: actions/checkout@v2
+              with:
+                repository: AdaCore/e3-core
+                path: e3-core
 
             - uses: actions/setup-python@v2
               with:
@@ -25,21 +36,13 @@ jobs:
                 pip install tox
                 pip install mypy==0.790
 
-            # TODO: it seems that Mypy does not support namespace packages yet
-            # (see https://github.com/python/mypy/issues/5759), so hack around:
-            # rebuild the tree of sources as if e3-core and e3-testsuite
-            # belonged to the same distribution.
-            - name: Get e3-core sources for Mypy
-              uses: actions/checkout@v2
-              with:
-                repository: AdaCore/e3-core
-                path: src-e3-core
-            - run: |
-                cp -r src/e3/testsuite src-e3-core/src/e3/testsuite
-                mypy --config-file=mypy.ini src-e3-core/src/e3/testsuite/
-                # Make sure we remove src-e3-core once done with typing so that
-                # testing does not pick it up.
-                rm -rf src-e3-core
+            - name: Type check with Mypy
+              run: |
+                cd e3-testsuite
+                mypy
 
             # Run the testsuite and style checks
-            - run: tox -e py-ci-cov-codecov,checkstyle,security
+            - name: Run the testsuite & style checks
+              run: |
+                cd e3-testsuite
+                tox -e py-ci-cov-codecov,checkstyle,security
