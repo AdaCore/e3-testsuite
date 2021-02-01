@@ -64,6 +64,14 @@ def dump_gaia_report(testsuite: TestsuiteCore, output_dir: str) -> None:
     :param output_dir: Directory in which to emit the report.
     """
     with open(
+        os.path.join(output_dir, "discs"), "w", encoding="utf-8"
+    ) as discs_fd:
+        if testsuite.env.discs is not None:
+            discs_fd.write(" ".join([
+                disc for disc in testsuite.env.discs if disc is not None
+            ]))
+
+    with open(
         os.path.join(output_dir, "results"), "w", encoding="utf-8"
     ) as results_fd:
         for entry in testsuite.report_index.entries.values():
