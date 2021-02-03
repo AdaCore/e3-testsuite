@@ -22,8 +22,8 @@ class AdaCoreLegacyTestDriver(DiffTestDriver):
     is controlled by "test.opt" files.
 
     This driver assumes that the list of discriminants for the "test.opt" file
-    is available as "self.env.discs", and that the environ for subprocesses is
-    available as "self.env.test_environ".
+    is available as "self.env.discs" (i.e. it is a list of strings), and that
+    the environ for subprocesses is available as "self.env.test_environ".
 
     If the TEST_SUPPORT_DIR environment variable is defined, consider that it
     contains the name of a directory that contains a "support.sh" script, that

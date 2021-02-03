@@ -63,6 +63,17 @@ def dump_gaia_report(testsuite: TestsuiteCore, output_dir: str) -> None:
         which to generate the report.
     :param output_dir: Directory in which to emit the report.
     """
+    # If there is a list of discriminants (i.e. in legacy AdaCore testsuites:
+    # see AdaCoreLegacyTestDriver), include it in the report.
+    discs = getattr(testsuite.env, "discs", None)
+    if isinstance(discs, list) and all(isinstance(d, str) for d in discs):
+        with open(
+            os.path.join(output_dir, "discs"), "w", encoding="utf-8"
+        ) as discs_fd:
+            if discs:
+                discs_fd.write(" ".join(discs))
+                discs_fd.write("\n")
+
     with open(
         os.path.join(output_dir, "results"), "w", encoding="utf-8"
     ) as results_fd:
