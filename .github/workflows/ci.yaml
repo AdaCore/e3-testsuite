@@ -34,7 +34,7 @@ jobs:
               run: |
                 pip install --upgrade pip
                 pip install tox
-                pip install mypy==0.790
+                pip install mypy==0.800
 
             - name: Type check with Mypy
               run: |
