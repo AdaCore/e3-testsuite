@@ -175,3 +175,49 @@ def test_rewriting(caplog):
         check_baselines("nondefault-nodiff", {"baseline.out": ["Hello"]})
         check_baselines("nondefault-empty", {"baseline.out": []})
         check_baselines("xfail-diff", {"test.out": ["World"]})
+
+
+def test_gaia_discs():
+    """Check that the GAIA report reports discriminants as expected."""
+    discs_filename = os.path.join("out", "new", "discs")
+
+    class BasicSuite(Suite):
+        tests_subdir = "simple-tests"
+
+    def run(cls):
+        run_testsuite(cls, args=["nosuchtest", "--gaia-output"])
+
+    def test_discs(discs_value, report_discs):
+        """Run a testsuite and check the list of discriminants in report.
+
+        Run a testsuite with ``testsuite.env.discs = discs_value``. Check that
+        there is no "discs" report file if ``report_discs`` is None, and that
+        it is a text file that contains the ``report_discs`` string otherwise.
+        """
+
+        class DiscsSuite(Suite):
+            def set_up(self):
+                super().set_up()
+                self.env.discs = discs_value
+
+        run(DiscsSuite)
+        if report_discs is None:
+            assert not os.path.exists(discs_filename)
+        else:
+            assert os.path.exists(discs_filename)
+            with open(discs_filename) as f:
+                assert f.read() == report_discs
+
+    # Check that no "discs" file is created when there is no "env.discs"
+    # attribute, or when it does not contain a list of strings.
+    run(BasicSuite)
+    assert not os.path.exists(discs_filename)
+
+    test_discs(None, None)
+    test_discs(1, None)
+    test_discs([1], None)
+
+    # Check that this file is created with the expected content when
+    # "env.discs" contains a list of strings.
+    test_discs([], "")
+    test_discs(["foo", "bar"], "foo bar\n")

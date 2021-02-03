@@ -1,6 +1,7 @@
 25.0 (Not released yet)
 =======================
 
+* GAIA reports: include discriminants list when available.
 * Protect test probing against duplicate test names.
 * Emit `ERROR` test results for trouble in test detection/parsing.
 * `ClassicTestDriver`: use XFAIL message for XPASS result.
