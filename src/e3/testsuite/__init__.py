@@ -9,6 +9,7 @@ import os
 import re
 import sys
 import tempfile
+import threading
 import traceback
 from typing import (Any, Callable, Dict, FrozenSet, IO, List, Optional,
                     Pattern, TYPE_CHECKING, Tuple, Type, cast)
@@ -58,20 +59,25 @@ class TestFragment(Job):
                  test_instance: TestDriver,
                  fun: Callable[[], None],
                  previous_values: Dict[str, Any],
-                 notify_end: Callable[[str], None]) -> None:
+                 notify_end: Callable[[str], None],
+                 running_status: RunningStatus) -> None:
         """Initialize a TestFragment.
 
         :param uid: UID of the test fragment (should be unique).
         :param test_instance: A TestDriver instance.
         :param fun: Callable to be executed by the job.
         :param notify_end: Internal parameter. See e3.job.
+        :param running_status: RunningStatus instance to signal when job
+            starts/completes.
         """
         super().__init__(uid, fun, notify_end)
         self.test_instance = test_instance
         self.previous_values = previous_values
+        self.running_status = running_status
 
     def run(self) -> None:
         """Run the test fragment."""
+        self.running_status.start(self)
         self.return_value = None
         try:
             self.return_value = self.data(self.previous_values, self.slot)
@@ -91,6 +97,104 @@ class TestFragment(Job):
             result.log += traceback.format_exc()
             test.push_result(result)
             self.return_value = e
+        self.running_status.complete(self)
+
+
+class RunningStatus:
+
+    def __init__(self, filename: str):
+        """RunningStatus constructor.
+
+        :param filename: Name of the status file to write.
+        """
+        self.dag: Optional[DAG] = None
+        self.filename = filename
+        self.lock = threading.Lock()
+
+        self.running: Dict[str, TestFragment] = {}
+        """Set of test fragments currently running, indexed by UID."""
+
+        self.completed: Dict[str, TestFragment] = {}
+        """Set of test fragments that completed their job, indexed by UID."""
+
+        self.status_counters: Dict[TestStatus, int] = {}
+        """Snapshot of the testsuite's report index status counters.
+
+        We preserve a copy to avoid inconsistent state due to race conditions:
+        these counters are updated in the collect_result method while the other
+        sets are updated in TestFragment.run, which is executed in workers
+        (i.e. other threads).
+        """
+
+    def set_dag(self, dag: DAG) -> None:
+        """Set the DAG that contains TestFragment instances."""
+        assert self.dag is None
+        self.dag = dag
+
+    def start(self, fragment: TestFragment) -> None:
+        """Put a fragment in the "running" set."""
+        assert self.dag is not None
+        with self.lock:
+            assert fragment.uid in self.dag.vertex_data
+            assert fragment.uid not in self.running
+            assert fragment.uid not in self.completed
+            self.running[fragment.uid] = fragment
+        self.dump()
+
+    def complete(self, fragment: TestFragment) -> None:
+        """Move a fragment from the "running" set to the "completed" set."""
+        assert self.dag is not None
+        with self.lock:
+            assert fragment.uid in self.dag.vertex_data
+            assert fragment.uid not in self.completed
+            f = self.running.pop(fragment.uid)
+            assert f is fragment
+            self.completed[f.uid] = f
+        self.dump()
+
+    def set_status_counters(self, counters: Dict[TestStatus, int]) -> None:
+        copy = dict(counters)
+        with self.lock:
+            self.status_counters = copy
+        self.dump()
+
+    def dump(self) -> None:
+        """Write a report for this status as human-readable text to "fp"."""
+        lines = []
+        with self.lock:
+            if self.dag is None:
+                lines.append("No test fragment yet")
+            else:
+                lines.append(
+                    f"Test fragments:"
+                    f" {len(self.completed)}"
+                    f" / {len(self.dag.vertex_data)} completed"
+                )
+
+                lines.append("Currently running:")
+                if self.running:
+                    lines.extend(f"  {uid}" for uid in sorted(self.running))
+                else:
+                    lines.append("  <none>")
+
+                statuses = sorted(
+                    [
+                        (status, count)
+                        for status, count in self.status_counters.items()
+                        if count
+                    ],
+                    key=lambda couple: couple[0].value,
+                )
+                lines.append("Partial results:")
+                if statuses:
+                    for status, count in statuses:
+                        lines.append(f"  {status.name.ljust(12)} {count}")
+                else:
+                    lines.append("  <none>")
+
+        text = "\n".join(lines)
+        with open(self.filename, "w") as f:
+            f.write(text)
 
 
 class TestsuiteCore:
@@ -208,6 +312,7 @@ class TestsuiteCore:
             data[1],
             {filter_key(k): self.return_values[k] for k in predecessors},
             notify_end,
+            self.running_status,
         )
 
     def testsuite_main(self, args: Optional[List[str]] = None) -> int:
@@ -398,6 +503,11 @@ class TestsuiteCore:
         self.env.working_dir = self.working_dir
         self.env.options = self.main.args
 
+        # Create an object to report testsuite execution status to users
+        self.running_status = RunningStatus(
+            os.path.join(self.output_dir, "status")
+        )
+
         # User specific startup
         self.set_up()
 
@@ -405,9 +515,6 @@ class TestsuiteCore:
         self.test_list = self.get_test_list(self.main.args.sublist)
 
         # Launch the mainloop
-        self.total_test = len(self.test_list)
-        self.run_test = 0
-
         self.scheduler = Scheduler(
             job_provider=self.job_factory,
             tokens=self.main.args.jobs,
@@ -422,6 +529,7 @@ class TestsuiteCore:
         for parsed_test in self.test_list:
             self.add_test(actions, parsed_test)
         actions.check()
+        self.running_status.set_dag(actions)
 
         with open(os.path.join(self.output_dir, "tests.dot"), "w") as fd:
             fd.write(actions.as_dot())
@@ -703,6 +811,9 @@ class TestsuiteCore:
             yaml.dump(result, fd)
         self.report_index.add_result(result)
         self.result_tracebacks[result.test_name] = tb
+        self.running_status.set_status_counters(
+            self.report_index.status_counters
+        )
 
     def add_test_error(self,
                        test_name: str,
