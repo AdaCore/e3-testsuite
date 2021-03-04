@@ -431,6 +431,11 @@ class TestsuiteCore:
             " can make the testing process stop when there is a regression."
         )
         parser.add_argument(
+            "--delay-before-tear-down", metavar="N", type=float, default=0.0,
+            help="Number of seconds to wait before running ClassicTestDriver's"
+            "tear_down method (no delay by default)."
+        )
+        parser.add_argument(
             "sublist", metavar="tests", nargs="*", default=[], help="test"
         )
         # Add user defined options

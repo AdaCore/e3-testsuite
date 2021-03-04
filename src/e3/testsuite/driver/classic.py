@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import subprocess
+import time
 from typing import Any, Dict, List, Optional, Union
 
 import e3.collection.dag
@@ -375,6 +376,17 @@ class ClassicTestDriver(TestDriver):
         except TestAbortWithFailure as exc:
             return self.push_failure(str(exc))
         finally:
+            # Potentially waiting for some requested delay before running the
+            # tear down.  Don't call time.sleep to avoid any risk of
+            # introducing a delay while none is requested.
+            assert self.env.options
+            delay_duration = self.env.options.delay_before_tear_down
+            if delay_duration > 0:
+                self.result.log += (
+                    f"\nWaiting for {delay_duration} before running the"
+                    " testsuite-wide tear down\n"
+                )
+                time.sleep(delay_duration)
             self.tear_down()
 
     def compute_failures(self) -> List[str]:
