@@ -18,6 +18,8 @@ First, create an empty directory and put the following Python code in a
 
    #! /usr/bin/env python3
 
+   import sys
+
    from e3.testsuite import Testsuite
 
 
