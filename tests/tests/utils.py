@@ -80,9 +80,6 @@ def create_report(results, tmp_path):
     """Create a report index in "tmp_path" for the given results."""
     index = ReportIndex(tmp_path)
     for r in results:
-        yaml_filename = tmp_path / "{}.yaml".format(r.test_name)
-        with open(yaml_filename, "w") as f:
-            yaml.dump(r, f)
         index.add_result(r)
     index.write()
     return index

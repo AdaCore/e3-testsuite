@@ -28,11 +28,7 @@ class ReportIndexEntry:
     msg: Optional[str]
 
     def load(self) -> TestResult:
-        yaml_filename = os.path.join(
-            self.index.results_dir,
-            self.test_name + ".yaml"
-        )
-        with open(yaml_filename, "rb") as f:
+        with open(self.index.result_filename(self.test_name), "rb") as f:
             result = yaml.safe_load(f)
         assert isinstance(result, TestResult)
         assert result.test_name == self.test_name
@@ -59,16 +55,22 @@ class ReportIndex:
         """Number of test result for each test status."""
 
     def add_result(self, test_result: TestResult) -> None:
-        """Add an entry to this index for the given test result."""
+        """Add an entry to this index for the given test result.
+
+        Note that this writes the result data in the results dir.
+        """
         assert isinstance(test_result.test_name, str)
         self._add_entry(
             test_result.test_name, test_result.status, test_result.msg
         )
+        with open(self.result_filename(test_result.test_name), "w") as fd:
+            yaml.dump(test_result, fd)
 
     def _add_entry(self,
                    test_name: str,
                    status: TestStatus,
-                   msg: Optional[str]) -> None:
+                   msg: Optional[str],
+                   write_on_disk: bool = False) -> None:
         """Add an entry to this index."""
         entry = ReportIndexEntry(self, test_name, status, msg)
         self.entries[entry.test_name] = entry
@@ -116,3 +118,10 @@ class ReportIndex:
             os.path.join(self.results_dir, self.INDEX_FILENAME), "w"
         ) as f:
             json.dump(doc, f)
+
+    def result_filename(self, test_name: str) -> str:
+        """Return the name of the YAML file that contains a test result.
+
+        :param test_name: Name of the test result.
+        """
+        return os.path.join(self.results_dir, f"{test_name}.yaml")
