@@ -73,7 +73,7 @@ def test_adacore():
 
         test_finders = [testcase_finder.AdaCoreLegacyTestFinder(ACDriver)]
 
-    suite = run_testsuite(Mysuite2, args=["-Ed/tmp/bar"])
+    suite = run_testsuite(Mysuite2)
     assert extract_results(suite) == {"T415-999": Status.PASS}
 
 
