@@ -14,8 +14,6 @@ import traceback
 from typing import (Any, Callable, Dict, FrozenSet, IO, List, Optional,
                     Pattern, TYPE_CHECKING, Tuple, Type, cast)
 
-import yaml
-
 from e3.collection.dag import DAG
 from e3.env import Env, BaseEnv
 from e3.fs import rm, mkdir, mv
@@ -274,13 +272,6 @@ class TestsuiteCore:
         Warning: this method is obsolete and will be removed in the future.
         """
         return self._results()
-
-    def test_result_filename(self, test_name: str) -> str:
-        """Return the name of the file in which the result are stored.
-
-        :param test_name: Name of the test for this result file.
-        """
-        return os.path.join(self.output_dir, test_name + ".yaml")
 
     def job_factory(self,
                     uid: str,
@@ -831,8 +822,6 @@ class TestsuiteCore:
             f"\nThis one happened at:"
             f"\n{indented_tb(tb)}"
         )
-        with open(self.test_result_filename(result.test_name), "w") as fd:
-            yaml.dump(result, fd)
         self.report_index.add_result(result)
         self.result_tracebacks[result.test_name] = tb
         self.running_status.set_status_counters(
