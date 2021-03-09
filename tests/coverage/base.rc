@@ -13,6 +13,7 @@ exclude_lines =
     # + py2-only or py3-only
     raise NotImplementedError
     interactive-only
+    \.\.\.
 
 
 [html]

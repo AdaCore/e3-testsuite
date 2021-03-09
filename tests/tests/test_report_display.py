@@ -1,7 +1,9 @@
 """Tests for the "e3-testsuite-report" script."""
 
+import os.path
+
 from e3.testsuite.report.display import main
-from e3.testsuite.result import TestStatus as Status
+from e3.testsuite.result import FailureReason, TestStatus as Status
 
 from .utils import create_report, create_result
 
@@ -35,32 +37,109 @@ basic_results = [
     ),
 ]
 
+sep_line = "-" * 79
+
 
 def test_basic(tmp_path, capsys):
     """Check that the script works fine in basic configurations."""
     assert run(basic_results, [str(tmp_path)], tmp_path, capsys) == (
+        "Summary:\n"
+        "\n"
+        "  Out of 4 results\n"
+        "  4 executed (not skipped)\n"
+        "  PASS         1\n"
+        "  FAIL         2\n"
+        "  XFAIL        1\n"
+        "\n"
+        "  The following results may need further investigation:\n"
+        "  2 new failure(s):\n"
+        "    div: Unexpected output\n"
+        "    mult: Unexpected result\n"
+        "\n"
+        "  1 expected failure(s):\n"
+        "    sub: Unexpected result\n"
+        "\n"
+        "Result logs:\n"
+        "\n"
+        f"{sep_line}\n"
         "FAIL            div: Unexpected output\n"
-        "    diff\n"
-        "    -4\n"
-        "    +5\n"
+        f"{sep_line}\n"
+        "\n"
+        "diff\n"
+        "-4\n"
+        "+5\n"
+        "\n"
+        f"{sep_line}\n"
         "FAIL            mult: Unexpected result\n"
-        "    3 * 2 = 5\n"
+        f"{sep_line}\n"
+        "\n"
+        "3 * 2 = 5\n"
+        "\n"
+    )
+
+
+def test_empty(tmp_path, capsys):
+    """Check the output for empty reports."""
+    assert run([], [str(tmp_path)], tmp_path, capsys) == (
+        "Summary:\n"
+        "\n"
+        "  Out of 0 results\n"
+        "  0 executed (not skipped)\n"
+        "  <no test result>\n"
+        "\n"
+        "Result logs:\n"
+        "\n"
+        "No relevant logs to display\n"
     )
 
 
 def test_all(tmp_path, capsys):
     """Check that the --all option works as expected."""
     assert run(basic_results, [str(tmp_path), "--all"], tmp_path, capsys) == (
-        "PASS            append\n"
+        "Summary:\n"
         "\n"
+        "  Out of 4 results\n"
+        "  4 executed (not skipped)\n"
+        "  PASS         1\n"
+        "  FAIL         2\n"
+        "  XFAIL        1\n"
+        "\n"
+        "  The following results may need further investigation:\n"
+        "  2 new failure(s):\n"
+        "    div: Unexpected output\n"
+        "    mult: Unexpected result\n"
+        "\n"
+        "  1 expected failure(s):\n"
+        "    sub: Unexpected result\n"
+        "\n"
+        "Result logs:\n"
+        "\n"
+        f"{sep_line}\n"
+        "PASS            append\n"
+        f"{sep_line}\n"
+        "\n"
+        "<all logs are empty>\n"
+        "\n"
+        f"{sep_line}\n"
         "FAIL            div: Unexpected output\n"
-        "    diff\n"
-        "    -4\n"
-        "    +5\n"
+        f"{sep_line}\n"
+        "\n"
+        "diff\n"
+        "-4\n"
+        "+5\n"
+        "\n"
+        f"{sep_line}\n"
         "FAIL            mult: Unexpected result\n"
-        "    3 * 2 = 5\n"
+        f"{sep_line}\n"
+        "\n"
+        "3 * 2 = 5\n"
+        "\n"
+        f"{sep_line}\n"
         "XFAIL           sub: Unexpected result\n"
-        "    3 - 2 = 0\n"
+        f"{sep_line}\n"
+        "\n"
+        "3 - 2 = 0\n"
+        "\n"
     )
 
 
@@ -69,12 +148,38 @@ def test_time(tmp_path, capsys):
     assert run(
         basic_results, [str(tmp_path), "--show-time-info"], tmp_path, capsys
     ) == (
+        "Summary:\n"
+        "\n"
+        "  Out of 4 results\n"
+        "  4 executed (not skipped)\n"
+        "  PASS         1\n"
+        "  FAIL         2\n"
+        "  XFAIL        1\n"
+        "\n"
+        "  The following results may need further investigation:\n"
+        "  2 new failure(s):\n"
+        "    div: Unexpected output\n"
+        "    mult: Unexpected result\n"
+        "\n"
+        "  1 expected failure(s):\n"
+        "    sub: Unexpected result\n"
+        "\n"
+        "Result logs:\n"
+        "\n"
+        f"{sep_line}\n"
         "FAIL            div: Unexpected output\n"
-        "    diff\n"
-        "    -4\n"
-        "    +5\n"
+        f"{sep_line}\n"
+        "\n"
+        "diff\n"
+        "-4\n"
+        "+5\n"
+        "\n"
+        f"{sep_line}\n"
         "FAIL     02m03s mult: Unexpected result\n"
-        "    3 * 2 = 5\n"
+        f"{sep_line}\n"
+        "\n"
+        "3 * 2 = 5\n"
+        "\n"
     )
 
 
@@ -83,6 +188,182 @@ def test_no_error_output(tmp_path, capsys):
     assert run(
         basic_results, [str(tmp_path), "--no-error-output"], tmp_path, capsys
     ) == (
+        "Summary:\n"
+        "\n"
+        "  Out of 4 results\n"
+        "  4 executed (not skipped)\n"
+        "  PASS         1\n"
+        "  FAIL         2\n"
+        "  XFAIL        1\n"
+        "\n"
+        "  The following results may need further investigation:\n"
+        "  2 new failure(s):\n"
+        "    div: Unexpected output\n"
+        "    mult: Unexpected result\n"
+        "\n"
+        "  1 expected failure(s):\n"
+        "    sub: Unexpected result\n"
+        "\n"
+        "Result logs:\n"
+        "\n"
         "FAIL            div: Unexpected output\n"
         "FAIL            mult: Unexpected result\n"
+    )
+
+
+def test_failure_reasons(tmp_path, capsys):
+    """Check that we report stats about failure reasons."""
+    results = [
+        create_result(
+            "crash", Status.FAIL, failure_reasons={FailureReason.CRASH}
+        ),
+        create_result(
+            "diff", Status.FAIL, failure_reasons={FailureReason.DIFF}
+        ),
+        create_result(
+            "diff-memcheck",
+            Status.FAIL,
+            failure_reasons={FailureReason.DIFF, FailureReason.MEMCHECK},
+        ),
+    ]
+
+    assert run(
+        results,
+        [str(tmp_path), "--no-error-output"],
+        str(tmp_path),
+        capsys,
+    ) == (
+        "Summary:\n"
+        "\n"
+        "  Out of 3 results\n"
+        "  3 executed (not skipped)\n"
+        "  FAIL         3, including:\n"
+        "    CRASH        1\n"
+        "    MEMCHECK     1\n"
+        "    DIFF         2\n"
+        "\n"
+        "  The following results may need further investigation:\n"
+        "  3 new failure(s):\n"
+        "    crash\n"
+        "    diff\n"
+        "    diff-memcheck\n"
+        "\n"
+        "Result logs:\n"
+        "\n"
+        "FAIL            crash\n"
+        "FAIL            diff\n"
+        "FAIL            diff-memcheck\n"
+    )
+
+
+def test_old_result(tmp_path, capsys):
+    """Check that --old-result-dir works as expected."""
+    old_results = [
+        create_result("fail-to-pass", Status.FAIL),
+        create_result("fail-to-xfail", Status.FAIL),
+        create_result("fail-to-xpass", Status.FAIL),
+        create_result("fail-to-fail", Status.FAIL),
+        create_result("pass-to-fail", Status.PASS),
+        create_result("pass-to-pass", Status.PASS),
+        create_result("pass-to-xfail", Status.PASS),
+        create_result("pass-to-xpass", Status.PASS),
+        create_result("skip-to-skip", Status.SKIP),
+        create_result("skip-to-pass", Status.SKIP),
+        create_result("skip-to-fail", Status.SKIP),
+        create_result("xfail-to-skip", Status.XFAIL),
+        create_result("xfail-to-pass", Status.XFAIL),
+        create_result("xfail-to-fail", Status.XFAIL),
+        create_result("xfail-to-xfail", Status.XFAIL),
+        create_result("removed", Status.PASS),
+    ]
+    new_results = [
+        create_result("fail-to-pass", Status.PASS),
+        create_result("fail-to-xfail", Status.XFAIL),
+        create_result("fail-to-xpass", Status.XPASS),
+        create_result("fail-to-fail", Status.FAIL),
+        create_result("pass-to-fail", Status.FAIL),
+        create_result("pass-to-pass", Status.PASS),
+        create_result("pass-to-xfail", Status.XFAIL),
+        create_result("pass-to-xpass", Status.XPASS),
+        create_result("skip-to-skip", Status.SKIP),
+        create_result("skip-to-pass", Status.PASS),
+        create_result("skip-to-fail", Status.FAIL),
+        create_result("xfail-to-skip", Status.SKIP),
+        create_result("xfail-to-pass", Status.PASS),
+        create_result("xfail-to-fail", Status.FAIL),
+        create_result("xfail-to-xfail", Status.XFAIL),
+        create_result("to-verify", Status.VERIFY),
+        create_result("not-applicable-test", Status.NOT_APPLICABLE),
+        create_result("error", Status.ERROR),
+    ]
+
+    # Create a report for old results
+    tmp_path = str(tmp_path)
+    old_result_dir = os.path.join(tmp_path, "old")
+    os.mkdir(old_result_dir)
+    create_report(old_results, old_result_dir)
+
+    new_result_dir = os.path.join(tmp_path, "new")
+    os.mkdir(new_result_dir)
+    assert run(
+        new_results,
+        [
+            new_result_dir,
+            "--no-error-output",
+            "--old-result-dir",
+            old_result_dir,
+        ],
+        new_result_dir,
+        capsys,
+    ) == (
+        "Summary:\n"
+        "\n"
+        "  Out of 18 results\n"
+        "  16 executed (not skipped)\n"
+        "  1 new skipped test(s)\n"
+        "  1 removed test(s)\n"
+        "\n"
+        "  PASS         4\n"
+        "  FAIL         4\n"
+        "  XFAIL        3\n"
+        "  XPASS        2\n"
+        "  VERIFY       1\n"
+        "  SKIP         2\n"
+        "  NOT_APPLICABLE 1\n"
+        "  ERROR        1\n"
+        "\n"
+        "  The following results may need further investigation:\n"
+        "  1 new failure(s):\n"
+        "    pass-to-fail\n"
+        "\n"
+        "  1 already detected failure(s):\n"
+        "    fail-to-fail\n"
+        "\n"
+        "  1 fixed failure(s):\n"
+        "    fail-to-pass\n"
+        "\n"
+        "  3 expected failure(s):\n"
+        "    fail-to-xfail\n"
+        "    pass-to-xfail\n"
+        "    xfail-to-xfail\n"
+        "\n"
+        "  2 unexpected passed test(s):\n"
+        "    fail-to-xpass\n"
+        "    pass-to-xpass\n"
+        "\n"
+        "  1 test(s) requiring additional verification:\n"
+        "    to-verify\n"
+        "\n"
+        "  1 test(s) aborted due to unknown error:\n"
+        "    error\n"
+        "\n"
+        "Result logs:\n"
+        "\n"
+        "ERROR           error\n"
+        "FAIL            fail-to-fail\n"
+        "NOT_APPLICABLE        not-applicable-test\n"
+        "FAIL            pass-to-fail\n"
+        "FAIL            skip-to-fail\n"
+        "VERIFY          to-verify\n"
+        "FAIL            xfail-to-fail\n"
     )
