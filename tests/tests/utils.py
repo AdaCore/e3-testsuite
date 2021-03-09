@@ -85,11 +85,21 @@ def create_report(results, tmp_path):
     return index
 
 
-def create_result(name, status, msg="", log="", diff=None, time=None):
+def create_result(
+    name,
+    status,
+    msg="",
+    log="",
+    diff=None,
+    time=None,
+    failure_reasons=None,
+):
     """Create a TestResult instance."""
     result = Result(name, status=status, msg=msg)
     result.log += log
     if diff is not None:
         result.diff = Log(diff)
     result.time = time
+    if failure_reasons:
+        result.failure_reasons.update(failure_reasons)
     return result
