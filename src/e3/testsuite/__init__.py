@@ -23,7 +23,7 @@ from e3.main import Main
 from e3.os.process import quote_arg
 from e3.testsuite._helpers import deprecated
 from e3.testsuite.report.gaia import dump_gaia_report
-from e3.testsuite.report.display import summary_line
+from e3.testsuite.report.display import generate_report, summary_line
 from e3.testsuite.report.index import ReportIndex
 from e3.testsuite.report.xunit import dump_xunit_report
 from e3.testsuite.result import Log, TestResult, TestStatus
@@ -395,6 +395,12 @@ class TestsuiteCore:
             help="Output a GAIA-compatible testsuite report next to the YAML"
             " report."
         )
+        if not self.auto_generate_text_report:
+            output_group.add_argument(
+                "--generate-text-report", action="store_true",
+                help="When the testsuite completes, generate a 'report' text"
+                " file in the output directory."
+            )
         output_group.add_argument(
             "--truncate-logs", "-T", metavar="N", type=int, default=200,
             help="When outputs (for instance subprocess outputs) exceed 2*N"
@@ -446,7 +452,6 @@ class TestsuiteCore:
             " running a testsuite in a continuous integration setup, as this"
             " can make the testing process stop when there is a regression."
         )
-
         parser.add_argument(
             "sublist", metavar="tests", nargs="*", default=[], help="test"
         )
@@ -570,6 +575,32 @@ class TestsuiteCore:
 
         # Clean everything
         self.tear_down()
+
+        # If requested, generate a text report
+        if (
+            self.auto_generate_text_report
+            or self.main.args.generate_text_report
+        ):
+            # Use the previous testsuite results for comparison, if available
+            old_index = (
+                ReportIndex.read(self.old_output_dir)
+                if self.old_output_dir
+                else None
+            )
+
+            # Include all information, except logs for successful tests, which
+            # is just too verbose.
+            with open(os.path.join(self.output_dir, "report"), "w") as f:
+                generate_report(
+                    output_file=f,
+                    new_index=self.report_index,
+                    old_index=old_index,
+                    colors=ColorConfig(colors_enabled=False),
+                    show_all_logs=False,
+                    show_xfail_logs=True,
+                    show_error_output=True,
+                    show_time_info=True,
+                )
 
         # Return the appropriate status code: 1 when there is a framework
         # issue, the failure status code from the --failure-exit-code=N option
@@ -998,6 +1029,16 @@ class TestsuiteCore:
         """Return the default exit code when at least one test fails."""
         raise NotImplementedError
 
+    @property
+    def auto_generate_text_report(self) -> bool:
+        """Return whether to automatically generate a text report.
+
+        This is disabled by default (and controlled by the
+        --generate-text-report command-line option) because the generation of
+        this report can add non-trivial overhead depending on results.
+        """
+        raise NotImplementedError
+
 
 class Testsuite(TestsuiteCore):
     """Testsuite class.
@@ -1058,3 +1099,7 @@ class Testsuite(TestsuiteCore):
     @property
     def default_failure_exit_code(self) -> int:
         return 0
+
+    @property
+    def auto_generate_text_report(self) -> bool:
+        return False

@@ -1,11 +1,14 @@
 """Tests for the "e3-testsuite-report" script."""
 
 import os.path
+import shutil
 
+from e3.testsuite import Testsuite as Suite
+from e3.testsuite.driver import BasicTestDriver as BasicDriver
 from e3.testsuite.report.display import main
 from e3.testsuite.result import FailureReason, TestStatus as Status
 
-from .utils import create_report, create_result
+from .utils import create_report, create_result, run_testsuite
 
 
 def run(results, argv, tmp_path, capsys):
@@ -366,4 +369,84 @@ def test_old_result(tmp_path, capsys):
         "FAIL            skip-to-fail\n"
         "VERIFY          to-verify\n"
         "FAIL            xfail-to-fail\n"
+    )
+
+
+def test_generate_text_report(tmp_path):
+    """Check TestsuiteCore's --generate-text-report option."""
+    tmp_path = str(tmp_path)
+
+    class MyDriver(BasicDriver):
+        return_status = Status.PASS
+
+        def run(self, prev, slot):
+            pass
+
+        def analyze(self, prev, slot):
+            self.result.set_status(Status.PASS)
+            self.push_result()
+
+    class Mysuite(Suite):
+        tests_subdir = "simple-tests"
+        test_driver_map = {"default": MyDriver}
+
+        @property
+        def default_driver(self):
+            return "default"
+
+    def check_report(expected):
+        with open(os.path.join(tmp_path, "new", "report")) as f:
+            assert f.read() == expected
+
+    args = [
+        "--generate-text-report",
+        "--output-dir",
+        tmp_path,
+        "--rotate-output-dirs",
+    ]
+
+    # First run the testsuite with no previous results
+    run_testsuite(Mysuite, args=args)
+    check_report(
+        "Summary:\n"
+        "\n"
+        "  Out of 2 results\n"
+        "  2 executed (not skipped)\n"
+        "  PASS         2\n"
+        "\n"
+        "No relevant logs to display\n"
+    )
+
+    # Replace the "new" report with other data and then re-run the testsuite in
+    # the same result dir, to exercize results comparison in the generated
+    # report.
+    new_result_dir = os.path.join(tmp_path, "new")
+    shutil.rmtree(new_result_dir)
+    os.mkdir(new_result_dir)
+    create_report(
+        [
+            create_result("test1", Status.PASS),
+            create_result("test2", Status.FAIL),
+        ],
+        new_result_dir,
+    )
+
+    run_testsuite(Mysuite, args=args)
+    check_report(
+        "Summary:\n"
+        "\n"
+        "  Out of 2 results\n"
+        "  2 executed (not skipped)\n"
+        "  0 new skipped test(s)\n"
+        "  0 removed test(s)\n"
+        "\n"
+        "  PASS         2\n"
+        "\n"
+        "  The following results may need further investigation:\n"
+        "  0 new failure(s):\n"
+        "\n"
+        "  1 fixed failure(s):\n"
+        "    test2\n"
+        "\n"
+        "No relevant logs to display\n"
     )
