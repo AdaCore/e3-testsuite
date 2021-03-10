@@ -1,9 +1,39 @@
 """Helpers for testcases."""
 
+import glob
+import os.path
 import yaml
 
 from e3.testsuite.report.index import ReportIndex
 from e3.testsuite.result import Log, TestResult as Result
+
+
+def check_result_dirs(new={}, old={}, new_dir=None, old_dir=None):
+    """Check the content of testsuite result directories.
+
+    :param new: Mapping from test names to expected test statuses for
+        "new_dir".
+    :param old: Likewise, but for "old_dir".
+    :param new_dir: Directory that contains new test results. If left to None,
+        use "out/new" in the current directory.
+    :param old_dir: Likewise, for old test results. If left to None, use
+        "out/old" in the current directory.
+    """
+    dirs = {
+        "new": new_dir or os.path.join("out", "new"),
+        "old": old_dir or os.path.join("out", "old"),
+    }
+    expected_data = {"new": new, "old": old}
+    actual_data = {"new": {}, "old": {}}
+
+    for d in ("new", "old"):
+        for filename in glob.glob(os.path.join(dirs[d], "*.yaml")):
+            if os.path.basename(filename) == ReportIndex.INDEX_FILENAME:
+                continue
+            with open(filename, "r") as f:
+                result = yaml.safe_load(f)
+            actual_data[d][result.test_name] = result.status
+    assert expected_data == actual_data, f"{expected_data} != {actual_data}"
 
 
 def check_result_from_prefix(suite, prefix, status, msg):

@@ -5,7 +5,6 @@ This checks the behavior of the Testsuite, TestDriver and BasicTestDriver
 classes.
 """
 
-import glob
 import logging
 import os
 import warnings
@@ -20,6 +19,7 @@ from e3.testsuite.result import TestResult as Result, TestStatus as Status
 from e3.testsuite.testcase_finder import TestFinder as Finder, ParsedTest
 
 from .utils import (
+    check_result_dirs,
     check_result_from_prefix,
     extract_results,
     run_testsuite,
@@ -28,37 +28,15 @@ from .utils import (
 )
 
 
-def check_results_dir(new={}, old={}):
-    """Check the content of a testsuite results directory.
-
-    ``new`` must be a dictionnary that maps test names to expected test
-    statuses for the "new" results subdirectory. ``old`` is the same, but for
-    the "old" results subdirectory.
-    """
-    expected_data = {"new": new, "old": old}
-    actual_data = {"new": {}, "old": {}}
-
-    for filename in glob.glob(os.path.join("out", "*", "*.yaml")):
-        if os.path.basename(filename) == ReportIndex.INDEX_FILENAME:
-            continue
-        with open(filename, "r") as f:
-            result = yaml.safe_load(f)
-        directory = os.path.basename(os.path.dirname(filename))
-        actual_data[directory][result.test_name] = result.status
-    assert expected_data == actual_data
-
-
 def test_basic():
     """Basic driver with all tests passing."""
 
     class MyDriver(BasicDriver):
-        return_status = Status.PASS
-
         def run(self, prev, slot):
             pass
 
         def analyze(self, prev, slot):
-            self.result.set_status(self.return_status)
+            self.result.set_status(Status.PASS)
             self.push_result()
 
     class Mysuite(Suite):
@@ -69,26 +47,11 @@ def test_basic():
         def default_driver(self):
             return "default"
 
-    result1 = {"test1": Status.PASS, "test2": Status.PASS}
-    result2 = {"test1": Status.FAIL, "test2": Status.FAIL}
-    result3 = {"test1": Status.SKIP, "test2": Status.SKIP}
-
-    # Do a first testsuite run, checking the results
+    # Run the testsuite and check both the in-memory report and the on-disk one
+    result = {"test1": Status.PASS, "test2": Status.PASS}
     suite = run_testsuite(Mysuite)
-    assert extract_results(suite) == result1
-    check_results_dir(new=result1)
-
-    # Then do a second one. We expect the previous "new" directory to move to
-    # the "old" one.
-    MyDriver.return_status = Status.FAIL
-    suite = run_testsuite(Mysuite)
-    check_results_dir(new=result2, old=result1)
-
-    # Do a third run. We expect the "old" directory to just disappear, and the
-    # "new" one to take its place.
-    MyDriver.return_status = Status.SKIP
-    suite = run_testsuite(Mysuite)
-    check_results_dir(new=result3, old=result2)
+    assert extract_results(suite) == result
+    check_result_dirs(new=result)
 
 
 def test_outer_testcase():
