@@ -356,15 +356,28 @@ class TestsuiteCore:
             "--output-dir",
             metavar="DIR",
             default="./out",
-            help="select output dir",
+            help="Select the output directory, where test results are to be"
+            " stored (default: './out'). If --old-output-dir=DIR2 is passed,"
+            " the new results are stored in DIR while DIR2 contains results"
+            " from a previous run. Otherwise, the new results are stored in"
+            " DIR/new/ while the old ones are stored in DIR/old. In both"
+            " cases, the testsuite cleans the directory for new results first."
         )
         output_group.add_argument(
-            "--keep-old-output-dir",
+            "--old-output-dir",
+            metavar="DIR",
+            help="Select the old output directory, for baseline comparison."
+            " See --output-dir."
+        )
+        output_group.add_argument(
+            "--rotate-output-dirs",
             default=False,
             action="store_true",
-            help="This is default with this testsuite framework. The option"
-            " is kept only to keep backward compatibility of invocation with"
-            " former framework (gnatpython.testdriver)",
+            help="Rotate testsuite results: move the new results directory to"
+            " the old results one before running testcases (this removes the"
+            " old results directory first). If not passed, we just remove the"
+            " new results directory before running testcases (i.e. just ignore"
+            " the old results directory)."
         )
         output_group.add_argument(
             "--show-error-output",
@@ -474,18 +487,21 @@ class TestsuiteCore:
         self.env.root_dir = self.root_dir
         self.env.test_dir = self.test_dir
 
-        # At this stage compute commonly used paths Keep the working dir as
-        # short as possible, to avoid the risk of having a path that's too long
-        # (a problem often seen on Windows, or when using WRS tools that have
-        # their own max path limitations).
+        # Setup output directories and create an index for the results we are
+        # going to produce.
+        self.output_dir: str
+        self.old_output_dir: Optional[str]
+        self.setup_result_dirs()
+        self.report_index = ReportIndex(self.output_dir)
+
+        # Prepare the working directory, where tests will run. Keep the working
+        # dir as short as possible, to avoid the risk of having a path that's
+        # too long (a problem often seen on Windows, or when using WRS tools
+        # that have their own max path limitations).
         #
         # Note that we do make sure that working_dir is an absolute path, as we
         # are likely to be changing directories when running each test. A
         # relative path would no longer work under those circumstances.
-        d = os.path.abspath(self.main.args.output_dir)
-        self.output_dir = os.path.join(d, "new")
-        self.old_output_dir = os.path.join(d, "old")
-
         if self.main.args.dev_temp:
             # Use a temporary directory for developers: make sure it is an
             # empty directory and disable cleanup to ease post-mortem
@@ -505,11 +521,6 @@ class TestsuiteCore:
 
             self.working_dir = tempfile.mkdtemp(
                 "", "tmp", os.path.abspath(self.main.args.temp_dir))
-
-        # Create the new output directory that will hold the results and create
-        # an index for it.
-        self.setup_result_dir()
-        self.report_index = ReportIndex(self.output_dir)
 
         # Store in global env: target information and common paths
         self.env.output_dir = self.output_dir
@@ -849,17 +860,42 @@ class TestsuiteCore:
             result.log += tb
         self.add_result(result, traceback.format_stack())
 
-    def setup_result_dir(self) -> None:
+    def setup_result_dirs(self) -> None:
         """Create the output directory in which the results are stored."""
         assert self.main.args
+        args = self.main.args
 
-        if os.path.isdir(self.old_output_dir):
-            rm(self.old_output_dir, True)
-        if os.path.isdir(self.output_dir):
-            mv(self.output_dir, self.old_output_dir)
+        # Both the actual new/old directories to use depend on both
+        # --output-dir and --old-output-dir options.
+        d = os.path.abspath(args.output_dir)
+        if args.old_output_dir:
+            self.output_dir = d
+            old_output_dir = os.path.abspath(args.old_output_dir)
+        else:
+            self.output_dir = os.path.join(d, "new")
+            old_output_dir = os.path.join(d, "old")
+
+        # Rotate results directories if requested. In both cases, make sure the
+        # new results dir is clean.
+        if args.rotate_output_dirs:
+            if os.path.isdir(old_output_dir):
+                rm(old_output_dir, recursive=True)
+            if os.path.isdir(self.output_dir):
+                mv(self.output_dir, old_output_dir)
+        elif os.path.isdir(self.output_dir):
+            rm(self.output_dir, recursive=True)
         mkdir(self.output_dir)
 
-        if self.main.args.dump_environ:
+        # Remember about the old output directory only if it exists (it is not
+        # our role to create it otherwise, and so this info will be unused at
+        # best, or misleading at best).
+        self.old_output_dir = (
+            old_output_dir
+            if os.path.exists(old_output_dir)
+            else None
+        )
+
+        if args.dump_environ:
             with open(os.path.join(self.output_dir, "environ.sh"), "w") as f:
                 for var_name in sorted(os.environ):
                     f.write("export {}={}\n".format(
