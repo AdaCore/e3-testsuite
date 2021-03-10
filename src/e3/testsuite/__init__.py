@@ -326,16 +326,13 @@ class TestsuiteCore:
 
         # Add common options
         parser = self.main.argument_parser
-        parser.add_argument(
-            "-o",
-            "--output-dir",
-            metavar="DIR",
-            default="./out",
-            help="select output dir",
+
+        temp_group = parser.add_argument_group(
+            title="temporaries handling arguments"
         )
-        parser.add_argument("-t", "--temp-dir", metavar="DIR",
-                            default=Env().tmp_dir)
-        parser.add_argument(
+        temp_group.add_argument(
+            "-t", "--temp-dir", metavar="DIR", default=Env().tmp_dir)
+        temp_group.add_argument(
             "-d", "--dev-temp",
             nargs="?", default=None, const="tmp",
             help="Unlike --temp-dir, use this very directory to store"
@@ -343,17 +340,25 @@ class TestsuiteCore:
                  " automatically disable temp dir cleanup, to be developer"
                  " friendly. If no directory is provided, use the local"
                  " \"tmp\" directory")
-        parser.add_argument(
-            "--max-consecutive-failures", "-M", metavar="N", type=int,
-            default=self.default_max_consecutive_failures,
-            help="Number of test failures (FAIL or ERROR) that trigger the"
-            " abortion of the testuite. If zero, this behavior is disabled. In"
-            " some cases, aborting the testsuite when there are just too many"
-            " failures saves time and costs: the software to test/environment"
-            " is too broken, there is no point to continue running the"
-            " testsuite."
+        temp_group.add_argument(
+            "--disable-cleanup",
+            dest="enable_cleanup",
+            action="store_false",
+            default=True,
+            help="disable cleanup of working space",
         )
-        parser.add_argument(
+
+        output_group = parser.add_argument_group(
+            title="results output arguments"
+        )
+        output_group.add_argument(
+            "-o",
+            "--output-dir",
+            metavar="DIR",
+            default="./out",
+            help="select output dir",
+        )
+        output_group.add_argument(
             "--keep-old-output-dir",
             default=False,
             action="store_true",
@@ -361,35 +366,40 @@ class TestsuiteCore:
             " is kept only to keep backward compatibility of invocation with"
             " former framework (gnatpython.testdriver)",
         )
-        parser.add_argument(
-            "--disable-cleanup",
-            dest="enable_cleanup",
-            action="store_false",
-            default=True,
-            help="disable cleanup of working space",
-        )
-        parser.add_argument(
-            "-j",
-            "--jobs",
-            dest="jobs",
-            type=int,
-            metavar="N",
-            default=Env().build.cpu.cores,
-            help="Specify the number of jobs to run simultaneously",
-        )
-        parser.add_argument(
+        output_group.add_argument(
             "--show-error-output",
             "-E",
             action="store_true",
             help="When testcases fail, display their output. This is for"
             " convenience for interactive use.",
         )
-        parser.add_argument(
+        output_group.add_argument(
             "--show-time-info",
             action="store_true",
             help="Display time information for test results, if available"
         )
-        parser.add_argument(
+        output_group.add_argument(
+            "--xunit-output",
+            dest="xunit_output",
+            metavar="FILE",
+            help="Output testsuite report to the given file in the standard"
+            " XUnit XML format. This is useful to display results in"
+            " continuous build systems such as Jenkins.",
+        )
+        output_group.add_argument(
+            "--gaia-output", action="store_true",
+            help="Output a GAIA-compatible testsuite report next to the YAML"
+            " report."
+        )
+        output_group.add_argument(
+            "--truncate-logs", "-T", metavar="N", type=int, default=200,
+            help="When outputs (for instance subprocess outputs) exceed 2*N"
+            " lines, only include the first and last N lines in logs. This is"
+            " necessary when storage for testsuite results have size limits,"
+            " and the useful information is generally either at the beginning"
+            " or the end of such outputs. If 0, never truncate logs."
+        )
+        output_group.add_argument(
             "--dump-environ",
             dest="dump_environ",
             action="store_true",
@@ -400,28 +410,30 @@ class TestsuiteCore:
             " the environement that existed when this testsuite was run"
             " to produce a given testsuite report.",
         )
-        parser.add_argument(
-            "--xunit-output",
-            dest="xunit_output",
-            metavar="FILE",
-            help="Output testsuite report to the given file in the standard"
-            " XUnit XML format. This is useful to display results in"
-            " continuous build systems such as Jenkins.",
+
+        exec_group = parser.add_argument_group(
+            title="execution control arguments"
         )
-        parser.add_argument(
-            "--gaia-output", action="store_true",
-            help="Output a GAIA-compatible testsuite report next to the YAML"
-            " report."
+        exec_group.add_argument(
+            "--max-consecutive-failures", "-M", metavar="N", type=int,
+            default=self.default_max_consecutive_failures,
+            help="Number of test failures (FAIL or ERROR) that trigger the"
+            " abortion of the testuite. If zero, this behavior is disabled. In"
+            " some cases, aborting the testsuite when there are just too many"
+            " failures saves time and costs: the software to test/environment"
+            " is too broken, there is no point to continue running the"
+            " testsuite."
         )
-        parser.add_argument(
-            "--truncate-logs", "-T", metavar="N", type=int, default=200,
-            help="When outputs (for instance subprocess outputs) exceed 2*N"
-            " lines, only include the first and last N lines in logs. This is"
-            " necessary when storage for testsuite results have size limits,"
-            " and the useful information is generally either at the beginning"
-            " or the end of such outputs. If 0, never truncate logs."
+        exec_group.add_argument(
+            "-j",
+            "--jobs",
+            dest="jobs",
+            type=int,
+            metavar="N",
+            default=Env().build.cpu.cores,
+            help="Specify the number of jobs to run simultaneously",
         )
-        parser.add_argument(
+        exec_group.add_argument(
             "--failure-exit-code", metavar="N", type=int,
             default=self.default_failure_exit_code,
             help="Exit code the testsuite must use when at least one test"
@@ -430,6 +442,7 @@ class TestsuiteCore:
             " running a testsuite in a continuous integration setup, as this"
             " can make the testing process stop when there is a regression."
         )
+
         parser.add_argument(
             "sublist", metavar="tests", nargs="*", default=[], help="test"
         )
