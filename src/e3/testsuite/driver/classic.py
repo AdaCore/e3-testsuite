@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import os
+
 import subprocess
+import traceback
 from typing import Any, Dict, List, Optional, Union
 
 import e3.collection.dag
@@ -10,7 +13,7 @@ from e3.testsuite.utils import DummyColors
 from e3.testsuite.control import (TestControl, TestControlCreator,
                                   YAMLTestControlCreator)
 from e3.testsuite.driver import TestDriver
-from e3.testsuite.result import Log, TestStatus, truncated
+from e3.testsuite.result import Log, TestResult, TestStatus, truncated
 
 from colorama import Fore, Style
 
@@ -307,6 +310,10 @@ class ClassicTestDriver(TestDriver):
         """
         pass
 
+    def cleanup_working_dir(self) -> None:
+        """Remove the working directory tree."""
+        rm(self.working_dir(), True)
+
     def tear_down(self) -> None:
         """Run finalization operations after a test has run.
 
@@ -317,7 +324,31 @@ class ClassicTestDriver(TestDriver):
         See set_up's docstring for the rationale behind this API.
         """
         if self.working_dir_cleanup_enabled:
-            rm(self.working_dir(), True)
+            # TODO (U222-013): sometimes on Windows, the recursive rm fails. In
+            # such cases, create a dedicated error message and dump the content
+            # of the working directory tree to help investigation.
+            wd = self.working_dir()
+            try:
+                self.cleanup_working_dir()
+            except Exception:
+                result = TestResult(
+                    f"{self.test_name}__tear_down",
+                    env=self.test_env,
+                    status=TestStatus.ERROR
+                )
+
+                result.log += (
+                    f"Error while removing the working directory {wd}:\n\n"
+                )
+                result.log += traceback.format_exc()
+                result.log += "\nRemaining files:\n"
+                for dirpath, dirnames, filenames in os.walk(wd):
+                    if dirpath != wd:
+                        result.log += f"  {os.path.relpath(dirpath, wd)}\n"
+                    for f in filenames:
+                        fpath = os.path.join(dirpath, f)
+                        result.log += f"  {os.path.relpath(fpath, wd)}\n"
+                self.push_result(result)
 
     def run_wrapper(self, prev: Dict[str, Any], slot: int) -> None:
         # Make the slot (unique identifier for active jobs at a specific time)

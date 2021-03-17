@@ -1,13 +1,14 @@
 """Tests for the e3.testsuite.driver.classic module."""
 
-
 import os
 import os.path
+import re
 import sys
 
 from e3.testsuite import Testsuite as Suite
 import e3.testsuite.control as crtl
 import e3.testsuite.driver.classic as classic
+from e3.testsuite.report.index import ReportIndex
 from e3.testsuite.result import TestStatus as Status
 
 from .utils import extract_results, run_testsuite, testsuite_logs
@@ -230,3 +231,45 @@ def test_long_logs(caplog):
         "b5",
         "b6",
     ]
+
+
+def test_cleanup_failure():
+    """Check that error recovery for working dir cleanup works as expected."""
+
+    class MyDriver(classic.ClassicTestDriver):
+        def run(self):
+            os.mkdir(self.working_dir("foo"))
+            with open(self.working_dir("foo", "bar.txt"), "w"):
+                pass
+
+        def cleanup_working_dir(self):
+            raise RuntimeError("some cleanup failure")
+
+    class Mysuite(Suite):
+        tests_subdir = "simple-tests"
+        test_driver_map = {"default": MyDriver}
+        default_driver = "default"
+
+    suite = run_testsuite(Mysuite, args=["-E"])
+    assert extract_results(suite) == {
+        "test1": Status.PASS,
+        "test2": Status.PASS,
+        "test1__tear_down": Status.ERROR,
+        "test2__tear_down": Status.ERROR,
+    }
+
+    index = ReportIndex.read("out/new")
+    r = index.entries["test1__tear_down"].load()
+
+    assert re.match(
+        "Error while removing the working directory .*test1:\n"
+        "\n"
+        "Traceback (?:.|\n)*\n"
+        "RuntimeError: some cleanup failure\n"
+        "\n"
+        "Remaining files:\n"
+        f"  test.yaml\n"
+        f"  foo\n"
+        f"  foo{os.path.sep}bar.txt\n",
+        r.log,
+    )
