@@ -273,3 +273,41 @@ def test_cleanup_failure():
         f"  foo{os.path.sep}bar.txt\n",
         r.log,
     )
+
+
+def test_ignore_env():
+    """Check that shell's ignore_env argument works as expected."""
+    env_printer = os.path.join(
+        os.path.dirname(os.path.abspath(__file__)), "env_printer.py"
+    )
+    os.environ["E3_TESTSUITE_VAR1"] = "var1-value"
+
+    def run(expected_output, **kwargs):
+        class MyDriver(classic.ClassicTestDriver):
+            def run(self):
+                self.shell(
+                    [sys.executable, env_printer],
+                    env={"E3_TESTSUITE_VAR2": "var2-value"},
+                    **kwargs,
+                )
+                self.result.out = self.output
+
+        class Mysuite(Suite):
+            tests_subdir = "simple-tests"
+            test_driver_map = {"default": MyDriver}
+            default_driver = "default"
+
+        suite = run_testsuite(Mysuite, args=["-E", "test1"])
+        assert extract_results(suite) == {"test1": Status.PASS}
+
+        index = ReportIndex.read("out/new")
+        r = index.entries["test1"].load()
+        lines = [line.strip() for line in r.out.splitlines()]
+        assert lines == expected_output
+
+    run(
+        ["E3_TESTSUITE_VAR1=var1-value", "E3_TESTSUITE_VAR2=var2-value"],
+        ignore_environ=False,
+    )
+    run(["E3_TESTSUITE_VAR2=var2-value"], ignore_environ=True)
+    run(["E3_TESTSUITE_VAR2=var2-value"])

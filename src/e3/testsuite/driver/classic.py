@@ -143,7 +143,8 @@ class ClassicTestDriver(TestDriver):
               analyze_output: bool = True,
               timeout: Optional[int] = None,
               encoding: Optional[str] = None,
-              truncate_logs_threshold: Optional[int] = None) -> ProcessResult:
+              truncate_logs_threshold: Optional[int] = None,
+              ignore_environ: bool = True) -> ProcessResult:
         """Run a subprocess.
 
         :param args: Arguments for the subprocess to run.
@@ -165,6 +166,10 @@ class ClassicTestDriver(TestDriver):
             output in ``self.result.log``. See
             ``e3.testsuite.result.truncated``'s ``line_count`` argument. If
             left to None, use the testsuite's ``--truncate-logs`` option.
+        :param ignore_environ: Applies only when ``env`` is not None.
+            When True (the default), pass exactly environment variables
+            in ``env``. When False, pass a copy of ``os.environ`` that is
+            augmented with variables in ``env``.
         """
         # By default, run the subprocess in the test working directory
         if cwd is None:
@@ -207,6 +212,7 @@ class ClassicTestDriver(TestDriver):
             input=DEVNULL,
             timeout=timeout,
             env=env,
+            ignore_environ=ignore_environ,
         )
 
         # Testsuites sometimes need to deal with binary data (or unknown
