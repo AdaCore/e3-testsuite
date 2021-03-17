@@ -2,13 +2,12 @@ from __future__ import annotations
 
 import os
 
-import subprocess
 import traceback
 from typing import Any, Dict, List, Optional, Union
 
 import e3.collection.dag
 from e3.fs import rm, sync_tree
-from e3.os.process import get_rlimit, quote_arg
+from e3.os.process import DEVNULL, PIPE, Run, STDOUT, quote_arg
 from e3.testsuite.utils import DummyColors
 from e3.testsuite.control import (TestControl, TestControlCreator,
                                   YAMLTestControlCreator)
@@ -200,20 +199,20 @@ class ClassicTestDriver(TestDriver):
                         "cwd": cwd}
         self.result.processes.append(process_info)
 
-        # Python2's subprocess module does not handle timeout, so re-implement
-        # e3.os.process's rlimit-based implementation of timeouts.
-        if timeout is not None:
-            args = [get_rlimit(), str(timeout)] + args
-
-        # We cannot use e3.os.process.Run as this API forces the use of text
-        # streams, whereas testsuite sometimes need to deal with binary data
-        # (or unknown encodings, which is equivalent).
-        subp = subprocess.Popen(
-            args, cwd=cwd, env=env, stdin=subprocess.DEVNULL,
-            stdout=subprocess.PIPE, stderr=subprocess.STDOUT
+        subp = Run(
+            cmds=args,
+            cwd=cwd,
+            output=PIPE,
+            error=STDOUT,
+            input=DEVNULL,
+            timeout=timeout,
+            env=env,
         )
+
+        # Testsuites sometimes need to deal with binary data (or unknown
+        # encodings, which is equivalent), so always use subp.raw_out.
         stdout: Union[str, bytes]
-        stdout, _ = subp.communicate()
+        stdout = subp.raw_out
         assert isinstance(stdout, bytes)
         encoding = encoding or self.default_encoding
         if encoding != "binary":
@@ -226,7 +225,11 @@ class ClassicTestDriver(TestDriver):
                     )
                 )
 
-        p = ProcessResult(subp.returncode, stdout)
+        # We run subprocesses in foreground mode, so by the time Run's
+        # constructor has returned, the subprocess is supposed to have
+        # completed, and thus we are supposed to have an exit status code.
+        assert subp.status is not None
+        p = ProcessResult(subp.status, stdout)
 
         self.result.log += format_header("Status code", p.status)
         process_info["status"] = p.status
