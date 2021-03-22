@@ -4,12 +4,15 @@ import abc
 import argparse
 import os.path
 import traceback
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, TYPE_CHECKING
 
 import e3.collection.dag
 import e3.env
 
 from e3.testsuite.result import TestResult
+
+if TYPE_CHECKING:  # no cover
+    from e3.testsuite import FragmentCallback
 
 
 class TestDriver(object, metaclass=abc.ABCMeta):
@@ -69,14 +72,14 @@ class TestDriver(object, metaclass=abc.ABCMeta):
         self,
         dag: e3.collection.dag.DAG,
         name: str,
-        fun: Optional[Callable[[Dict[str, Any], int], None]] = None,
+        fun: Optional[FragmentCallback] = None,
         after: Optional[List[str]] = None
     ) -> None:
         """Add a test fragment.
 
         This function is a helper to define test workflows that do not
-        introduce dependencies to other tests. For more complex operation
-        use directly add_vertex method from the dag. See add_test method
+        introduce dependencies to other tests. For more complex operation use
+        directly add_vertex method from the dag. See add_test method.
 
         :param dag: DAG containing test fragments.
         :param name: Name of the fragment.
@@ -87,15 +90,24 @@ class TestDriver(object, metaclass=abc.ABCMeta):
         :param after: List of fragment names that should be executed before
             this one.
         """
+        from e3.testsuite import FragmentData
+
         if after is not None:
             after = [self.test_name + "." + k for k in after]
 
         if fun is None:
             fun = getattr(self, name)
 
+        fragment = FragmentData(
+            uid=f"{self.test_name}.{name}",
+            driver=self,
+            name=name,
+            callback=fun,
+        )
+
         dag.update_vertex(
-            vertex_id=self.test_name + "." + name,
-            data=(self, fun),
+            vertex_id=fragment.uid,
+            data=fragment,
             predecessors=after,
             enable_checks=False
         )

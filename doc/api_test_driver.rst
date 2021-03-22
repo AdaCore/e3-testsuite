@@ -130,6 +130,8 @@ subclasses are required to do is to provide an implementation for the
 ``add_test`` method, which acts as an entry point. Note that there should be no
 need to override the constructor.
 
+.. _test_driver_add_fragment:
+
 This ``add_test`` method has one purpose: register test fragments, and the
 ``TestDriver.add_fragment`` method is available to do so. This latter method
 has the following interface:
@@ -318,3 +320,143 @@ test fragments.
 This is exactly the role of the ``slot`` argument in test fragments callback:
 it is a job ID between 1 and the number ``N`` of testsuite jobs (included).
 Test drivers can use it to handle shared resources avoiding conflicts.
+
+
+Inter-test dependencies
+-----------------------
+
+This section presents how to create dependencies between fragments that don't
+belong to the same tests. But first, a warning: the design of ``e3-testsuite``
+is thought primarily for tests that are independent: tests not interacting so
+that each test can be executed and not the others. Introducing inter-test
+dependencies removes this restriction, which introduces a fair amount of
+complexity:
+
+* The execution of tests must be synchronized so that the one that depends on
+  another one must run after it.
+
+* There is likely logistic to take care of so that whatever justifies the
+  dependency is carried from one test to the other.
+
+* A test does not depend only on what is being tested, but may also depend on
+  what other tests did, which may make tests more fragile and complicates
+  failure analysis.
+
+* When a user asks to run only one test, while this test happens to depend on
+  another one, the testsuite needs to make sure that this other test is also
+  run.
+
+Most of the time, these drawbacks make inter-test dependencies inappropriate,
+and thus better avoided. However there are cases where they are necessary. Real
+world examples include:
+
+* Writing an ``e3-testsuite`` based test harness to exercize existing
+  inter-dependent testcases that cannot be modified. For instance, the `ACATS
+  (Ada Conformity Assessment Test Suite) <http://www.ada-auth.org/acats.html>`_
+  has some tests which write files and other tests that then read later on.
+
+* External constraints require separate tests to host the validation of data
+  produced in other tests. For instance a qualification testsuite (in the
+  context of software certification) that needs a single test (say
+  ``report-format-check``) to check that all the outputs of a qualified tool
+  throughout the testsuite (say output of tests ``feature-A``, ``feature-B``,
+  ...) respect a given constraint.
+
+  Notice how, in this case, the outcome of such a test depends on how the
+  testsuite is run: if ``report-format-check`` detects a problem in the output
+  from ``feature-A`` but not in outputs from other tests, then
+  ``report-format-check`` will pass or fail depending on the specific set of
+  tests that the testsuite is requested to run.
+
+With these pitfalls in mind, let's see how to create inter-test dependencies.
+First, a bit of theory regarding the logistics of test fragments in the
+testsuite:
+
+The description of the :ref:`TestDriver.add_fragment method
+<test_driver_add_fragment>` above mentionned a crucial data structure in the
+testsuite: the DAG (Directed Acyclic Graph). This graph (an instance of
+``e3.collections.dag.DAG``) contains the list of fragments to run as nodes and
+the dependencies between these fragments as edges. The DAG is then is used to
+schedule their execution: first execute fragments that have no dependencies,
+then fragments that depend on these, etc.
+
+Each node in this graph is a ``FragmentData`` instance, that the
+``add_fragment`` method creates. This class has four fields:
+
+* ``uid``, a string used as an identifier for this fragment that is unique in
+  the whole DAG (it corresponds to the ``VertexID`` generic type in
+  ``e3.collections.dag``). ``add_fragment`` automatically creates it from the
+  driver's ``test_name`` field and ``add_fragment``'s own ``name`` argument.
+
+* ``driver``, the test driver that created this fragment.
+
+* ``name``, the ``name`` argument passed to ``add_fragment``.
+
+* ``callback``, the ``fun`` argument passed to ``add_fragment``.
+
+Our goal here is, once the DAG is populated with all the ``FragmentData`` to
+run, to add dependencies between them to express scheduling constraints.
+Overriding the ``Testsuite.adjust_dag_dependencies`` method allows this: this
+method is called when the DAG was created and populated, and right before the
+scheduling and starting the execution of fragments.
+
+As as simplistic example, suppose that a testsuite has two kinds of drivers:
+``ComputeNumberDriver`` and ``SumDriver``. Tests running with
+``ComputeNumberDriver`` have no dependencies, while each test using
+``SumDriver`` needs the result of all ``ComputeNumberDriver`` (i.e. depends on
+all of them). Also assume that each driver creates only one fragment (more on
+this later), then the following method overriding would do the job:
+
+.. code-block:: python
+
+     def adjust_dag_dependencies(self, dag: DAG) -> None:
+         # Get the list of all fragments for...
+
+         # ... ComputeNumberDriver
+         comp_fragments = []
+
+         # ... SumDriver
+         sum_fragments = []
+
+         # "dag.vertex_data" is a dict that maps fragment UIDs to FragmentData
+         # instances.
+         for fg in dag.vertex_data.values():
+             if isinstance(fg.driver, ComputeNumberDriver):
+                 comp_fragments.append(fg)
+             elif isinstance(fg.driver, SumDriver):
+                 sum_fragments.append(fg)
+
+         # Pass the list of ComputeNumberDriver fragments to all SumDriver
+         # instances and make sure SumDriver fragments run after all
+         # ComputeNumberDriver ones.
+         comp_uids = [fg.uid for fg in comp_fragments]
+         for fg in sum_fragments:
+             # This allows code in SumDriver to have access to all
+             # ComputeNumberDriver fragments.
+             fg.driver.comp_fragments = comp_fragments
+
+             # This creates the scheduling constraint: the "fg" fragment must
+             # run only after all "comp_uids" fragments have run.
+             dag.update_vertex(vertex_id=fg.uid, predecessors=comp_uids)
+
+Note the use of the ``DAG.update_vertex`` method rather than
+``.set_predecessors``: the former adds predecessors (i.e. preserves existing
+ones, that the ``TestDriver.add_fragment`` method already created) while the
+latter would override them.
+
+Some drivers create more than one fragment: for instance
+``e3.testsuite.driver.BasicDriver`` creates a ``set_up`` fragment, a ``run``
+one, a ``tear_down`` one and a ``analyze`` one, which each fragment having a
+dependency on the previous one. To deal with them, ``adjust_dag_dependencies``
+need to check the ``FragmentData.name`` field to get access to specific
+fragments:
+
+.. code-block:: python
+
+   # Look for the "run" fragment from FooDriver tests
+   if fg.name == "run" and isinstance(fg.driver, FooDriver):
+      ...
+
+   # FragmentData provides a helper to do this:
+   if fg.matches(FooDriver, "run"):
+      ...
