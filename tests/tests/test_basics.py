@@ -7,12 +7,16 @@ classes.
 
 import logging
 import os
+from typing import List
 import warnings
 
 import yaml
 
-from e3.testsuite import TestAbort as E3TestAbort
-from e3.testsuite import Testsuite as Suite
+from e3.testsuite import (
+    FragmentData,
+    TestAbort as E3TestAbort,
+    Testsuite as Suite,
+)
 from e3.testsuite.driver import BasicTestDriver as BasicDriver
 from e3.testsuite.report.index import ReportIndex, ReportIndexEntry
 from e3.testsuite.result import TestResult as Result, TestStatus as Status
@@ -756,4 +760,84 @@ def test_multiple_tests_per_dir():
         "foo__a": Status.PASS,
         "foo__b": Status.PASS,
         "foo__c": Status.PASS,
+    }
+
+
+def test_inter_test_deps():
+    """Check we can run a testsuite with inter-tests dependencies."""
+    # Run a testsuite with two kind of drivers: UnitDriver ones, which just
+    # "compute a number" and SumDriver ones, which compute the sum of all
+    # numbers from UnitDriver tests. SumDriver tests depend on the UnitDriver:
+    # they must run after them and access their data.
+
+    class UnitDriver(BasicDriver):
+        def run(self, prev, slot):
+            return int(self.test_name.split("_")[-1])
+
+        def analyze(self, prev, slot):
+            assert isinstance(prev["run"], int)
+            self.result.set_status(Status.PASS)
+            self.push_result()
+
+    class SumDriver(BasicDriver):
+        unit_fragments: List[FragmentData]
+
+        def run(self, prev, slot):
+            self.sum_result = sum(
+                prev[f"{d.uid}"] for d in self.unit_fragments
+            )
+
+        def analyze(self, prev, slot):
+            self.result.set_status(
+                Status.PASS if self.sum_result == 10 else Status.FAIL
+            )
+            self.push_result()
+
+    def parsed_test(driver_cls, test_name):
+        return ParsedTest(test_name, driver_cls, {}, ".")
+
+    class Mysuite(Suite):
+        tests_subdir = "."
+
+        def get_test_list(selfi, sublist):
+            return [
+                parsed_test(SumDriver, "sum"),
+                parsed_test(UnitDriver, "unit_0"),
+                parsed_test(UnitDriver, "unit_1"),
+                parsed_test(UnitDriver, "unit_2"),
+                parsed_test(UnitDriver, "unit_3"),
+                parsed_test(UnitDriver, "unit_4"),
+            ]
+
+        def adjust_dag_dependencies(self, dag):
+            # Get the list of all fragments for...
+
+            # ... UnitDriver.run
+            unit_fragments = []
+
+            # ... SumDriver.run
+            sum_fragments = []
+
+            for fg in dag.vertex_data.values():
+                if fg.matches(UnitDriver, "run"):
+                    unit_fragments.append(fg)
+                elif fg.matches(SumDriver, "run"):
+                    sum_fragments.append(fg)
+
+            # Pass the list of UnitDriver.run fragments to all SumDriver
+            # instances and make sure SumDriver fragments run after all
+            # UnitDriver.run ones.
+            unit_uids = [fg.uid for fg in unit_fragments]
+            for fg in sum_fragments:
+                fg.driver.unit_fragments = unit_fragments
+                dag.update_vertex(vertex_id=fg.uid, predecessors=unit_uids)
+
+    suite = run_testsuite(Mysuite, args=["-E"])
+    assert extract_results(suite) == {
+        "unit_0": Status.PASS,
+        "unit_1": Status.PASS,
+        "unit_2": Status.PASS,
+        "unit_3": Status.PASS,
+        "unit_4": Status.PASS,
+        "sum": Status.PASS,
     }

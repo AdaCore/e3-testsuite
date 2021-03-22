@@ -1,6 +1,7 @@
 25.0 (Not released yet)
 =======================
 
+* Testsuite: enhance the API to ease adding inter-test dependencies.
 * Add the `--generate-text-report` command-line option.
 * Revamp the `e3-testsuite-report` script.
 * Create a "status" file to allow users to check testsuite execution.

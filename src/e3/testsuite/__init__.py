@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+from dataclasses import dataclass
 import inspect
 import logging
 import os
@@ -12,7 +13,7 @@ import tempfile
 import threading
 import traceback
 from typing import (Any, Callable, Dict, FrozenSet, IO, List, Optional,
-                    Pattern, TYPE_CHECKING, Tuple, Type, cast)
+                    Pattern, Protocol, TYPE_CHECKING, Tuple, Type, cast)
 
 from e3.collection.dag import DAG
 from e3.env import Env, BaseEnv
@@ -45,31 +46,63 @@ class TestAbort(Exception):
     pass
 
 
+class FragmentCallback(Protocol):
+    def __call__(self, previous_values: Dict[str, Any], slot: int) -> None:
+        ...
+
+
+@dataclass(frozen=True)
+class FragmentData:
+    """Data for a job unit in the testsuite.
+
+    Each ``FragmentData`` instance is recorded in the testsuite global DAG to
+    control the order of execution of all fragments with the requested level of
+    parallelism.
+
+    Note that the job scheduler turns ``FragmentData`` instances into
+    ``TestFragment`` ones during the execution (see ``Testsuite.job_factory``
+    callback).
+    """
+
+    uid: str
+    driver: TestDriver
+    name: str
+    callback: FragmentCallback
+
+    def matches(self, driver_cls: Type[TestDriver], name: str) -> bool:
+        """Return whether this fragment matches the given name/test driver.
+
+        If ``name`` is left to None, just check the driver type.
+        """
+        return isinstance(self.driver, driver_cls) and (
+            name is None or self.name == name
+        )
+
+
 class TestFragment(Job):
     """Job used in a testsuite.
 
-    :ivar test_instance: a TestDriver instance
-    :ivar data: a function to call with the following signature (,) -> None
+    :ivar driver: A TestDriver instance.
     """
 
     def __init__(self,
                  uid: str,
-                 test_instance: TestDriver,
-                 fun: Callable[[], None],
+                 driver: TestDriver,
+                 callback: FragmentCallback,
                  previous_values: Dict[str, Any],
                  notify_end: Callable[[str], None],
                  running_status: RunningStatus) -> None:
         """Initialize a TestFragment.
 
         :param uid: UID of the test fragment (should be unique).
-        :param test_instance: A TestDriver instance.
-        :param fun: Callable to be executed by the job.
+        :param driver: A TestDriver instance.
+        :param callback: Callable to be executed by the job.
         :param notify_end: Internal parameter. See e3.job.
         :param running_status: RunningStatus instance to signal when job
             starts/completes.
         """
-        super().__init__(uid, fun, notify_end)
-        self.test_instance = test_instance
+        super().__init__(uid, callback, notify_end)
+        self.driver = driver
         self.previous_values = previous_values
         self.running_status = running_status
 
@@ -86,7 +119,7 @@ class TestFragment(Job):
             # as well as the traceback, for post-mortem investigation. The name
             # is based on the test fragment name with an additional random part
             # to avoid conflicts.
-            test = self.test_instance
+            test = self.driver
             result = TestResult(
                 "{}__except{}".format(self.uid, self.index),
                 env=test.test_env,
@@ -282,13 +315,12 @@ class TestsuiteCore:
 
         See e3.job.scheduler
         """
-        # We assume that data[0] is the test instance and data[1] the method
-        # to call.
+        assert isinstance(data, FragmentData)
 
         # When passing return values from predecessors, remove current test
         # name from the keys to ease referencing by user (the short fragment
         # name can then be used by user without knowing the full node id).
-        key_prefix = data[0].test_name + "."
+        key_prefix = data.driver.test_name + "."
         key_prefix_len = len(key_prefix)
 
         def filter_key(k: str) -> str:
@@ -299,8 +331,8 @@ class TestsuiteCore:
 
         return TestFragment(
             uid,
-            data[0],
-            data[1],
+            data.driver,
+            data.callback,
             {filter_key(k): self.return_values[k] for k in predecessors},
             notify_end,
             self.running_status,
@@ -534,7 +566,19 @@ class TestsuiteCore:
         # Retrieve the list of test
         self.test_list = self.get_test_list(self.main.args.sublist)
 
-        # Launch the mainloop
+        # Create a DAG to constraint the test execution order
+        dag = DAG()
+        for parsed_test in self.test_list:
+            self.add_test(dag, parsed_test)
+        self.adjust_dag_dependencies(dag)
+        dag.check()
+        self.running_status.set_dag(dag)
+
+        # For debugging purposes, dump the final DAG to a DOT file
+        with open(os.path.join(self.output_dir, "tests.dot"), "w") as fd:
+            fd.write(dag.as_dot())
+
+        # Create a scheduler to run all fragments for the testsuite main loop
         self.scheduler = Scheduler(
             job_provider=self.job_factory,
             tokens=self.main.args.jobs,
@@ -545,14 +589,6 @@ class TestsuiteCore:
             # instances, so the following cast should be fine.
             collect=cast(Any, self.collect_result),
         )
-        actions = DAG()
-        for parsed_test in self.test_list:
-            self.add_test(actions, parsed_test)
-        actions.check()
-        self.running_status.set_dag(actions)
-
-        with open(os.path.join(self.output_dir, "tests.dot"), "w") as fd:
-            fd.write(actions.as_dot())
 
         # Run the tests. Note that when the testsuite aborts because of too
         # many consecutive test failures, we still want to produce a report and
@@ -561,7 +597,7 @@ class TestsuiteCore:
         # such cases. In other words, let the exception propagates if it's the
         # user that interrupted the testsuite.
         try:
-            self.scheduler.run(actions)
+            self.scheduler.run(dag)
         except KeyboardInterrupt:
             if not self.aborted_too_many_failures:  # interactive-only
                 raise
@@ -700,10 +736,10 @@ class TestsuiteCore:
         logger.debug("tests:\n  " + "\n  ".join(t.test_dir for t in result))
         return result
 
-    def add_test(self, actions: DAG, parsed_test: ParsedTest) -> None:
+    def add_test(self, dag: DAG, parsed_test: ParsedTest) -> None:
         """Register a test to run.
 
-        :param actions: The dag of actions for the testsuite.
+        :param dag: The DAG of test fragments to execute for the testsuite.
         :param parsed_test: Test to instantiate.
         """
         test_name = parsed_test.test_name
@@ -733,7 +769,7 @@ class TestsuiteCore:
             instance = driver(self.env, test_env)
             instance.Fore = self.Fore
             instance.Style = self.Style
-            instance.add_test(actions)
+            instance.add_test(dag)
 
         except Exception as e:
             self.add_test_error(
@@ -788,8 +824,8 @@ class TestsuiteCore:
 
         self.return_values[job.uid] = job.return_value
 
-        while job.test_instance.result_queue:
-            result, tb = job.test_instance.result_queue.pop()
+        while job.driver.result_queue:
+            result, tb = job.driver.result_queue.pop()
 
             self.add_result(result, tb)
 
@@ -1039,6 +1075,14 @@ class TestsuiteCore:
         """
         raise NotImplementedError
 
+    def adjust_dag_dependencies(self, dag: DAG) -> None:
+        """Adjust dependencies in the DAG of all test fragments.
+
+        :param dag: DAG to adjust.
+        :param fragments: Set of all fragments added so far to the DAG.
+        """
+        raise NotImplementedError
+
 
 class Testsuite(TestsuiteCore):
     """Testsuite class.
@@ -1103,3 +1147,6 @@ class Testsuite(TestsuiteCore):
     @property
     def auto_generate_text_report(self) -> bool:
         return False
+
+    def adjust_dag_dependencies(self, dag: DAG) -> None:
+        pass
