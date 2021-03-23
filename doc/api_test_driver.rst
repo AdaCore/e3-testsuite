@@ -285,6 +285,11 @@ implies no entry left in ``previous_values`` and, unless the callback already
 pushed a result (``TestDriver.push_result``), there will be no track of this
 fragment in the test report.
 
+However, if a callback raises another type of uncaught exception, the testsuite
+creates and pushes a test result with an ``ERROR`` status and with the
+exception traceback in its log, so that this error appears in the testsuite
+report.
+
 
 .. _test_fragment_slot:
 
