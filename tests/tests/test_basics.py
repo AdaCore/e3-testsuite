@@ -750,7 +750,7 @@ def test_multiple_tests_per_dir():
             return "default"
 
     suite = run_testsuite(Mysuite)
-    assert suite.results == {
+    assert extract_results(suite) == {
         "bar__x": Status.PASS,
         "bar__y": Status.PASS,
         "foo__a": Status.PASS,
