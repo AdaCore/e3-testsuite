@@ -160,7 +160,11 @@ has the following interface:
    The ``slot`` argument is described :ref:`below <test_fragment_slot>`.
 
 ``after``
-   List of fragment names that this new fragment depends on.
+   List of fragment names that this new fragment depends on. The testsuite will
+   schedule the execution of this new fragment only after all the fragments
+   that ``after`` designates have been executed. Note that its execution will
+   happen even if one or several fragments in ``after`` terminated with an
+   exception.
 
 Let's again continue with this JSON example. It is time to roll a
 ``TestDriver`` subclass, define the appropriate ``add_test`` method to create
