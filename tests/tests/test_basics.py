@@ -128,6 +128,7 @@ def test_dump_environ():
         default_driver = "default"
 
     run_testsuite(Mysuite, args=["--dump-environ"])
+    assert os.path.exists(os.path.join("out", "new", "environ.sh"))
 
 
 def test_no_testcase(caplog):
