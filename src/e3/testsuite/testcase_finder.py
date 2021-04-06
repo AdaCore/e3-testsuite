@@ -21,7 +21,8 @@ class ParsedTest:
                  test_name: str,
                  driver_cls: Optional[Type[TestDriver]],
                  test_env: dict,
-                 test_dir: str) -> None:
+                 test_dir: str,
+                 test_matcher: Optional[str] = None) -> None:
         """
         Initialize a ParsedTest instance.
 
@@ -31,11 +32,16 @@ class ParsedTest:
         :param test_env: Base test environment. Driver instantiation will
             complete it with test directory, test name, etc.
         :param test_dir: Directory that contains the testcase.
+        :param test_matcher: If not None, string to match against the list of
+            requested tests to run: in that case, the test is ignored if there
+            is no match. This is needed to filter out tests in testsuites where
+            tests don't necessarily have dedicated directories.
         """
         self.test_name = test_name
         self.driver_cls = driver_cls
         self.test_env = test_env
         self.test_dir = test_dir
+        self.test_matcher = test_matcher
 
 
 TestFinderResult = Union[Optional[ParsedTest], List[ParsedTest]]
@@ -49,6 +55,17 @@ class ProbingError(Exception):
 
 class TestFinder:
     """Interface for objects that find testcases in the tests subdirectory."""
+
+    @property
+    def test_dedicated_directory(self) -> bool:
+        """Return whether each test has a dedicated test directory.
+
+        Even though e3-testsuite is primarily designed for this to be true,
+        some testsuites actually host multiple tests in the same directory.
+        When this is the case, we need to probe all directories and only then
+        filter which test to run using ParsedTest.test_matcher.
+        """
+        return True
 
     def probe(self,
               testsuite: TestsuiteCore,
