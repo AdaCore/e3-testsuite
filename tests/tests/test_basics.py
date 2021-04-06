@@ -717,20 +717,26 @@ def test_multiple_tests_per_dir():
     """Test a test finder that returns multiple tests per directory."""
 
     class CustomTestFinder(Finder):
+        test_dedicated_directory = False
+
         def probe(self, testsuite, dirpath, dirnames, filenames):
             result = []
             for f in filenames:
                 if not f.endswith(".txt"):
                     continue
-                f = f[:-4]
+
+                # Strip the "*.txt" extension for the test name, but preserve
+                # it for the matcher.
+                test_name = testsuite.test_name(os.path.join(dirpath, f[:-4]))
+                test_matcher = os.path.join(dirpath, f)
+
                 result.append(
                     ParsedTest(
-                        test_name=testsuite.test_name(
-                            os.path.join(dirpath, f)
-                        ),
+                        test_name=test_name,
                         driver_cls=MyDriver,
                         test_env={},
                         test_dir=dirpath,
+                        test_matcher=test_matcher,
                     )
                 )
             return result
@@ -753,6 +759,7 @@ def test_multiple_tests_per_dir():
         def default_driver(self):
             return "default"
 
+    # Check a full testsuite run
     suite = run_testsuite(Mysuite)
     assert extract_results(suite) == {
         "bar__x": Status.PASS,
@@ -761,6 +768,10 @@ def test_multiple_tests_per_dir():
         "foo__b": Status.PASS,
         "foo__c": Status.PASS,
     }
+
+    # Check filtering
+    suite = run_testsuite(Mysuite, args=["a.txt"])
+    assert extract_results(suite) == {"foo__a": Status.PASS}
 
 
 def test_inter_test_deps():

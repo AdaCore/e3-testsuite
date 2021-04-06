@@ -660,8 +660,25 @@ class TestsuiteCore:
         # several patterns in "sublist" may yield the same testcase.
         testcases: Dict[str, ParsedTest] = {}
         test_finders = self.test_finders
+        dedicated_dirs_only = all(
+            tf.test_dedicated_directory for tf in test_finders
+        )
 
-        def add_testcase(test: ParsedTest) -> None:
+        def matches_pattern(pattern: Optional[Pattern[str]],
+                            name: str) -> bool:
+            return pattern is None or bool(pattern.search(name))
+
+        def add_testcase(pattern: Optional[Pattern[str]],
+                         test: ParsedTest) -> None:
+
+            # Do not add this testcase if its test-specific matcher does not
+            # match the requested pattern.
+            if (
+                test.test_matcher
+                and not matches_pattern(pattern, test.test_matcher)
+            ):
+                return
+
             if test.test_name in testcases:
                 self.add_test_error(
                     test_name=test.test_name,
@@ -694,9 +711,13 @@ class TestsuiteCore:
             for dirpath, dirnames, filenames in os.walk(
                 root, followlinks=True
             ):
-                # If the directory name does not match the given pattern, skip
-                # it.
-                if pattern is not None and not pattern.search(dirpath):
+                # If all tests are guaranteed to have a dedicated directory,
+                # do not process directories that don't match the requested
+                # pattern.
+                if (
+                    dedicated_dirs_only
+                    and not matches_pattern(pattern, dirpath)
+                ):
                     continue
 
                 # The first test finder that has a match "wins". When handling
@@ -717,10 +738,10 @@ class TestsuiteCore:
                         break
                     if isinstance(test_or_list, list):
                         for t in test_or_list:
-                            add_testcase(t)
+                            add_testcase(pattern, t)
                         break
                     elif test_or_list is not None:
-                        add_testcase(test_or_list)
+                        add_testcase(pattern, test_or_list)
                         break
 
         # If specific tests are requested, only look for them. Otherwise, just

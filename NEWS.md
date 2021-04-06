@@ -1,6 +1,7 @@
 25.0 (Not released yet)
 =======================
 
+* Fix test filtering when they don't have dedicated directories.
 * Testsuite: enhance the API to ease adding inter-test dependencies.
 * Add the `--generate-text-report` command-line option.
 * Revamp the `e3-testsuite-report` script.
