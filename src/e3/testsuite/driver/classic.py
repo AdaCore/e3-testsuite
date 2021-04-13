@@ -321,7 +321,29 @@ class ClassicTestDriver(TestDriver):
 
     def cleanup_working_dir(self) -> None:
         """Remove the working directory tree."""
-        rm(self.working_dir(), True)
+        try:
+            rm(self.working_dir(), True)
+        except Exception:  # no cover
+            # TODO (U222-013) For mysterious reasons, on Windows hosts,
+            # sometimes executable files are still visible in the filesystem
+            # even after the call to "os.unlink" returned with success. As a
+            # result, removing the directory that contains them fails and thus
+            # we get an exception.  At first we thought it could be related to
+            # the system indexer
+            # (https://superuser.com/questions/260375/why-would-system-continue-locking-executable-file-handles-after-the-app-has-exit)
+            # but this issue still occurs on systems that have it disabled.
+            #
+            # As far as we know (because we failed to pinpoint the exact reason
+            # for this condition), these issues do not reveal any bug in tests
+            # themselves, so silently ignore such errors.
+            if self.env.host.os.name == "windows":
+                self.result.log += (
+                    f"\nError while cleaning up the working directory:"
+                    f"\n{traceback.format_exc()}"
+                    f"\nHost is running Windows: discarding this error..."
+                )
+            else:
+                raise
 
     def tear_down(self) -> None:
         """Run finalization operations after a test has run.
@@ -333,9 +355,9 @@ class ClassicTestDriver(TestDriver):
         See set_up's docstring for the rationale behind this API.
         """
         if self.working_dir_cleanup_enabled:
-            # TODO (U222-013): sometimes on Windows, the recursive rm fails. In
-            # such cases, create a dedicated error message and dump the content
-            # of the working directory tree to help investigation.
+            # If an error occurs during working dir cleanup, create a dedicated
+            # error message and dump the content of the working directory tree
+            # to help investigation.
             wd = self.working_dir()
             try:
                 self.cleanup_working_dir()
