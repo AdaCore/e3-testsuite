@@ -22,7 +22,7 @@ STATUS_MAP = {
     TestStatus.XPASS: "UOK",
     TestStatus.VERIFY: "VERIFY",
     TestStatus.SKIP: "DEAD",
-    TestStatus.NOT_APPLICABLE: "NOT_APPLICABLE",
+    TestStatus.NOT_APPLICABLE: "NOT-APPLICABLE",
     TestStatus.ERROR: "PROBLEM",
 }
 """

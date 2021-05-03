@@ -57,6 +57,7 @@ def test_gaia():
             "fail-out:FAIL:",
             "fail-simple:FAIL:",
             "fail-timeout:TIMEOUT:",
+            "not_applicable:NOT-APPLICABLE:",
             "pass-log:OK:",
             "pass-time:OK:",
             "pass:OK:",
@@ -105,6 +106,7 @@ def test_gaia():
     check_logs("fail-out", out="output of failed testcase\n")
     check_logs("fail-simple")
     check_logs("fail-timeout")
+    check_logs("not_applicable")
     check_logs("pass-log", log="Log for a successful test.\n")
     check_logs("pass-time", time="1.230000000")
     check_logs("pass")
