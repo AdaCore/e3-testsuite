@@ -11,14 +11,14 @@ def isatty(stream: IO[AnyStr]) -> bool:
     support TTY detection: in these cases, be conservative (consider it's not a
     TTY).
     """
-    return bool(stream) and bool(getattr(stream, 'isatty')) and stream.isatty()
+    return bool(stream) and hasattr(stream, "isatty") and stream.isatty()
 
 
 class DummyColors:
     """Stub to replace colorama's Fore/Style when colors are disabled."""
 
     def __getattr__(self, name: str) -> str:
-        return ''
+        return ""
 
 
 class ColorConfig:
@@ -36,6 +36,7 @@ class ColorConfig:
             the standard output is a TTY.
         """
         from colorama import Fore, Style
+
         self.Fore = Fore
         self.Style = Style
 

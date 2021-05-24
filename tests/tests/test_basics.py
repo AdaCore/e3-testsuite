@@ -811,7 +811,7 @@ def test_inter_test_deps():
     class Mysuite(Suite):
         tests_subdir = "."
 
-        def get_test_list(selfi, sublist):
+        def get_test_list(self, sublist):
             return [
                 parsed_test(SumDriver, "sum"),
                 parsed_test(UnitDriver, "unit_0"),

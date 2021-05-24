@@ -5,15 +5,17 @@ import os.path
 from e3.testsuite.optfileparser import BadFormattingError, OptFileParse
 
 
-def parse_file(filename, tags=[]):
+def parse_file(filename, tags=None):
     """Parse an optfile in the "optfiles" subdirectory."""
+    tags = tags if tags is not None else []
     return OptFileParse(
         tags, os.path.join(os.path.dirname(__file__), "optfiles", filename)
     )
 
 
-def parse(lines, tags=[]):
+def parse(lines, tags=None):
     """Parse an optfile from its list of lines."""
+    tags = tags if tags is not None else []
     return OptFileParse(tags, lines)
 
 
@@ -132,7 +134,7 @@ def test_syntax_error():
     except BadFormattingError as exc:
         assert str(exc) == "Can not parse line: ? ?\n"
     else:
-        assert False
+        raise AssertionError()
 
 
 def test_required():

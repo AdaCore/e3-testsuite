@@ -1,0 +1,5 @@
+[flake8]
+exclude = .git,__pycache__,build,dist,.tox,doc/conf.py
+filename = *.py
+ignore = C901, E203, E266, E501, E231, W503,D100,D101,D102,D102,D103,D104,D105,D106,D107,D203,D403,D213
+max-line-length = 79

@@ -7,10 +7,13 @@ from e3.testsuite.result import TestStatus
 
 args_parser = argparse.ArgumentParser(
     description="Look for testcases that are always skipped in a set of"
-                " testsuite reports.")
+    " testsuite reports."
+)
 args_parser.add_argument(
-    "reports", metavar="RESULT_DIR", nargs="+",
-    help="Directory that contains the report to load."
+    "reports",
+    metavar="RESULT_DIR",
+    nargs="+",
+    help="Directory that contains the report to load.",
 )
 
 

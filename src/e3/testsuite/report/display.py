@@ -5,7 +5,15 @@ from enum import Enum
 import os.path
 import sys
 from typing import (
-    Callable, Dict, IO, Optional, List, Protocol, Set, Tuple, TypeVar
+    Callable,
+    Dict,
+    IO,
+    Optional,
+    List,
+    Protocol,
+    Set,
+    Tuple,
+    TypeVar,
 )
 
 from e3.testsuite.report.index import ReportIndex, ReportIndexEntry
@@ -14,42 +22,54 @@ from e3.testsuite.utils import ColorConfig
 
 
 args_parser = argparse.ArgumentParser(
-    description="Display the results of a testsuite.")
-args_parser.add_argument(
-    "--force-colors", "-C", action="store_true",
-    help="Force the use of colors in the output."
+    description="Display the results of a testsuite."
 )
 args_parser.add_argument(
-    "--all-logs", "-a", action="store_true",
-    help="Show logs for all tests, even if successful."
+    "--force-colors",
+    "-C",
+    action="store_true",
+    help="Force the use of colors in the output.",
 )
 args_parser.add_argument(
-    "--xfail-logs", action="store_true",
-    help="Display the log of XFAIL tests."
+    "--all-logs",
+    "-a",
+    action="store_true",
+    help="Show logs for all tests, even if successful.",
 )
 args_parser.add_argument(
-    "--show-error-output", "-E", action="store_true", dest="show_error_output",
+    "--xfail-logs", action="store_true", help="Display the log of XFAIL tests."
+)
+args_parser.add_argument(
+    "--show-error-output",
+    "-E",
+    action="store_true",
+    dest="show_error_output",
     default=True,
-    help="Display the log of test failures. Enabled by default."
+    help="Display the log of test failures. Enabled by default.",
 )
 args_parser.add_argument(
-    "--no-error-output", action="store_false", dest="show_error_output",
-    help="Do not display test output logs."
+    "--no-error-output",
+    action="store_false",
+    dest="show_error_output",
+    help="Do not display test output logs.",
 )
 args_parser.add_argument(
-    "--show-time-info", action="store_true",
-    help="Display time information for test results, if available."
+    "--show-time-info",
+    action="store_true",
+    help="Display time information for test results, if available.",
 )
 args_parser.add_argument(
     "--old-result-dir",
     help="Directory that contains the report from a previous testsuite run. If"
-         " passed, used to compute the new/already-detected/fixed regressions."
+    " passed, used to compute the new/already-detected/fixed regressions.",
 )
 args_parser.add_argument(
-    "report", metavar="RESULT_DIR", nargs="?",
+    "report",
+    metavar="RESULT_DIR",
+    nargs="?",
     default=os.path.join("out", "new"),
     help="Directory that contains the report to load. By default, use"
-         " 'out/new' from the current directory."
+    " 'out/new' from the current directory.",
 )
 
 
@@ -62,8 +82,7 @@ KeyType = TypeVar("KeyType")
 
 
 def sorted_counters(
-    counters: Dict[KeyType, int],
-    key: Callable[[KeyType], SupportsLessThan]
+    counters: Dict[KeyType, int], key: Callable[[KeyType], SupportsLessThan]
 ) -> List[Tuple[KeyType, int]]:
     """Filter out the set of null counters and sort them."""
     return sorted(
@@ -72,9 +91,9 @@ def sorted_counters(
     )
 
 
-def summary_line(result: TestResult,
-                 colors: ColorConfig,
-                 show_time_info: bool) -> str:
+def summary_line(
+    result: TestResult, colors: ColorConfig, show_time_info: bool
+) -> str:
     """Format a summary line to describe the ``result`` test result.
 
     :param colors: Proxy to introduce (or not) colors in the result.
@@ -82,34 +101,35 @@ def summary_line(result: TestResult,
     """
     if show_time_info and result.time is not None:
         seconds = int(result.time)
-        time_info = '{:>02}m{:>02}s'.format(seconds // 60,
-                                            seconds % 60)
+        time_info = "{:>02}m{:>02}s".format(seconds // 60, seconds % 60)
     else:
-        time_info = ''
+        time_info = ""
 
-    line = '{}{:<8}{} {}{:>6}{} {}{}{}'.format(
+    line = "{}{:<8}{} {}{:>6}{} {}{}{}".format(
         result.status.color(colors),
         result.status.name,
         colors.Style.RESET_ALL,
-
         colors.Style.DIM,
         time_info,
         colors.Style.NORMAL,
-
         colors.Style.BRIGHT,
         result.test_name,
-        colors.Style.NORMAL)
+        colors.Style.NORMAL,
+    )
     if result.msg:
-        line += ': {}{}{}'.format(colors.Style.DIM, result.msg,
-                                  colors.Style.NORMAL)
+        line += ": {}{}{}".format(
+            colors.Style.DIM, result.msg, colors.Style.NORMAL
+        )
 
     return line
 
 
-def format_result_logs(result: TestResult,
-                       colors: ColorConfig,
-                       show_error_output: bool,
-                       show_time_info: bool) -> List[str]:
+def format_result_logs(
+    result: TestResult,
+    colors: ColorConfig,
+    show_error_output: bool,
+    show_time_info: bool,
+) -> List[str]:
     """Return a human readable description for the ``result`` test result.
 
     :param colors: Proxy to introduce (or not) colors in the result.
@@ -230,17 +250,13 @@ def generate_report(
         # Unless they are requested, do not display results for successful
         # tests or XFAILed ones.
         if (
-            (
-                entry.status in (
-                    TestStatus.PASS, TestStatus.XPASS, TestStatus.SKIP
-                )
-                and not show_all_logs
-            )
-            or (
-                entry.status == TestStatus.XFAIL
-                and not show_all_logs
-                and not show_xfail_logs
-            )
+            entry.status
+            in (TestStatus.PASS, TestStatus.XPASS, TestStatus.SKIP)
+            and not show_all_logs
+        ) or (
+            entry.status == TestStatus.XFAIL
+            and not show_all_logs
+            and not show_xfail_logs
         ):
             continue
 
@@ -252,7 +268,7 @@ def generate_report(
     # Write the summary
     print(
         f"{colors.Style.BRIGHT}Summary:{colors.Style.NORMAL}\n",
-        file=output_file
+        file=output_file,
     )
     print(f"  Out of {count_results} results", file=output_file)
     print(f"  {count_executed} executed (not skipped)", file=output_file)
@@ -299,7 +315,7 @@ def generate_report(
             print(
                 f"  {status.color(colors)}{status.name.ljust(12)}"
                 f"{colors.Style.RESET_ALL} {count}{suffix}",
-                file=output_file
+                file=output_file,
             )
             if show_reasons:
                 for r, c in failure_reason_stats:
@@ -320,7 +336,7 @@ def generate_report(
         ):
             print(
                 "  The following results may need further investigation:",
-                file=output_file
+                file=output_file,
             )
 
             def display_failures(
@@ -334,7 +350,7 @@ def generate_report(
                 print(
                     f"  {color}{len(failures)} {kind}"
                     f"{colors.Style.RESET_ALL}:",
-                    file=output_file
+                    file=output_file,
                 )
                 for e in failures:
                     label = e.test_name
@@ -349,15 +365,19 @@ def generate_report(
             # always make sense, even if there is no old index (assuming the
             # baseline is failure free).
             display_failures(
-                "new failure(s)", colors.Fore.RED + colors.Style.BRIGHT,
-                new_failures, display_if_empty=True,
+                "new failure(s)",
+                colors.Fore.RED + colors.Style.BRIGHT,
+                new_failures,
+                display_if_empty=True,
             )
             display_failures(
-                "already detected failure(s)", colors.Fore.RED,
+                "already detected failure(s)",
+                colors.Fore.RED,
                 already_detected_failures,
             )
             display_failures(
-                "fixed failure(s)", colors.Fore.GREEN, fixed_failures)
+                "fixed failure(s)", colors.Fore.GREEN, fixed_failures
+            )
             display_failures("expected failure(s)", colors.Fore.CYAN, xfail)
             display_failures(
                 "unexpected passed test(s)", colors.Fore.YELLOW, xpass
@@ -369,19 +389,20 @@ def generate_report(
             )
             display_failures(
                 "test(s) aborted due to unknown error",
-                colors.Fore.RED + colors.Style.BRIGHT, error,
+                colors.Fore.RED + colors.Style.BRIGHT,
+                error,
             )
 
     else:
         print(
             f"  {colors.Style.DIM}<no test result>{colors.Style.NORMAL}\n",
-            file=output_file
+            file=output_file,
         )
 
     # Finally, display results logs when relevant
     print(
         f"{colors.Style.BRIGHT}Result logs:{colors.Style.NORMAL}\n",
-        file=sys.stdout
+        file=sys.stdout,
     )
     for line in results_display:
         print(line, file=output_file)
@@ -389,7 +410,7 @@ def generate_report(
         print(
             f"{colors.Style.DIM}No relevant logs to display"
             f"{colors.Style.NORMAL}",
-            file=output_file
+            file=output_file,
         )
 
 
@@ -414,5 +435,5 @@ def main(argv: Optional[List[str]] = None) -> None:
     )
 
 
-if __name__ == '__main__':  # interactive-only
+if __name__ == "__main__":  # interactive-only
     main()

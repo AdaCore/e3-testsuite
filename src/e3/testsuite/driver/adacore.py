@@ -8,8 +8,12 @@ from typing import Dict, List, Pattern, Tuple
 
 from e3.fs import cp, sync_tree
 from e3.testsuite.driver.classic import TestAbortWithError
-from e3.testsuite.driver.diff import (DiffTestDriver, LineByLine,
-                                      OutputRefiner, PatternSubstitute)
+from e3.testsuite.driver.diff import (
+    DiffTestDriver,
+    LineByLine,
+    OutputRefiner,
+    PatternSubstitute,
+)
 from e3.testsuite.control import AdaCoreLegacyTestControlCreator
 
 
@@ -62,9 +66,8 @@ class AdaCoreLegacyTestDriver(DiffTestDriver):
         # present.
         baseline = self.test_control.opt_results["OUT"]
         self._original_baseline_file = self.test_dir(baseline)
-        if (
-            not baseline.endswith("test.out")
-            and not os.path.isfile(self._original_baseline_file)
+        if not baseline.endswith("test.out") and not os.path.isfile(
+            self._original_baseline_file
         ):
             raise TestAbortWithError(
                 "cannot find output file {}".format(baseline)
@@ -88,15 +91,12 @@ class AdaCoreLegacyTestDriver(DiffTestDriver):
         # Remove ".exe" suffix for output files. This will for instance turn
         # "gcc -o main.exe main.adb" into "gcc -o main main.adb".
         (re.compile(r"-o(.*).exe"), r"-o \1"),
-
         # Convert references to environment variables: "%VAR%" -> "$VAR"
         (re.compile(r"%([^ ]*)%"), r'"$\1"'),
-
         # TODO??? Imported as-is from gnatpython.testdriver. It's not clear
         # what this tries to do given that escape characters are interpreted
         # literally ('r' string prefix).
         (re.compile(r"(\032|\015)"), r""),
-
         # Replace environment variable definitions:
         # "set FOO = BAR" -> 'FOO="BAR"; export FOO'.
         (re.compile(r"set *([^ =]+) *= *([^ ]*)"), r'\1="\2"; export \1'),
@@ -192,18 +192,16 @@ class AdaCoreLegacyTestDriver(DiffTestDriver):
         return [
             # Remove platform specificities in relative filenames
             PatternSubstitute(rb"\\", rb"/"),
-
             # Remove ".exe" extension and CR characters anywhere in outputs.
             # TODO: same question as in the TODO in "cmd_substitutions".
             PatternSubstitute(rb"(\.exe\b|\015)", rb""),
-
             # Remove occurences of the "src" working dir subdirectory
             LineByLine(
                 PatternSubstitute(
                     rb"[^ '\"]*"
                     + os.path.basename(self.working_dir()).encode("ascii")
                     + rb"/src/",
-                    rb""
+                    rb"",
                 )
             ),
         ]
@@ -217,7 +215,7 @@ class AdaCoreLegacyTestDriver(DiffTestDriver):
             cwd=self.working_dir("src"),
             env=self.test_environ,
             timeout=self.timeout,
-            catch_error=False
+            catch_error=False,
         )
         self.result.time = time.time() - start_time
 
@@ -228,21 +226,20 @@ class AdaCoreLegacyTestDriver(DiffTestDriver):
         result = super().compute_failures()
 
         # Now, make sure we propagate the new baseline to the test directory
-        if (
-            not self.test_control.xfail
-            and getattr(self.env, "rewrite_baselines", False)
+        if not self.test_control.xfail and getattr(
+            self.env, "rewrite_baselines", False
         ):
-            with open(self._baseline_file, 'rb') as f:
+            with open(self._baseline_file, "rb") as f:
                 content = f.read()
 
             # Materialize empty baselines as missing baseline file, but only
             # for the default baseline file.
-            default_baseline_file = self.test_dir('test.out')
+            default_baseline_file = self.test_dir("test.out")
             if (
                 content
                 or self._original_baseline_file != default_baseline_file
             ):
-                with open(self._original_baseline_file, 'wb') as f:
+                with open(self._original_baseline_file, "wb") as f:
                     f.write(content)
             elif os.path.exists(default_baseline_file):
                 os.remove(default_baseline_file)

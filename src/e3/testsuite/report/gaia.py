@@ -124,5 +124,5 @@ def dump_gaia_report(testsuite: TestsuiteCore, output_dir: str) -> None:
                         "{}:{}".format(key, value)
                         for key, value in sorted(result.info.items())
                     ),
-                    ".info"
+                    ".info",
                 )

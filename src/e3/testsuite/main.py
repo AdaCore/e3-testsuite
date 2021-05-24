@@ -39,7 +39,8 @@ def main() -> int:
             sys.executable,
             os.path.join(root_dir, config["main"]),
             os.path.relpath(cwd, root_dir) + "/",
-        ] + config.get("default_args", []),
+        ]
+        + config.get("default_args", []),
         output=None,
         cwd=root_dir,
     )

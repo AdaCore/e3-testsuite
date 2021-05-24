@@ -12,8 +12,21 @@ import sys
 import tempfile
 import threading
 import traceback
-from typing import (Any, Callable, Dict, FrozenSet, IO, List, Optional,
-                    Pattern, Protocol, TYPE_CHECKING, Tuple, Type, cast)
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    FrozenSet,
+    IO,
+    List,
+    Optional,
+    Pattern,
+    Protocol,
+    TYPE_CHECKING,
+    Tuple,
+    Type,
+    cast,
+)
 
 from e3.collection.dag import DAG
 from e3.env import Env, BaseEnv
@@ -28,8 +41,12 @@ from e3.testsuite.report.display import generate_report, summary_line
 from e3.testsuite.report.index import ReportIndex
 from e3.testsuite.report.xunit import dump_xunit_report
 from e3.testsuite.result import Log, TestResult, TestStatus
-from e3.testsuite.testcase_finder import (ParsedTest, ProbingError, TestFinder,
-                                          YAMLTestFinder)
+from e3.testsuite.testcase_finder import (
+    ParsedTest,
+    ProbingError,
+    TestFinder,
+    YAMLTestFinder,
+)
 from e3.testsuite.utils import ColorConfig, isatty
 
 
@@ -85,13 +102,15 @@ class TestFragment(Job):
     :ivar driver: A TestDriver instance.
     """
 
-    def __init__(self,
-                 uid: str,
-                 driver: TestDriver,
-                 callback: FragmentCallback,
-                 previous_values: Dict[str, Any],
-                 notify_end: Callable[[str], None],
-                 running_status: RunningStatus) -> None:
+    def __init__(
+        self,
+        uid: str,
+        driver: TestDriver,
+        callback: FragmentCallback,
+        previous_values: Dict[str, Any],
+        notify_end: Callable[[str], None],
+        running_status: RunningStatus,
+    ) -> None:
         """Initialize a TestFragment.
 
         :param uid: UID of the test fragment (should be unique).
@@ -132,7 +151,6 @@ class TestFragment(Job):
 
 
 class RunningStatus:
-
     def __init__(self, filename: str):
         """RunningStatus constructor.
 
@@ -238,9 +256,11 @@ class TestsuiteCore:
     variables.
     """
 
-    def __init__(self,
-                 root_dir: Optional[str] = None,
-                 testsuite_name: str = "Untitled testsute") -> None:
+    def __init__(
+        self,
+        root_dir: Optional[str] = None,
+        testsuite_name: str = "Untitled testsute",
+    ) -> None:
         """Testsuite constructor.
 
         :param root_dir: Root directory for the testsuite. If left to None, use
@@ -306,11 +326,13 @@ class TestsuiteCore:
         """
         return self._results()
 
-    def job_factory(self,
-                    uid: str,
-                    data: Any,
-                    predecessors: FrozenSet[str],
-                    notify_end: Callable[[str], None]) -> TestFragment:
+    def job_factory(
+        self,
+        uid: str,
+        data: Any,
+        predecessors: FrozenSet[str],
+        notify_end: Callable[[str], None],
+    ) -> TestFragment:
         """Run internal function.
 
         See e3.job.scheduler
@@ -354,15 +376,20 @@ class TestsuiteCore:
             title="temporaries handling arguments"
         )
         temp_group.add_argument(
-            "-t", "--temp-dir", metavar="DIR", default=Env().tmp_dir)
+            "-t", "--temp-dir", metavar="DIR", default=Env().tmp_dir
+        )
         temp_group.add_argument(
-            "-d", "--dev-temp",
-            nargs="?", default=None, const="tmp",
+            "-d",
+            "--dev-temp",
+            nargs="?",
+            default=None,
+            const="tmp",
             help="Unlike --temp-dir, use this very directory to store"
-                 " testsuite temporaries (i.e. no random subdirectory). Also"
-                 " automatically disable temp dir cleanup, to be developer"
-                 " friendly. If no directory is provided, use the local"
-                 " \"tmp\" directory")
+            " testsuite temporaries (i.e. no random subdirectory). Also"
+            " automatically disable temp dir cleanup, to be developer"
+            " friendly. If no directory is provided, use the local"
+            ' "tmp" directory',
+        )
         temp_group.add_argument(
             "--disable-cleanup",
             dest="enable_cleanup",
@@ -384,13 +411,14 @@ class TestsuiteCore:
             " the new results are stored in DIR while DIR2 contains results"
             " from a previous run. Otherwise, the new results are stored in"
             " DIR/new/ while the old ones are stored in DIR/old. In both"
-            " cases, the testsuite cleans the directory for new results first."
+            " cases, the testsuite cleans the directory for new results"
+            " first.",
         )
         output_group.add_argument(
             "--old-output-dir",
             metavar="DIR",
             help="Select the old output directory, for baseline comparison."
-            " See --output-dir."
+            " See --output-dir.",
         )
         output_group.add_argument(
             "--rotate-output-dirs",
@@ -400,7 +428,7 @@ class TestsuiteCore:
             " the old results one before running testcases (this removes the"
             " old results directory first). If not passed, we just remove the"
             " new results directory before running testcases (i.e. just ignore"
-            " the old results directory)."
+            " the old results directory).",
         )
         output_group.add_argument(
             "--show-error-output",
@@ -412,7 +440,7 @@ class TestsuiteCore:
         output_group.add_argument(
             "--show-time-info",
             action="store_true",
-            help="Display time information for test results, if available"
+            help="Display time information for test results, if available",
         )
         output_group.add_argument(
             "--xunit-output",
@@ -423,23 +451,29 @@ class TestsuiteCore:
             " continuous build systems such as Jenkins.",
         )
         output_group.add_argument(
-            "--gaia-output", action="store_true",
+            "--gaia-output",
+            action="store_true",
             help="Output a GAIA-compatible testsuite report next to the YAML"
-            " report."
+            " report.",
         )
         if not self.auto_generate_text_report:
             output_group.add_argument(
-                "--generate-text-report", action="store_true",
+                "--generate-text-report",
+                action="store_true",
                 help="When the testsuite completes, generate a 'report' text"
-                " file in the output directory."
+                " file in the output directory.",
             )
         output_group.add_argument(
-            "--truncate-logs", "-T", metavar="N", type=int, default=200,
+            "--truncate-logs",
+            "-T",
+            metavar="N",
+            type=int,
+            default=200,
             help="When outputs (for instance subprocess outputs) exceed 2*N"
             " lines, only include the first and last N lines in logs. This is"
             " necessary when storage for testsuite results have size limits,"
             " and the useful information is generally either at the beginning"
-            " or the end of such outputs. If 0, never truncate logs."
+            " or the end of such outputs. If 0, never truncate logs.",
         )
         output_group.add_argument(
             "--dump-environ",
@@ -457,14 +491,17 @@ class TestsuiteCore:
             title="execution control arguments"
         )
         exec_group.add_argument(
-            "--max-consecutive-failures", "-M", metavar="N", type=int,
+            "--max-consecutive-failures",
+            "-M",
+            metavar="N",
+            type=int,
             default=self.default_max_consecutive_failures,
             help="Number of test failures (FAIL or ERROR) that trigger the"
             " abortion of the testuite. If zero, this behavior is disabled. In"
             " some cases, aborting the testsuite when there are just too many"
             " failures saves time and costs: the software to test/environment"
             " is too broken, there is no point to continue running the"
-            " testsuite."
+            " testsuite.",
         )
         exec_group.add_argument(
             "-j",
@@ -476,13 +513,15 @@ class TestsuiteCore:
             help="Specify the number of jobs to run simultaneously",
         )
         exec_group.add_argument(
-            "--failure-exit-code", metavar="N", type=int,
+            "--failure-exit-code",
+            metavar="N",
+            type=int,
             default=self.default_failure_exit_code,
             help="Exit code the testsuite must use when at least one test"
             " result shows a failure/error. By default, this is"
             f" {self.default_failure_exit_code}. This option is useful when"
             " running a testsuite in a continuous integration setup, as this"
-            " can make the testing process stop when there is a regression."
+            " can make the testing process stop when there is a regression.",
         )
         parser.add_argument(
             "sublist", metavar="tests", nargs="*", default=[], help="test"
@@ -543,12 +582,14 @@ class TestsuiteCore:
             # If the temp dir is supposed to be randomized, we need to create a
             # subdirectory, so check that the parent directory exists first.
             if not os.path.isdir(self.main.args.temp_dir):
-                logger.critical("temp dir '%s' does not exist",
-                                self.main.args.temp_dir)
+                logger.critical(
+                    "temp dir '%s' does not exist", self.main.args.temp_dir
+                )
                 return 1
 
             self.working_dir = tempfile.mkdtemp(
-                "", "tmp", os.path.abspath(self.main.args.temp_dir))
+                "", "tmp", os.path.abspath(self.main.args.temp_dir)
+            )
 
         # Store in global env: target information and common paths
         self.env.output_dir = self.output_dir
@@ -582,7 +623,6 @@ class TestsuiteCore:
         self.scheduler = Scheduler(
             job_provider=self.job_factory,
             tokens=self.main.args.jobs,
-
             # correct_result expects specifically TestFragment instances (a Job
             # subclass), while Scheduler only guarantees Job instances.
             # Test drivers are supposed to register only TestFragment
@@ -664,18 +704,19 @@ class TestsuiteCore:
             tf.test_dedicated_directory for tf in test_finders
         )
 
-        def matches_pattern(pattern: Optional[Pattern[str]],
-                            name: str) -> bool:
+        def matches_pattern(
+            pattern: Optional[Pattern[str]], name: str
+        ) -> bool:
             return pattern is None or bool(pattern.search(name))
 
-        def add_testcase(pattern: Optional[Pattern[str]],
-                         test: ParsedTest) -> None:
+        def add_testcase(
+            pattern: Optional[Pattern[str]], test: ParsedTest
+        ) -> None:
 
             # Do not add this testcase if its test-specific matcher does not
             # match the requested pattern.
-            if (
-                test.test_matcher
-                and not matches_pattern(pattern, test.test_matcher)
+            if test.test_matcher and not matches_pattern(
+                pattern, test.test_matcher
             ):
                 return
 
@@ -714,9 +755,8 @@ class TestsuiteCore:
                 # If all tests are guaranteed to have a dedicated directory,
                 # do not process directories that don't match the requested
                 # pattern.
-                if (
-                    dedicated_dirs_only
-                    and not matches_pattern(pattern, dirpath)
+                if dedicated_dirs_only and not matches_pattern(
+                    pattern, dirpath
                 ):
                     continue
 
@@ -805,7 +845,7 @@ class TestsuiteCore:
         Subclasses are free to override this to do whatever is suitable for
         them.
         """
-        lines = ['Summary:']
+        lines = ["Summary:"]
 
         # Display test count for each status, but only for status that have
         # at least one test. Sort them by status value, to get consistent
@@ -813,19 +853,27 @@ class TestsuiteCore:
         def sort_key(couple: Tuple[TestStatus, int]) -> Any:
             status, _ = couple
             return status.value
+
         stats = sorted(
-            ((status, count)
-             for status, count in self.report_index.status_counters.items()
-             if count),
-            key=sort_key
+            (
+                (status, count)
+                for status, count in self.report_index.status_counters.items()
+                if count
+            ),
+            key=sort_key,
         )
         for status, count in stats:
-            lines.append('  {}{: <12}{} {}'.format(
-                status.color(self.colors), status.name,
-                self.Style.RESET_ALL, count))
+            lines.append(
+                "  {}{: <12}{} {}".format(
+                    status.color(self.colors),
+                    status.name,
+                    self.Style.RESET_ALL,
+                    count,
+                )
+            )
         if not stats:
-            lines.append('  <no test result>')
-        logger.info('\n'.join(lines))
+            lines.append("  <no test result>")
+        logger.info("\n".join(lines))
 
         # Dump the comment file
         with open(os.path.join(self.output_dir, "comment"), "w") as f:
@@ -886,11 +934,13 @@ class TestsuiteCore:
         log_line = summary_line(
             result, self.colors, self.main.args.show_time_info
         )
-        if (
-            self.main.args.show_error_output
-            and result.status not in (TestStatus.PASS, TestStatus.XFAIL,
-                                      TestStatus.XPASS, TestStatus.SKIP)
+        if self.main.args.show_error_output and result.status not in (
+            TestStatus.PASS,
+            TestStatus.XFAIL,
+            TestStatus.XPASS,
+            TestStatus.SKIP,
         ):
+
             def format_log(log: Log) -> str:
                 return "\n" + str(log) + self.Style.RESET_ALL
 
@@ -916,10 +966,9 @@ class TestsuiteCore:
             self.report_index.status_counters
         )
 
-    def add_test_error(self,
-                       test_name: str,
-                       message: str,
-                       tb: Optional[str] = None) -> None:
+    def add_test_error(
+        self, test_name: str, message: str, tb: Optional[str] = None
+    ) -> None:
         """Create and add an ERROR test status.
 
         :param test_name: Prefix for the test result to create. This adds a
@@ -967,16 +1016,17 @@ class TestsuiteCore:
         # our role to create it otherwise, and so this info will be unused at
         # best, or misleading at best).
         self.old_output_dir = (
-            old_output_dir
-            if os.path.exists(old_output_dir)
-            else None
+            old_output_dir if os.path.exists(old_output_dir) else None
         )
 
         if args.dump_environ:
             with open(os.path.join(self.output_dir, "environ.sh"), "w") as f:
                 for var_name in sorted(os.environ):
-                    f.write("export {}={}\n".format(
-                        var_name, quote_arg(os.environ[var_name])))
+                    f.write(
+                        "export {}={}\n".format(
+                            var_name, quote_arg(os.environ[var_name])
+                        )
+                    )
 
     # Unlike the previous methods, the following ones are supposed to be
     # overriden.
@@ -1132,7 +1182,7 @@ class Testsuite(TestsuiteCore):
         # strip leading "..".
         pattern = os.path.pardir + os.path.sep
         while result.startswith(pattern):
-            result = result[len(pattern):]
+            result = result[len(pattern) :]
 
         # Run some name canonicalization and replace directory separators with
         # double underscores.
