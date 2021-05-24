@@ -18,11 +18,13 @@ from e3.testsuite.driver import TestDriver
 from e3.testsuite.result import Log, TestResult, TestStatus
 
 
-def check_call(driver: TestDriver,
-               cmd: List[str],
-               test_name: Optional[str] = None,
-               result: Optional[TestResult] = None,
-               **kwargs: Any) -> Run:
+def check_call(
+    driver: TestDriver,
+    cmd: List[str],
+    test_name: Optional[str] = None,
+    result: Optional[TestResult] = None,
+    **kwargs: Any
+) -> Run:
     if "cwd" not in kwargs and "working_dir" in driver.test_env:
         kwargs["cwd"] = driver.test_env["working_dir"]
     if result is None:
@@ -52,17 +54,24 @@ def check_call(driver: TestDriver,
     return process
 
 
-def gprbuild(driver: TestDriver,
-             project_file: Optional[str] = None,
-             cwd: Optional[str] = None,
-             gcov: bool = False) -> bool:
+def gprbuild(
+    driver: TestDriver,
+    project_file: Optional[str] = None,
+    cwd: Optional[str] = None,
+    gcov: bool = False,
+) -> bool:
     if project_file is None:
         project_file = os.path.join(driver.test_env["test_dir"], "test.gpr")
     if cwd is None:
         cwd = driver.test_env["working_dir"]
     mkdir(cwd)
-    gprbuild_cmd = ["gprbuild", "--relocate-build-tree", "-p",
-                    "-P", project_file]
+    gprbuild_cmd = [
+        "gprbuild",
+        "--relocate-build-tree",
+        "-p",
+        "-P",
+        project_file,
+    ]
     if gcov:
         gprbuild_cmd += ["-largs", "-lgcov"]
     check_call(driver, gprbuild_cmd, cwd=cwd)

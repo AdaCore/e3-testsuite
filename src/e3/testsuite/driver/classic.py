@@ -9,8 +9,11 @@ import e3.collection.dag
 from e3.fs import rm, sync_tree
 from e3.os.process import DEVNULL, PIPE, Run, STDOUT, quote_arg
 from e3.testsuite.utils import DummyColors
-from e3.testsuite.control import (TestControl, TestControlCreator,
-                                  YAMLTestControlCreator)
+from e3.testsuite.control import (
+    TestControl,
+    TestControlCreator,
+    YAMLTestControlCreator,
+)
 from e3.testsuite.driver import TestDriver
 from e3.testsuite.result import Log, TestResult, TestStatus, truncated
 
@@ -135,16 +138,18 @@ class ClassicTestDriver(TestDriver):
         """
         return YAMLTestControlCreator({})
 
-    def shell(self,
-              args: List[str],
-              cwd: Optional[str] = None,
-              env: Optional[Dict[str, str]] = None,
-              catch_error: bool = True,
-              analyze_output: bool = True,
-              timeout: Optional[int] = None,
-              encoding: Optional[str] = None,
-              truncate_logs_threshold: Optional[int] = None,
-              ignore_environ: bool = True) -> ProcessResult:
+    def shell(
+        self,
+        args: List[str],
+        cwd: Optional[str] = None,
+        env: Optional[Dict[str, str]] = None,
+        catch_error: bool = True,
+        analyze_output: bool = True,
+        timeout: Optional[int] = None,
+        encoding: Optional[str] = None,
+        truncate_logs_threshold: Optional[int] = None,
+        ignore_environ: bool = True,
+    ) -> ProcessResult:
         """Run a subprocess.
 
         :param args: Arguments for the subprocess to run.
@@ -190,18 +195,18 @@ class ClassicTestDriver(TestDriver):
                 self.Style.DIM,
                 value,
             )
+
         self.result.log += format_header(
             "Running",
             "{} (cwd={}{}{})".format(
                 " ".join(quote_arg(a) for a in args),
                 self.Style.RESET_ALL,
                 cwd,
-                self.Style.DIM
-            )
+                self.Style.DIM,
+            ),
         )
 
-        process_info = {"cmd": args,
-                        "cwd": cwd}
+        process_info = {"cmd": args, "cwd": cwd}
         self.result.processes.append(process_info)
 
         subp = Run(
@@ -242,8 +247,9 @@ class ClassicTestDriver(TestDriver):
         process_info["output"] = Log(stdout)
 
         self.result.log += format_header(
-            "Output", "\n"
-            + truncated(str(process_info["output"]), truncate_logs_threshold)
+            "Output",
+            "\n"
+            + truncated(str(process_info["output"]), truncate_logs_threshold),
         )
 
         # If requested, use its output for analysis
@@ -330,7 +336,8 @@ class ClassicTestDriver(TestDriver):
             # result, removing the directory that contains them fails and thus
             # we get an exception.  At first we thought it could be related to
             # the system indexer
-            # (https://superuser.com/questions/260375/why-would-system-continue-locking-executable-file-handles-after-the-app-has-exit)
+            # (https://superuser.com/questions/260375/why-would-system-continue-locking-
+            # executable-file-handles-after-the-app-has-exit)
             # but this issue still occurs on systems that have it disabled.
             #
             # As far as we know (because we failed to pinpoint the exact reason
@@ -365,7 +372,7 @@ class ClassicTestDriver(TestDriver):
                 result = TestResult(
                     f"{self.test_name}__tear_down",
                     env=self.test_env,
-                    status=TestStatus.ERROR
+                    status=TestStatus.ERROR,
                 )
 
                 result.log += (
@@ -373,7 +380,7 @@ class ClassicTestDriver(TestDriver):
                 )
                 result.log += traceback.format_exc()
                 result.log += "\nRemaining files:\n"
-                for dirpath, dirnames, filenames in os.walk(wd):
+                for dirpath, _dirnames, filenames in os.walk(wd):
                     if dirpath != wd:
                         result.log += f"  {os.path.relpath(dirpath, wd)}\n"
                     for f in filenames:
@@ -399,7 +406,8 @@ class ClassicTestDriver(TestDriver):
             self.test_control = self.test_control_creator.create(self)
         except ValueError as exc:
             return self.push_error(
-                "Error while interpreting control: {}".format(exc))
+                "Error while interpreting control: {}".format(exc)
+            )
 
         # If test control tells us to skip the test, stop right here. Note that
         # if we have both skip and xfail, we are supposed not to execute the
@@ -414,8 +422,11 @@ class ClassicTestDriver(TestDriver):
         # If requested, prepare the test working directory to initially be a
         # copy of the test directory.
         if self.copy_test_directory:
-            sync_tree(self.test_env["test_dir"], self.test_env["working_dir"],
-                      delete=True)
+            sync_tree(
+                self.test_env["test_dir"],
+                self.test_env["working_dir"],
+                delete=True,
+            )
 
         # If the requested encoding is "binary", this actually means we will
         # handle binary data (i.e. no specific encoding). Create a binary log

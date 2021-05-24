@@ -73,7 +73,7 @@ class TestDriver(object, metaclass=abc.ABCMeta):
         dag: e3.collection.dag.DAG,
         name: str,
         fun: Optional[FragmentCallback] = None,
-        after: Optional[List[str]] = None
+        after: Optional[List[str]] = None,
     ) -> None:
         """Add a test fragment.
 
@@ -109,16 +109,16 @@ class TestDriver(object, metaclass=abc.ABCMeta):
             vertex_id=fragment.uid,
             data=fragment,
             predecessors=after,
-            enable_checks=False
+            enable_checks=False,
         )
 
     def working_dir(self, *args: str) -> str:
         """Build a filename in the test working directory."""
-        return os.path.join(self.test_env['working_dir'], *args)
+        return os.path.join(self.test_env["working_dir"], *args)
 
     def test_dir(self, *args: str) -> str:
         """Build a filename in the testcase directory."""
-        return os.path.join(self.test_env['test_dir'], *args)
+        return os.path.join(self.test_env["test_dir"], *args)
 
     @abc.abstractmethod
     def add_test(self, dag: e3.collection.dag.DAG) -> None:

@@ -67,14 +67,14 @@ class TestStatus(Enum):
         Fore = colors.Fore
         Style = colors.Style
         return {
-            'PASS': Fore.GREEN,
-            'FAIL': Fore.RED,
-            'XFAIL': Fore.CYAN,
-            'XPASS': Fore.YELLOW,
-            'VERIFY': Fore.YELLOW,
-            'SKIP': Style.DIM,
-            'NOT_APPLICABLE': Style.DIM,
-            'ERROR': Fore.RED + Style.BRIGHT,
+            "PASS": Fore.GREEN,
+            "FAIL": Fore.RED,
+            "XFAIL": Fore.CYAN,
+            "XPASS": Fore.YELLOW,
+            "VERIFY": Fore.YELLOW,
+            "SKIP": Style.DIM,
+            "NOT_APPLICABLE": Style.DIM,
+            "ERROR": Fore.RED + Style.BRIGHT,
         }[self.name]
 
 
@@ -105,7 +105,7 @@ class Log(yaml.YAMLObject, Generic[AnyStr]):
     """
 
     yaml_loader = yaml.SafeLoader
-    yaml_tag = '!e3.testsuite.result.Log'
+    yaml_tag = "!e3.testsuite.result.Log"
 
     def __init__(self, content: AnyStr) -> None:
         """Initialize log instance.
@@ -134,9 +134,11 @@ class Log(yaml.YAMLObject, Generic[AnyStr]):
         return self
 
     def __str__(self) -> str:
-        return (cast(str, self.log)
-                if self.is_text
-                else binary_repr(cast(bytes, self.log)))
+        return (
+            cast(str, self.log)
+            if self.is_text
+            else binary_repr(cast(bytes, self.log))
+        )
 
 
 def binary_repr(binary: bytes) -> str:
@@ -157,8 +159,7 @@ def binary_repr(binary: bytes) -> str:
             return "\\x{:>02x}".format(b)
 
     return "\n".join(
-        "".join(escape(b) for b in line)
-        for line in binary.split(b"\n")
+        "".join(escape(b) for b in line) for line in binary.split(b"\n")
     )
 
 
@@ -182,23 +183,25 @@ def truncated(output: str, line_count: int) -> str:
     if line_count and len(lines) > max_lines:
         lines = (
             lines[:line_count]
-            + ['\n... {} lines skipped...\n'.format(len(lines) - max_lines)]
+            + ["\n... {} lines skipped...\n".format(len(lines) - max_lines)]
             + lines[-line_count:]
         )
-    return '\n'.join(lines)
+    return "\n".join(lines)
 
 
 class TestResult(yaml.YAMLObject):
     """Represent a result for a given test."""
 
     yaml_loader = yaml.SafeLoader
-    yaml_tag = '!e3.testsuite.result.TestResult'
+    yaml_tag = "!e3.testsuite.result.TestResult"
 
-    def __init__(self,
-                 name: str,
-                 env: Optional[dict] = None,
-                 status: Optional[TestStatus] = None,
-                 msg: str = ""):
+    def __init__(
+        self,
+        name: str,
+        env: Optional[dict] = None,
+        status: Optional[TestStatus] = None,
+        msg: str = "",
+    ):
         """Initialize a test result.
 
         :param name: Name of the test that this result describes.
@@ -295,10 +298,12 @@ class TestResult(yaml.YAMLObject):
 def _log_representer(dumper: Any, data: Log) -> Any:
     return (
         dumper.represent_scalar("tag:yaml.org,2002:str", data.log, style="|")
-        if data.is_text else
-        dumper.represent_scalar(
+        if data.is_text
+        else dumper.represent_scalar(
             "tag:yaml.org,2002:binary",
-            binascii.b2a_base64(data.log).decode('ascii'), style="|")
+            binascii.b2a_base64(data.log).decode("ascii"),
+            style="|",
+        )
     )
 
 

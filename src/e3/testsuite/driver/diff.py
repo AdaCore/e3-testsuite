@@ -62,9 +62,9 @@ class RefiningChain(OutputRefiner[AnyStr]):
 class Substitute(OutputRefiner[AnyStr]):
     """Replace substrings in outputs."""
 
-    def __init__(self,
-                 substring: AnyStr,
-                 replacement: Optional[AnyStr] = None) -> None:
+    def __init__(
+        self, substring: AnyStr, replacement: Optional[AnyStr] = None
+    ) -> None:
         """
         Initialize a Substitute instance.
 
@@ -85,9 +85,9 @@ class CanonicalizeLineEndings(OutputRefiner[AnyStr]):
 
     def refine(self, output: AnyStr) -> AnyStr:
         if isinstance(output, str):
-            return output.replace('\r\n', '\n')
+            return output.replace("\r\n", "\n")
         else:
-            return output.replace(b'\r\n', b'\n')
+            return output.replace(b"\r\n", b"\n")
 
 
 class ReplacePath(RefiningChain[str]):
@@ -97,20 +97,20 @@ class ReplacePath(RefiningChain[str]):
         # First replace the normalized path, then the Unix-style path (which
         # some tool may output even on Windows) and finally the very path that
         # was given.
-        super().__init__([
-            Substitute(substring, replacement)
-            for substring in [os.path.realpath(path),
-                              unixpath(path),
-                              path]
-        ])
+        super().__init__(
+            [
+                Substitute(substring, replacement)
+                for substring in [os.path.realpath(path), unixpath(path), path]
+            ]
+        )
 
 
 class PatternSubstitute(OutputRefiner, Generic[AnyStr]):
     """Replace patterns in outputs."""
 
-    def __init__(self,
-                 pattern: AnyStr,
-                 replacement: Optional[AnyStr] = None) -> None:
+    def __init__(
+        self, pattern: AnyStr, replacement: Optional[AnyStr] = None
+    ) -> None:
         """
         Initialize a PatternSubstitute instance.
 
@@ -250,7 +250,7 @@ class DiffTestDriver(ClassicTestDriver):
         actual: AnyStr,
         failure_message: str = "unexpected output",
         ignore_white_chars: Optional[bool] = None,
-        truncate_logs_threshold: Optional[int] = None
+        truncate_logs_threshold: Optional[int] = None,
     ) -> List[str]:
         """Compute the diff between expected and actual outputs.
 
@@ -277,14 +277,14 @@ class DiffTestDriver(ClassicTestDriver):
             truncate_logs_threshold = self.testsuite_options.truncate_logs
 
         # Run output refiners on the actual output, not on the baseline
-        refiners = (RefiningChain[str](self.output_refiners)
-                    if isinstance(actual, str)
-                    else RefiningChain[bytes](self.output_refiners))
+        refiners = (
+            RefiningChain[str](self.output_refiners)
+            if isinstance(actual, str)
+            else RefiningChain[bytes](self.output_refiners)
+        )
         refined_actual = refiners.refine(actual)
         refined_baseline = (
-            refiners.refine(baseline)
-            if self.refine_baseline
-            else baseline
+            refiners.refine(baseline) if self.refine_baseline else baseline
         )
 
         # When running in binary mode, make sure the diff runs on text strings
@@ -307,8 +307,9 @@ class DiffTestDriver(ClassicTestDriver):
         # Compute the diff. If it is empty, return no failure. Otherwise,
         # include the diff in the test log and return the given failure
         # message.
-        d = diff(expected_lines, actual_lines,
-                 ignore_white_chars=ignore_white_chars)
+        d = diff(
+            expected_lines, actual_lines, ignore_white_chars=ignore_white_chars
+        )
         if not d:
             return []
 
@@ -336,8 +337,9 @@ class DiffTestDriver(ClassicTestDriver):
             and getattr(self.env, "rewrite_baselines", False)
         ):
             if isinstance(refined_actual, str):
-                with open(baseline_file, "w",
-                          encoding=self.default_encoding) as f:
+                with open(
+                    baseline_file, "w", encoding=self.default_encoding
+                ) as f:
                     f.write(refined_actual)
             else:
                 assert isinstance(refined_actual, bytes)
@@ -349,9 +351,11 @@ class DiffTestDriver(ClassicTestDriver):
         # information. If there are multiple diff failures for this testcase,
         # do not emit the "expected/out" logs, as they support only one diff.
         diff_log = (
-            self.Style.RESET_ALL + self.Style.BRIGHT
+            self.Style.RESET_ALL
+            + self.Style.BRIGHT
             + "Diff failure: {}\n".format(message)
-            + "\n".join(diff_lines) + "\n"
+            + "\n".join(diff_lines)
+            + "\n"
         )
         self.result.log += "\n" + truncated(diff_log, truncate_logs_threshold)
         if self.failing_diff_count == 1:
@@ -361,8 +365,9 @@ class DiffTestDriver(ClassicTestDriver):
         else:
             self.result.expected = None
             self.result.out = None
-            assert (isinstance(self.result.diff, Log)
-                    and isinstance(self.result.diff.log, str))
+            assert isinstance(self.result.diff, Log) and isinstance(
+                self.result.diff.log, str
+            )
             self.result.diff += "\n" + diff_log
 
         return [message]
@@ -372,7 +377,7 @@ class DiffTestDriver(ClassicTestDriver):
         regexp: Union[Pattern[AnyStr], AnyStr],
         actual: AnyStr,
         failure_message: str = "output does not match expected pattern",
-        truncate_logs_threshold: Optional[int] = None
+        truncate_logs_threshold: Optional[int] = None,
     ) -> List[str]:
         """Compute whether the actual output matches a regexp.
 
@@ -396,9 +401,11 @@ class DiffTestDriver(ClassicTestDriver):
 
         # Run output refiners. Code is more complex than it should be to
         # satisfy Mypy's constraints.
-        refiners = (RefiningChain[str](self.output_refiners)
-                    if isinstance(actual, str)
-                    else RefiningChain[bytes](self.output_refiners))
+        refiners = (
+            RefiningChain[str](self.output_refiners)
+            if isinstance(actual, str)
+            else RefiningChain[bytes](self.output_refiners)
+        )
         refined_actual = refiners.refine(actual)
 
         match = regexp.match(refined_actual)
@@ -418,13 +425,11 @@ class DiffTestDriver(ClassicTestDriver):
         # Send the appropriate logging
         self.result.log += failure_message + ":\n"
         self.result.log += truncated(
-            quote(refined_actual),
-            truncate_logs_threshold
+            quote(refined_actual), truncate_logs_threshold
         )
         self.result.log += "\nDoes not match the expected pattern:\n"
         self.result.log += truncated(
-            quote(regexp.pattern),
-            truncate_logs_threshold
+            quote(regexp.pattern), truncate_logs_threshold
         )
 
         return [failure_message]

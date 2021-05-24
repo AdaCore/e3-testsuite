@@ -29,10 +29,12 @@ class TestControlKind(Enum):
 class TestControl:
     """Control the execution and analysis of a testcase."""
 
-    def __init__(self,
-                 message: Optional[str] = None,
-                 skip: bool = False,
-                 xfail: bool = False) -> None:
+    def __init__(
+        self,
+        message: Optional[str] = None,
+        skip: bool = False,
+        xfail: bool = False,
+    ) -> None:
         """Initialize a TestControl instance.
 
         :param message: Optional message to convey with the test status.
@@ -66,8 +68,7 @@ class TestControlCreator:
 class YAMLTestControlCreator(TestControlCreator):
     """Create test controls from "test.yaml"'s "control" entries."""
 
-    def __init__(self,
-                 condition_env: Optional[Dict[str, Any]] = None) -> None:
+    def __init__(self, condition_env: Optional[Dict[str, Any]] = None) -> None:
         """Initialize a YAMLTestControlCreator instance.
 
         :param condition_env: Environment to pass to condition evaluation in
@@ -83,7 +84,7 @@ class YAMLTestControlCreator(TestControlCreator):
         if os.path.exists(driver.test_dir("test.opt")):
             logger.warning(
                 '{}: "test.opt" file found whereas only "control" entries are'
-                ' considered'.format(driver.test_env["test_name"])
+                " considered".format(driver.test_env["test_name"])
             )
 
         # Read the configuration from the test environment's "control" key, if
@@ -120,6 +121,7 @@ class YAMLTestControlCreator(TestControlCreator):
             raise ValueError("list expected at the top level")
 
         for i, entry in enumerate(control, 1):
+
             def error(message: str) -> NoReturn:
                 raise ValueError("entry #{}: {}".format(i, message))
 
@@ -140,8 +142,11 @@ class YAMLTestControlCreator(TestControlCreator):
             try:
                 cond = eval(entry[1], condition_env)
             except Exception as exc:
-                error("invalid condition ({}): {}"
-                      .format(type(exc).__name__, exc))
+                error(
+                    "invalid condition ({}): {}".format(
+                        type(exc).__name__, exc
+                    )
+                )
 
             message = entry[2] if len(entry) > 2 else None
 
@@ -178,8 +183,9 @@ class AdaCoreLegacyTestControlCreator(TestControlCreator):
                 return "test.sh"
         return "test.cmd"
 
-    def default_opt_results(self,
-                            driver: TestDriver) -> Dict[str, Optional[str]]:
+    def default_opt_results(
+        self, driver: TestDriver
+    ) -> Dict[str, Optional[str]]:
         """Return the default options. test.opt files can override these.
 
         By default, a test is not DEAD, SKIP, nor XFAIL. Its execution timeout
@@ -201,9 +207,9 @@ class AdaCoreLegacyTestControlCreator(TestControlCreator):
             "NOTE": None,
         }
 
-    def __init__(self,
-                 system_tags: List[str],
-                 opt_filename: str = "test.opt") -> None:
+    def __init__(
+        self, system_tags: List[str], opt_filename: str = "test.opt"
+    ) -> None:
         """Initialize a OptfileTestControlCreator instance.
 
         :param system_tags: Tags to forward to OptFileParse().
@@ -221,15 +227,17 @@ class AdaCoreLegacyTestControlCreator(TestControlCreator):
         if "control" in driver.test_env:
             logger.warning(
                 '{}: "control" entry found in test.yaml whereas only test.opt'
-                ' files are considered'.format(driver.test_env["test_name"])
+                " files are considered".format(driver.test_env["test_name"])
             )
 
         # If it exists, parse the "test.opt" file in the test directory.
         # Create a dummy optfile otherwise.
         filename = driver.test_dir(self.opt_filename)
-        optfile = (OptFileParse(self.system_tags, filename)
-                   if os.path.exists(filename)
-                   else OptFileParse(self.system_tags, []))
+        optfile = (
+            OptFileParse(self.system_tags, filename)
+            if os.path.exists(filename)
+            else OptFileParse(self.system_tags, [])
+        )
 
         # Create a TestControl depending on the contents of the optfile
         message = None

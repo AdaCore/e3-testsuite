@@ -38,7 +38,8 @@ results_fail = {"test1": Status.FAIL, "test2": Status.FAIL}
 results_skip = {"test1": Status.SKIP, "test2": Status.SKIP}
 
 
-def run(status, args=[]):
+def run(status, args=None):
+    args = args if args is not None else []
     MyDriver.return_status = status
     run_testsuite(Mysuite, args=args)
 

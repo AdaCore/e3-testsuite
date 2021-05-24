@@ -44,9 +44,11 @@ class OptFileParse:
       is_dead: True if the test should be considered DEAD, False otherwise
     """
 
-    def __init__(self,
-                 system_tags: Union[str, List[str]],
-                 filename: Union[str, List[str]]) -> None:
+    def __init__(
+        self,
+        system_tags: Union[str, List[str]],
+        filename: Union[str, List[str]],
+    ) -> None:
         """Parse a test.opt file.
 
         :param system_tags: Either a list of tags or a string containing the
@@ -71,9 +73,9 @@ class OptFileParse:
         self.__matches: Dict[str, Tuple[List[str], str, bool]] = {}
         self.__parse_file(filename)
 
-    def get_value(self,
-                  cmd: str,
-                  default_value: Optional[str] = None) -> Optional[str]:
+    def get_value(
+        self, cmd: str, default_value: Optional[str] = None
+    ) -> Optional[str]:
         """Query on the parsing result.
 
         :param cmd: The command on which we do the query ex: dead, cmd, out...
@@ -98,8 +100,7 @@ class OptFileParse:
             return default_value
 
     def get_values(
-        self,
-        default_values: Dict[str, Optional[str]]
+        self, default_values: Dict[str, Optional[str]]
     ) -> Dict[str, Optional[str]]:
         """Query on the parsing result.
 
@@ -196,12 +197,8 @@ class OptFileParse:
             if self.__is_overidable(cmd):
                 self.__matches[cmd] = (tags, arg, self.__is_all(tags))
 
-                if (
-                    not self.__is_dead_cmd(cmd)
-                    and (
-                        self.__note is None
-                        or self.__matches[cmd][OVERIDABLE]
-                    )
+                if not self.__is_dead_cmd(cmd) and (
+                    self.__note is None or self.__matches[cmd][OVERIDABLE]
                 ):
                     self.__note = self.__matches[cmd]
 
@@ -216,9 +213,11 @@ class OptFileParse:
         return len(tag_list) == 1 and tag_list[0].lower() == "all"
 
     def __is_dead_cmd(self, cmd: str) -> bool:
-        return cmd == "dead" and \
-            "dead" in self.__matches and \
-            self.__matches["dead"][ARG] != "false"
+        return (
+            cmd == "dead"
+            and "dead" in self.__matches
+            and self.__matches["dead"][ARG] != "false"
+        )
 
     def __match(self, tag_list: List[str]) -> bool:
         """Match tags against the system tags.
@@ -260,8 +259,9 @@ class OptFileParse:
             else:
                 self.is_dead = False
 
-            if (self.__note is not None and self.__note[OVERIDABLE]) \
-                    or not self.__enable_note:
+            if (
+                self.__note is not None and self.__note[OVERIDABLE]
+            ) or not self.__enable_note:
                 self.__note = None
 
     def __str__(self) -> str:
@@ -275,8 +275,7 @@ class OptFileParse:
             for k in self.__matches:
                 if k != "dead":
                     result += '{}="{}"\n'.format(
-                        k,
-                        re.sub('"', '\\"', self.__matches[k][ARG])
+                        k, re.sub('"', '\\"', self.__matches[k][ARG])
                     )
 
             if self.__note is not None:

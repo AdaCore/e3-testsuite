@@ -31,19 +31,23 @@ def test_control_interpret():
         def test_dir(self, *args):
             return os.path.join("/nosuchdir", *args)
 
-    def expect_result(test_env, condition_env={}, env={}):
+    def expect_result(test_env, condition_env=None, env=None):
+        condition_env = condition_env if condition_env is not None else {}
+        env = env if env is not None else {}
         driver = MockDriver(test_env, env)
         control = crtl.YAMLTestControlCreator(condition_env).create(driver)
         return control.skip, control.xfail, control.message
 
-    def expect_error(test_env, condition_env={}, env={}):
+    def expect_error(test_env, condition_env=None, env=None):
+        condition_env = condition_env if condition_env is not None else {}
+        env = env if env is not None else {}
         driver = MockDriver(test_env, env)
         try:
             crtl.YAMLTestControlCreator(condition_env).create(driver)
         except ValueError as exc:
             return str(exc)
         else:
-            assert False, "exception expected"
+            raise AssertionError("exception expected")
 
     # No control entry: no test control
     assert expect_result({}) == (False, False, None)

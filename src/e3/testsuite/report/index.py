@@ -66,11 +66,13 @@ class ReportIndex:
         with open(self.result_filename(test_result.test_name), "w") as fd:
             yaml.dump(test_result, fd)
 
-    def _add_entry(self,
-                   test_name: str,
-                   status: TestStatus,
-                   msg: Optional[str],
-                   write_on_disk: bool = False) -> None:
+    def _add_entry(
+        self,
+        test_name: str,
+        status: TestStatus,
+        msg: Optional[str],
+        write_on_disk: bool = False,
+    ) -> None:
         """Add an entry to this index."""
         entry = ReportIndexEntry(self, test_name, status, msg)
         self.entries[entry.test_name] = entry
@@ -85,16 +87,14 @@ class ReportIndex:
             doc = json.load(f)
 
         # Basic sanity checking on the index file format
-        assert isinstance(doc, dict) and doc["magic"] == cls.INDEX_MAGIC, (
-            "Invalid index file format"
-        )
+        assert (
+            isinstance(doc, dict) and doc["magic"] == cls.INDEX_MAGIC
+        ), "Invalid index file format"
 
         # Import all entries
         for e in doc["entries"]:
             result._add_entry(
-                e["test_name"],
-                TestStatus[e["status"]],
-                e["msg"]
+                e["test_name"], TestStatus[e["status"]], e["msg"]
             )
 
         return result

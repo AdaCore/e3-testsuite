@@ -15,6 +15,7 @@ def deprecated(stacklevel: int = 1) -> Callable[[F], F]:
     The function that the decorator returns emits the deprecation warning only
     the first time it is called.
     """
+
     def deprecated(func: F) -> F:
         triggered: List[bool] = []
 
@@ -30,4 +31,5 @@ def deprecated(stacklevel: int = 1) -> Callable[[F], F]:
             return func(*args, **kwargs)
 
         return cast(F, wrapper)
+
     return deprecated

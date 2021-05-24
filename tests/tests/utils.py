@@ -8,7 +8,7 @@ from e3.testsuite.report.index import ReportIndex
 from e3.testsuite.result import Log, TestResult as Result
 
 
-def check_result_dirs(new={}, old={}, new_dir=None, old_dir=None):
+def check_result_dirs(new=None, old=None, new_dir=None, old_dir=None):
     """Check the content of testsuite result directories.
 
     :param new: Mapping from test names to expected test statuses for
@@ -19,6 +19,8 @@ def check_result_dirs(new={}, old={}, new_dir=None, old_dir=None):
     :param old_dir: Likewise, for old test results. If left to None, use
         "out/old" in the current directory.
     """
+    new = new if new is not None else {}
+    old = old if old is not None else {}
     dirs = {
         "new": new_dir or os.path.join("out", "new"),
         "old": old_dir or os.path.join("out", "old"),
@@ -55,14 +57,16 @@ def extract_results(testsuite):
     }
 
 
-def run_testsuite_status(cls, args=[]):
+def run_testsuite_status(cls, args=None):
     """Instantiate a Testsuite subclass, run it and return it and its sttus."""
+    args = args if args is not None else []
     suite = cls()
     return (suite, suite.testsuite_main(args))
 
 
-def run_testsuite(cls, args=[], expect_failure=False):
+def run_testsuite(cls, args=None, expect_failure=False):
     """Instantiate a Testsuite subclass and run it."""
+    args = args if args is not None else []
     suite, status = run_testsuite_status(cls, args)
     if expect_failure:
         assert status != 0
