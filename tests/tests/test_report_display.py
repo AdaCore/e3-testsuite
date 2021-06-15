@@ -43,6 +43,26 @@ basic_results = [
 sep_line = "-" * 79
 
 
+class MyDriver(BasicDriver):
+    return_status = Status.PASS
+
+    def run(self, prev, slot):
+        pass
+
+    def analyze(self, prev, slot):
+        self.result.set_status(Status.PASS)
+        self.push_result()
+
+
+class Mysuite(Suite):
+    tests_subdir = "simple-tests"
+    test_driver_map = {"default": MyDriver}
+
+    @property
+    def default_driver(self):
+        return "default"
+
+
 def test_basic(tmp_path, capsys):
     """Check that the script works fine in basic configurations."""
     assert run(basic_results, [str(tmp_path)], tmp_path, capsys) == (
@@ -376,24 +396,6 @@ def test_generate_text_report(tmp_path):
     """Check TestsuiteCore's --generate-text-report option."""
     tmp_path = str(tmp_path)
 
-    class MyDriver(BasicDriver):
-        return_status = Status.PASS
-
-        def run(self, prev, slot):
-            pass
-
-        def analyze(self, prev, slot):
-            self.result.set_status(Status.PASS)
-            self.push_result()
-
-    class Mysuite(Suite):
-        tests_subdir = "simple-tests"
-        test_driver_map = {"default": MyDriver}
-
-        @property
-        def default_driver(self):
-            return "default"
-
     def check_report(expected):
         with open(os.path.join(tmp_path, "new", "report")) as f:
             assert f.read() == expected
@@ -450,3 +452,26 @@ def test_generate_text_report(tmp_path):
         "\n"
         "No relevant logs to display\n"
     )
+
+
+def test_auto_generate(tmp_path):
+    """Check TestsuiteCore's auto_generate_text_report property."""
+
+    def check_report(report_expected):
+        assert (tmp_path / "new" / "report").exists() == report_expected
+
+    class MyDerivedSuite(Mysuite):
+        auto_generate_text_report = True
+
+    args = [f"--output-dir={tmp_path}"]
+
+    # First run the testsuite with no arg: we expect the text report to be
+    # automatically generated.
+    run_testsuite(MyDerivedSuite, args=args)
+    check_report(True)
+    shutil.rmtree(str(tmp_path / "new"))
+
+    # Disable its generation on the command line and make sure it's not
+    # generated
+    run_testsuite(MyDerivedSuite, args=args + ["--no-generate-text-report"])
+    check_report(False)

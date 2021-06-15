@@ -456,13 +456,28 @@ class TestsuiteCore:
             help="Output a GAIA-compatible testsuite report next to the YAML"
             " report.",
         )
-        if not self.auto_generate_text_report:
-            output_group.add_argument(
-                "--generate-text-report",
-                action="store_true",
-                help="When the testsuite completes, generate a 'report' text"
-                " file in the output directory.",
-            )
+
+        auto_gen_default = (
+            "enabled" if self.auto_generate_text_report else "disabled"
+        )
+        output_group.add_argument(
+            "--generate-text-report",
+            action="store_true",
+            dest="generate_text_report",
+            default=self.auto_generate_text_report,
+            help=(
+                f"When the testsuite completes, generate a 'report' text file"
+                f" in the output directory ({auto_gen_default} by default)."
+            ),
+        )
+        output_group.add_argument(
+            "--no-generate-text-report",
+            action="store_false",
+            dest="generate_text_report",
+            help="Disable the generation of a 'report' text file (see"
+            "--generate-text-report).",
+        )
+
         output_group.add_argument(
             "--truncate-logs",
             "-T",
@@ -653,10 +668,7 @@ class TestsuiteCore:
         self.tear_down()
 
         # If requested, generate a text report
-        if (
-            self.auto_generate_text_report
-            or self.main.args.generate_text_report
-        ):
+        if self.main.args.generate_text_report:
             # Use the previous testsuite results for comparison, if available
             old_index = (
                 ReportIndex.read(self.old_output_dir)
