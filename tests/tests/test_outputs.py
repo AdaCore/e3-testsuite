@@ -153,3 +153,20 @@ def test_rotation(tmp_path):
         new_dir=str(tmp_path / "foo"),
         old_dir=str(tmp_path / "bar"),
     )
+
+
+def test_empty_old_output_dir_report(tmp_path):
+    """Check text report generation with an empty old output dir.
+
+    The testsuite framework used to crash in such a case.
+    """
+    new_dir = tmp_path / "new"
+    old_path = tmp_path / "old"
+    old_path.mkdir()
+
+    args = [
+        f"--output-dir={new_dir}",
+        f"--old-output-dir={old_path}",
+        "--generate-text-report",
+    ]
+    run(Status.PASS, args)
