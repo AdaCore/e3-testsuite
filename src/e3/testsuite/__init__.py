@@ -1012,12 +1012,17 @@ class TestsuiteCore:
             rm(self.output_dir, recursive=True)
         mkdir(self.output_dir)
 
-        # Remember about the old output directory only if it exists (it is not
-        # our role to create it otherwise, and so this info will be unused at
-        # best, or misleading at best).
-        self.old_output_dir = (
-            old_output_dir if os.path.exists(old_output_dir) else None
-        )
+        # Remember about the old output directory only if it exists and does
+        # contain results. If not, this info will be unused at best, or lead to
+        # incorrect behavior.
+        self.old_output_dir = None
+        if (
+            os.path.exists(old_output_dir)
+            and os.path.exists(
+                os.path.join(old_output_dir, ReportIndex.INDEX_FILENAME)
+            )
+        ):
+            self.old_output_dir = old_output_dir
 
         if args.dump_environ:
             with open(os.path.join(self.output_dir, "environ.sh"), "w") as f:
