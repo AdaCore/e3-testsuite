@@ -4,7 +4,8 @@
 * GAIA reports: rename `NOT_APPLICABLE` to `NOT-APPLICABLE`.
 * Fix test filtering when they don't have dedicated directories.
 * Testsuite: enhance the API to ease adding inter-test dependencies.
-* Add the `--generate-text-report` command-line option.
+* Add the `--generate-text-report`/`--no-generate-text-report` command-line
+  options.
 * Revamp the `e3-testsuite-report` script.
 * Create a "status" file to allow users to check testsuite execution.
 * GAIA reports: include discriminants list when available.
