@@ -1,6 +1,7 @@
 25.0 (Not released yet)
 =======================
 
+* `AdaCoreLegacyDriver`: add the `TIMEOUT` failure reason on rlimit abort.
 * GAIA reports: rename `NOT_APPLICABLE` to `NOT-APPLICABLE`.
 * Fix test filtering when they don't have dedicated directories.
 * Testsuite: enhance the API to ease adding inter-test dependencies.

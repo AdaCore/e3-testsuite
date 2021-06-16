@@ -4,10 +4,10 @@ import os.path
 import re
 import sys
 import time
-from typing import Dict, List, Pattern, Tuple
+from typing import Dict, List, Optional, Pattern, Tuple
 
 from e3.fs import cp, sync_tree
-from e3.testsuite.driver.classic import TestAbortWithError
+from e3.testsuite.driver.classic import ProcessResult, TestAbortWithError
 from e3.testsuite.driver.diff import (
     DiffTestDriver,
     LineByLine,
@@ -15,6 +15,7 @@ from e3.testsuite.driver.diff import (
     PatternSubstitute,
 )
 from e3.testsuite.control import AdaCoreLegacyTestControlCreator
+from e3.testsuite.result import FailureReason
 
 
 class AdaCoreLegacyTestDriver(DiffTestDriver):
@@ -46,6 +47,8 @@ class AdaCoreLegacyTestDriver(DiffTestDriver):
 
     argv: List[str]
     test_environ: Dict[str, str]
+
+    test_process: Optional[ProcessResult]
 
     @property
     def test_control_creator(self) -> AdaCoreLegacyTestControlCreator:
@@ -86,6 +89,7 @@ class AdaCoreLegacyTestDriver(DiffTestDriver):
         assert isinstance(self.env.test_environ, dict)
         self.test_environ = dict(self.env.test_environ)
         self.argv = self.get_script_command_line()
+        self.test_process = None
 
     default_substitutions: List[Tuple[Pattern[str], str]] = [
         # Remove ".exe" suffix for output files. This will for instance turn
@@ -210,7 +214,7 @@ class AdaCoreLegacyTestDriver(DiffTestDriver):
         # Run the test script and record execution time. Note that the
         # status code is not significant (catch_error=False).
         start_time = time.time()
-        self.shell(
+        self.test_process = self.shell(
             args=self.argv,
             cwd=self.working_dir("src"),
             env=self.test_environ,
@@ -243,5 +247,12 @@ class AdaCoreLegacyTestDriver(DiffTestDriver):
                     f.write(content)
             elif os.path.exists(default_baseline_file):
                 os.remove(default_baseline_file)
+
+        if (
+            self.test_process is not None
+            and self.process_may_have_timed_out(self.test_process)
+        ):
+            self.result.failure_reasons.add(FailureReason.TIMEOUT)
+            result.append("test timed out")
 
         return result

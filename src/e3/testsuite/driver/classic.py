@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import re
 
 import traceback
 from typing import Any, Dict, List, Optional, Union
@@ -51,6 +52,13 @@ class TestAbortWithFailure(Exception):
     """
 
     pass
+
+
+# Regular expressions to match the "timeout" error message from the rlimit
+# program.
+TIMEOUT_OUTPUT_PATTERN = r"rlimit: Real time limit ([^\n]+) exceeded\n"
+TIMEOUT_OUTPUT_STR_RE = re.compile(TIMEOUT_OUTPUT_PATTERN)
+TIMEOUT_OUTPUT_BYTES_RE = re.compile(TIMEOUT_OUTPUT_PATTERN.encode("ascii"))
 
 
 class ProcessResult:
@@ -449,6 +457,25 @@ class ClassicTestDriver(TestDriver):
             return self.push_failure(str(exc))
         finally:
             self.tear_down()
+
+    def process_may_have_timed_out(self, result: ProcessResult) -> bool:
+        """
+        Return whether the process that yielded ``result`` may have timed out.
+
+        This assumes that ``result`` is the returned value from a call to the
+        ``shell`` method. Note that this uses simple heuristics to determine
+        whether the process may have timed out, as this information is not
+        preserved reliably under the hood: process is wrapped under the rlimit
+        program, which just prints a known error message and returns some
+        specific exit code in case of timeout.
+        """
+        if result.status != 2:
+            return False
+
+        if isinstance(result.out, str):
+            return bool(TIMEOUT_OUTPUT_STR_RE.search(result.out))
+        else:
+            return bool(TIMEOUT_OUTPUT_BYTES_RE.search(result.out))
 
     def compute_failures(self) -> List[str]:
         """
