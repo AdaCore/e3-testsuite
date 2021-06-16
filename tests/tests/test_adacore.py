@@ -221,3 +221,30 @@ def test_gaia_discs():
     # "env.discs" contains a list of strings.
     test_discs([], "")
     test_discs(["foo", "bar"], "foo bar\n")
+
+
+def test_timeout():
+    """Check that AdaCore legacy support detects timeouts."""
+
+    class Mysuite(Suite):
+        tests_subdir = "adacore-timeout-tests"
+        test_driver_map = {"adacore": ACDriver}
+        default_driver = "adacore"
+
+        def set_up(self):
+            super(Mysuite, self).set_up()
+            self.env.discs = []
+            self.env.test_environ = dict(os.environ)
+
+    suite = run_testsuite(Mysuite, ["--gaia-output", "-E"])
+    assert extract_results(suite) == {
+        "pass": Status.PASS,
+        "timedout": Status.FAIL,
+    }
+
+    with open(os.path.join("out", "new", "results")) as f:
+        lines = sorted(f.read().splitlines())
+        assert lines == [
+            "pass:OK:",
+            "timedout:TIMEOUT:unexpected output | test timed out",
+        ]

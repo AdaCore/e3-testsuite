@@ -315,3 +315,29 @@ def test_ignore_env():
     )
     run(["E3_TESTSUITE_VAR2=var2-value"], ignore_environ=True)
     run(["E3_TESTSUITE_VAR2=var2-value"])
+
+
+def test_may_have_timed_out():
+    """Check the ClassicTestDriver.process_may_have_timed_out method."""
+
+    class MyDriver(classic.ClassicTestDriver):
+        def run(self):
+            def check(status, output):
+                return self.process_may_have_timed_out(
+                    classic.ProcessResult(status, output)
+                )
+
+            matching_msg = "rlimit: Real time limit (1 s) exceeded\n"
+
+            assert not check(0, "foobar")
+            assert not check(2, "foobar")
+            assert not check(0, matching_msg)
+            assert check(2, matching_msg)
+
+    class Mysuite(Suite):
+        tests_subdir = "simple-tests"
+        test_driver_map = {"default": MyDriver}
+        default_driver = "default"
+
+    suite = run_testsuite(Mysuite, args=["-E", "test1"])
+    assert extract_results(suite) == {"test1": Status.PASS}
