@@ -183,9 +183,14 @@ def generate_report(
     :param show_time_info: Whether to display time information for test
         results, if available.
     """
-    # Lines for the results to include in the detailed report (i.e. the part
-    # that follows the summary).
-    results_display: List[str] = []
+    # For each test name, list of lines for the results to include in the
+    # detailed report (i.e. the part that follows the summary).
+    results_display: Dict[str, List[str]] = {}
+
+    # List of test names, in the order in which their results should be
+    # displayed (failures first in the summary order, then non-failures if
+    # requested).
+    ordered_entries: List[str] = []
 
     count_results = len(new_index.entries)
     count_executed = 0
@@ -261,7 +266,7 @@ def generate_report(
             continue
 
         result = result or entry.load()
-        results_display += format_result_logs(
+        results_display[entry.test_name] = format_result_logs(
             result, colors, show_error_output, show_time_info
         )
 
@@ -354,6 +359,7 @@ def generate_report(
                 )
                 for e in failures:
                     label = e.test_name
+                    ordered_entries.append(label)
                     if e.msg:
                         label += (
                             f": {colors.Style.DIM}{e.msg}{colors.Style.NORMAL}"
@@ -399,13 +405,20 @@ def generate_report(
             file=output_file,
         )
 
+    # Display all non-failures at the end of the report
+    non_failures = set(results_display) - set(ordered_entries)
+    ordered_entries.extend(sorted(non_failures))
+
     # Finally, display results logs when relevant
     print(
         f"{colors.Style.BRIGHT}Result logs:{colors.Style.NORMAL}\n",
         file=sys.stdout,
     )
-    for line in results_display:
-        print(line, file=output_file)
+    for test_name in ordered_entries:
+        lines = results_display.get(test_name)
+        if lines:
+            for line in lines:
+                print(line, file=output_file)
     if not results_display:
         print(
             f"{colors.Style.DIM}No relevant logs to display"
