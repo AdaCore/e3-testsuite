@@ -229,10 +229,10 @@ def generate_report(
                 old_index.entries.get(entry.test_name) if old_index else None
             )
             if old_entry:
-                if old_entry.status == TestStatus.PASS:
-                    new_failures.append(entry)
-                elif old_entry.status == TestStatus.FAIL:
+                if old_entry.status == TestStatus.FAIL:
                     already_detected_failures.append(entry)
+                else:
+                    new_failures.append(entry)
             else:
                 new_failures.append(entry)
 
