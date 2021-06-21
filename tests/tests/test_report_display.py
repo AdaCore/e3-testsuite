@@ -356,8 +356,10 @@ def test_old_result(tmp_path, capsys):
         "  ERROR        1\n"
         "\n"
         "  The following results may need further investigation:\n"
-        "  1 new failure(s):\n"
+        "  3 new failure(s):\n"
         "    pass-to-fail\n"
+        "    skip-to-fail\n"
+        "    xfail-to-fail\n"
         "\n"
         "  1 already detected failure(s):\n"
         "    fail-to-fail\n"
@@ -383,12 +385,12 @@ def test_old_result(tmp_path, capsys):
         "Result logs:\n"
         "\n"
         "FAIL            pass-to-fail\n"
+        "FAIL            skip-to-fail\n"
+        "FAIL            xfail-to-fail\n"
         "FAIL            fail-to-fail\n"
         "VERIFY          to-verify\n"
         "ERROR           error\n"
         "NOT_APPLICABLE        not-applicable-test\n"
-        "FAIL            skip-to-fail\n"
-        "FAIL            xfail-to-fail\n"
     )
 
 
