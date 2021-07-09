@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import collections.abc
+from dataclasses import dataclass
 import os.path
 import re
 from typing import List, Optional, TYPE_CHECKING, Type, Union
@@ -14,36 +15,33 @@ if TYPE_CHECKING:  # no cover
     from e3.testsuite import TestsuiteCore
 
 
+@dataclass
 class ParsedTest:
     """Basic information to instantiate a test driver."""
 
-    def __init__(
-        self,
-        test_name: str,
-        driver_cls: Optional[Type[TestDriver]],
-        test_env: dict,
-        test_dir: str,
-        test_matcher: Optional[str] = None,
-    ) -> None:
-        """
-        Initialize a ParsedTest instance.
+    test_name: str
+    """Name for this testcase."""
 
-        :param test_name: Name for this testcase.
-        :param driver_cls: Test driver class to instantiate, None to use the
-            default one.
-        :param test_env: Base test environment. Driver instantiation will
-            complete it with test directory, test name, etc.
-        :param test_dir: Directory that contains the testcase.
-        :param test_matcher: If not None, string to match against the list of
-            requested tests to run: in that case, the test is ignored if there
-            is no match. This is needed to filter out tests in testsuites where
-            tests don't necessarily have dedicated directories.
-        """
-        self.test_name = test_name
-        self.driver_cls = driver_cls
-        self.test_env = test_env
-        self.test_dir = test_dir
-        self.test_matcher = test_matcher
+    driver_cls: Optional[Type[TestDriver]]
+    """Test driver class to instantiate, None to use the default one."""
+
+    test_env: dict
+    """Base test environment.
+
+    Driver instantiation will complete it with test directory, test name, etc.
+    """
+
+    test_dir: str
+    """Directory that contains the testcase."""
+
+    test_matcher: Optional[str] = None
+    """Textual text matcher.
+
+    If not None, string to match against the list of requested tests to run: in
+    that case, the test is ignored if there is no match. This is needed to
+    filter out tests in testsuites where tests don't necessarily have dedicated
+    directories.
+    """
 
 
 TestFinderResult = Union[Optional[ParsedTest], List[ParsedTest]]
