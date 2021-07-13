@@ -17,7 +17,7 @@ from e3.testsuite.result import TestResult, TestStatus
 
 
 if TYPE_CHECKING:
-    from e3.testsuite import RunningStatus
+    from e3.testsuite.running_status import RunningStatus
 
 
 class FragmentCallback(Protocol):
