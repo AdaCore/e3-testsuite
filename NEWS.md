@@ -1,6 +1,7 @@
 25.0 (Not released yet)
 =======================
 
+* Write command line options to the comment file by default.
 * `AdaCoreLegacyDriver`: add the `TIMEOUT` failure reason on rlimit abort.
 * GAIA reports: rename `NOT_APPLICABLE` to `NOT-APPLICABLE`.
 * Fix test filtering when they don't have dedicated directories.

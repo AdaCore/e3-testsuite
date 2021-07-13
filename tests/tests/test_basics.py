@@ -476,6 +476,29 @@ def test_result_str(caplog):
     assert str(r) == "foobar                   TestStatus.ERROR <message>"
 
 
+def test_default_comment_file():
+    """Test that the comment file is written as expected by default."""
+
+    class MyDriver(BasicDriver):
+        def run(self, prev, slot):
+            pass
+
+        def analyze(self, prev, slot):
+            self.result.set_status(Status.PASS)
+            self.push_result()
+
+    class Mysuite(Suite):
+        tests_subdir = "simple-tests"
+        test_driver_map = {"default": MyDriver}
+        default_driver = "default"
+
+    run_testsuite(Mysuite)
+    with open(os.path.join("out", "new", "comment")) as f:
+        content = f.readlines()
+    assert len(content) == 2
+    assert content[0] == "Testsuite options:\n"
+
+
 def test_comment_file():
     """Test that the comment file is written as expected."""
 

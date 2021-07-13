@@ -1222,7 +1222,14 @@ class Testsuite(TestsuiteCore):
             rm(self.working_dir, True)
 
     def write_comment_file(self, comment_file: IO[str]) -> None:
-        pass
+        # Sensible default: just write the command line used to run the
+        # testsuite. Testsuites can override or reuse this.
+        quoted_cmdline = " ".join(quote_arg(arg) for arg in sys.argv)
+        comment_file.write(
+            f"Testsuite options:"
+            f"\n  {quoted_cmdline}"
+            f"\n"
+        )
 
     @property
     def default_max_consecutive_failures(self) -> int:
