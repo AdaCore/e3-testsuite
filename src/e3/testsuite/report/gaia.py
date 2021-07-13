@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING, Union
 from e3.testsuite.result import FailureReason, TestResult, TestStatus
 
 # Import TestsuiteCore only for typing, as this creates a circular import
-if TYPE_CHECKING:  # no cover
+if TYPE_CHECKING:
     from e3.testsuite import TestsuiteCore
 
 
