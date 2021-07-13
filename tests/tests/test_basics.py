@@ -12,12 +12,9 @@ import warnings
 
 import yaml
 
-from e3.testsuite import (
-    FragmentData,
-    TestAbort as E3TestAbort,
-    Testsuite as Suite,
-)
+from e3.testsuite import TestAbort as E3TestAbort, Testsuite as Suite
 from e3.testsuite.driver import BasicTestDriver as BasicDriver
+from e3.testsuite.fragment import FragmentData
 from e3.testsuite.report.index import ReportIndex, ReportIndexEntry
 from e3.testsuite.result import TestResult as Result, TestStatus as Status
 from e3.testsuite.testcase_finder import TestFinder as Finder, ParsedTest
@@ -53,7 +50,7 @@ def test_basic():
 
     # Run the testsuite and check both the in-memory report and the on-disk one
     result = {"test1": Status.PASS, "test2": Status.PASS}
-    suite = run_testsuite(Mysuite)
+    suite = run_testsuite(Mysuite, args=["-E"])
     assert extract_results(suite) == result
     check_result_dirs(new=result)
 
