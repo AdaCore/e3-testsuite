@@ -46,7 +46,7 @@ from e3.testsuite.testcase_finder import (
 from e3.testsuite.utils import ColorConfig, isatty
 
 
-if TYPE_CHECKING:  # no cover
+if TYPE_CHECKING:
     from e3.testsuite.driver import TestDriver
     from e3.testsuite.fragment import TestFragment
 

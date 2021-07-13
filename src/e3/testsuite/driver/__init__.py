@@ -11,7 +11,7 @@ import e3.env
 
 from e3.testsuite.result import TestResult
 
-if TYPE_CHECKING:  # no cover
+if TYPE_CHECKING:
     from e3.testsuite.fragment import FragmentCallback
 
 

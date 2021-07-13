@@ -11,7 +11,7 @@ import e3.yaml
 
 from e3.testsuite.driver import TestDriver
 
-if TYPE_CHECKING:  # no cover
+if TYPE_CHECKING:
     from e3.testsuite import TestsuiteCore
 
 
