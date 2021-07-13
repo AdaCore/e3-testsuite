@@ -12,7 +12,7 @@ import e3.env
 from e3.testsuite.result import TestResult
 
 if TYPE_CHECKING:  # no cover
-    from e3.testsuite import FragmentCallback
+    from e3.testsuite.fragment import FragmentCallback
 
 
 class TestDriver(object, metaclass=abc.ABCMeta):
@@ -90,7 +90,7 @@ class TestDriver(object, metaclass=abc.ABCMeta):
         :param after: List of fragment names that should be executed before
             this one.
         """
-        from e3.testsuite import FragmentData
+        from e3.testsuite.fragment import FragmentData
 
         if after is not None:
             after = [self.test_name + "." + k for k in after]
