@@ -1,8 +1,6 @@
 """Helpers for testcases."""
 
-import glob
 import os.path
-import yaml
 
 from e3.testsuite.report.index import ReportIndex
 from e3.testsuite.result import Log, TestResult as Result
@@ -29,12 +27,11 @@ def check_result_dirs(new=None, old=None, new_dir=None, old_dir=None):
     actual_data = {"new": {}, "old": {}}
 
     for d in ("new", "old"):
-        for filename in glob.glob(os.path.join(dirs[d], "*.yaml")):
-            if os.path.basename(filename) == ReportIndex.INDEX_FILENAME:
-                continue
-            with open(filename, "r") as f:
-                result = yaml.safe_load(f)
-            actual_data[d][result.test_name] = result.status
+        output_dir = dirs[d]
+        if os.path.exists(os.path.join(output_dir, "_index.json")):
+            index = ReportIndex.read(dirs[d])
+            for e in index.entries.values():
+                actual_data[d][e.test_name] = e.status
     assert expected_data == actual_data, f"{expected_data} != {actual_data}"
 
 
