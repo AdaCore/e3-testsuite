@@ -13,8 +13,12 @@ import warnings
 from e3.testsuite import TestAbort as E3TestAbort, Testsuite as Suite
 from e3.testsuite.driver import BasicTestDriver as BasicDriver
 from e3.testsuite.fragment import FragmentData
-from e3.testsuite.report.index import ReportIndex, ReportIndexEntry
-from e3.testsuite.result import TestResult as Result, TestStatus as Status
+from e3.testsuite.report.index import ReportIndex
+from e3.testsuite.result import (
+    TestResult as Result,
+    TestResultSummary as ResultSummary,
+    TestStatus as Status,
+)
 from e3.testsuite.testcase_finder import TestFinder as Finder, ParsedTest
 
 from .utils import (
@@ -725,9 +729,10 @@ def test_read_report_index():
 
     run_testsuite(Mysuite)
     index = ReportIndex.read(os.path.join("out", "new"))
-    assert index.entries == {
-        "test1": ReportIndexEntry(index, "test1", Status.PASS, None),
-        "test2": ReportIndexEntry(index, "test2", Status.PASS, None),
+    summaries = {key: entry.summary for key, entry in index.entries.items()}
+    assert summaries == {
+        "test1": ResultSummary("test1", Status.PASS, None, None),
+        "test2": ResultSummary("test2", Status.PASS, None, None),
     }
 
 

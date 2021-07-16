@@ -81,7 +81,7 @@ def create_report(results, tmp_path):
     """Create a report index in "tmp_path" for the given results."""
     index = ReportIndex(tmp_path)
     for r in results:
-        index.add_result(r)
+        index.add_result(r, r.save(tmp_path))
     index.write()
     return index
 

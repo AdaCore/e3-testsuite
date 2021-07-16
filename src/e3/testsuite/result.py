@@ -3,9 +3,22 @@
 from __future__ import annotations
 
 import binascii
+from dataclasses import dataclass
 from enum import Enum, auto
 import logging
-from typing import Any, AnyStr, Dict, Iterator, Generic, Optional, Set, cast
+import tempfile
+from typing import (
+    Any,
+    AnyStr,
+    Dict,
+    Iterator,
+    Generic,
+    List,
+    Optional,
+    Set,
+    Tuple,
+    cast,
+)
 
 import yaml
 
@@ -293,6 +306,30 @@ class TestResult(yaml.YAMLObject):
     def __str__(self) -> str:
         return "%-24s %-12s %s" % (self.test_name, self.status, self.msg)
 
+    def save(self, output_dir: str) -> str:
+        """Write this test results as a YAML file.
+
+        :param output_dir: Name of the directory in which to write the test
+            result.
+        :return: The name of the file written. It is generated from the
+            testname.
+        """
+        with tempfile.NamedTemporaryFile(
+            mode="w",
+            prefix=self.test_name,
+            suffix=".yaml",
+            dir=output_dir,
+            delete=False,
+        ) as f:
+            yaml.dump(self, f)
+            return f.name
+
+    @property
+    def summary(self) -> TestResultSummary:
+        return TestResultSummary(
+            self.test_name, self.status, self.msg, self.time
+        )
+
 
 # Enforce representation of Log objects when dumped to yaml
 def _log_representer(dumper: Any, data: Log) -> Any:
@@ -351,3 +388,27 @@ yaml.SafeLoader.add_constructor(
     _failure_reason_tag, _failure_reason_constructor
 )
 yaml.add_representer(FailureReason, _failure_reason_representer)
+
+
+@dataclass(frozen=True)
+class TestResultSummary:
+    """Basic data about a test result.
+
+    This class holds a subset of the information available in ``TestResult``
+    instances. This subset is meant to be small enough to be included in result
+    indexes while enabling efficient common processings such as "show logs for
+    tests that failed": no need to load all the test results for tests that
+    succeeded.
+    """
+
+    test_name: str
+    status: TestStatus
+    msg: Optional[str]
+    time: Optional[float]
+
+
+# List of test results instances, with associated filename (where result
+# details are saved) and tracebacks (i.e. stack trace corresponding to code
+# that led a TestResult instance to be included in a testsuite reports, used
+# for debugging when that instance is rejected later on).
+ResultQueue = List[Tuple[TestResultSummary, str, List[str]]]

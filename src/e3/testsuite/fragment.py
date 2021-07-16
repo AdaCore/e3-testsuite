@@ -9,7 +9,14 @@ Each fragment is an atomic task, which can be dispatched to a separate worker.
 
 from dataclasses import dataclass
 import traceback
-from typing import Any, Callable, Dict, Protocol, TYPE_CHECKING, Type
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    Protocol,
+    TYPE_CHECKING,
+    Type,
+)
 
 from e3.job import Job
 from e3.testsuite.driver import TestDriver
@@ -18,6 +25,7 @@ from e3.testsuite.result import TestResult, TestStatus
 
 if TYPE_CHECKING:
     from e3.testsuite.running_status import RunningStatus
+    from e3.testsuite.result import ResultQueue
 
 
 class FragmentCallback(Protocol):
@@ -82,6 +90,30 @@ class TestFragment(Job):
         self.previous_values = previous_values
         self.running_status = running_status
 
+        self.result_queue: ResultQueue = driver.result_queue
+        """
+        List of test results that this fragments plans to integrate to the
+        testsuite report.
+        """
+
+    def push_error_result(self, exc: Exception) -> None:
+        """Generate a test result to log the exception and traceback.
+
+        This helper method is meant to be used when the execution of the test
+        fragments aborts because of an uncaught exception. We must report a
+        test error, and we provide exception information for post-mortem
+        investigation.
+        """
+        # The name is based on the test fragment name with an additional random
+        # part to avoid conflicts at the testsuite report level.
+        result = TestResult(
+            "{}__except{}".format(self.uid, self.index),
+            env=self.driver.test_env,
+            status=TestStatus.ERROR,
+        )
+        result.log += traceback.format_exc()
+        self.driver.push_result(result)
+
     def run(self) -> None:
         """Run the test fragment."""
         from e3.testsuite import TestAbort
@@ -93,17 +125,6 @@ class TestFragment(Job):
         except TestAbort:
             pass
         except Exception as e:
-            # In case of exception generate a test result to log the exception
-            # as well as the traceback, for post-mortem investigation. The name
-            # is based on the test fragment name with an additional random part
-            # to avoid conflicts.
-            test = self.driver
-            result = TestResult(
-                "{}__except{}".format(self.uid, self.index),
-                env=test.test_env,
-                status=TestStatus.ERROR,
-            )
-            result.log += traceback.format_exc()
-            test.push_result(result)
+            self.push_error_result(e)
             self.return_value = e
         self.running_status.complete(self)
