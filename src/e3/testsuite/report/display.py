@@ -17,7 +17,9 @@ from typing import (
 )
 
 from e3.testsuite.report.index import ReportIndex, ReportIndexEntry
-from e3.testsuite.result import FailureReason, TestResult, TestStatus
+from e3.testsuite.result import (
+    FailureReason, TestResult, TestResultSummary, TestStatus
+)
 from e3.testsuite.utils import ColorConfig
 
 
@@ -92,7 +94,7 @@ def sorted_counters(
 
 
 def summary_line(
-    result: TestResult, colors: ColorConfig, show_time_info: bool
+    result: TestResultSummary, colors: ColorConfig, show_time_info: bool
 ) -> str:
     """Format a summary line to describe the ``result`` test result.
 
@@ -137,7 +139,7 @@ def format_result_logs(
         only show the test name, status, message and timing info if requested.
     :param show_time_info: Whether to include timing information in the result.
     """
-    first_line = summary_line(result, colors, show_time_info)
+    first_line = summary_line(result.summary, colors, show_time_info)
 
     # If the caller has not requested logs, just return the summary line
     if not show_error_output:

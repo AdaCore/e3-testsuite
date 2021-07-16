@@ -4,12 +4,12 @@ import abc
 import argparse
 import os.path
 import traceback
-from typing import Any, Dict, List, Optional, Tuple, TYPE_CHECKING
+from typing import Any, Dict, List, Optional, TYPE_CHECKING
 
 import e3.collection.dag
 import e3.env
 
-from e3.testsuite.result import TestResult
+from e3.testsuite.result import ResultQueue, TestResult
 
 if TYPE_CHECKING:
     from e3.testsuite.fragment import FragmentCallback
@@ -50,11 +50,11 @@ class TestDriver(object, metaclass=abc.ABCMeta):
             name=self.test_name, env=self.test_env
         )
 
-        # Queue used to push result to the testsuite. Each queue item is a
-        # couple that contains the TestResult instance and a string traceback
-        # corresponding to the chain of call that pushed that result. This
-        # traceback is useful to debug test drivers that push twice results.
-        self.result_queue: List[Tuple[TestResult, List[str]]] = []
+        self.result_queue: ResultQueue = []
+        """
+        Queue of test results that this driver plans to integrate to the
+        testsuite report.
+        """
 
     def push_result(self, result: Optional[TestResult] = None) -> None:
         """Push a result to the testsuite.
@@ -66,7 +66,18 @@ class TestDriver(object, metaclass=abc.ABCMeta):
         """
         if result is None:
             result = self.result
-        self.result_queue.append((result, traceback.format_stack()))
+
+        # Write the result as a new file in the output directory and let the
+        # testsuite main know about this result.
+        output_dir = self.env.output_dir
+        assert isinstance(output_dir, str)
+        self.result_queue.append(
+            (
+                result.summary,
+                result.save(self.env.output_dir),
+                traceback.format_stack(),
+            )
+        )
 
     def add_fragment(
         self,

@@ -36,7 +36,7 @@ from e3.testsuite.report.gaia import dump_gaia_report
 from e3.testsuite.report.display import generate_report, summary_line
 from e3.testsuite.report.index import ReportIndex
 from e3.testsuite.report.xunit import dump_xunit_report
-from e3.testsuite.result import Log, TestResult, TestStatus
+from e3.testsuite.result import Log, TestResult, TestResultSummary, TestStatus
 from e3.testsuite.testcase_finder import (
     ParsedTest,
     ProbingError,
@@ -722,10 +722,10 @@ class TestsuiteCore:
 
         self.return_values[job.uid] = job.return_value
 
-        while job.driver.result_queue:
-            result, tb = job.driver.result_queue.pop()
+        while job.result_queue:
+            result, filename, tb = job.result_queue.pop()
 
-            self.add_result(result, tb)
+            self.add_result(result, filename, tb)
 
             # Update the number of consecutive failures, aborting the testsuite
             # if appropriate
@@ -745,10 +745,14 @@ class TestsuiteCore:
 
         return False
 
-    def add_result(self, result: TestResult, tb: List[str]) -> None:
+    def add_result(self,
+                   result: TestResultSummary,
+                   filename: str,
+                   tb: List[str]) -> None:
         """Add a test result to the result index and log it.
 
         :param result: Test result to add.
+        :param filename: Name of the file that contains test result data.
         :param tb: Traceback for the code that created this result, for
             debugging purposes.
         """
@@ -757,6 +761,26 @@ class TestsuiteCore:
         # The test results that reach this point are special: there were
         # serialized/deserialized through YAML, so the Log layer disappeared.
         assert result.status is not None
+
+        # Ensure that we don't have two results with the same test name
+
+        def indented_tb(tb: List[str]) -> str:
+            return "".join("  {}".format(line) for line in tb)
+
+        assert result.test_name not in self.report_index.entries, (
+            f"cannot push twice results for {result.test_name}"
+            f"\nFirst push happened at:"
+            f"\n{indented_tb(self.result_tracebacks[result.test_name])}"
+            f"\nThis one happened at:"
+            f"\n{indented_tb(tb)}"
+        )
+
+        # Now that the result is validated, add it to our internals
+        self.report_index.add_result(result, filename)
+        self.result_tracebacks[result.test_name] = tb
+        self.running_status.set_status_counters(
+            self.report_index.status_counters
+        )
 
         # Log the test result. If error output is requested and the test
         # failed unexpectedly, show the detailed logs.
@@ -769,31 +793,16 @@ class TestsuiteCore:
             TestStatus.XPASS,
             TestStatus.SKIP,
         ):
+            full_result = self.report_index.entries[result.test_name].load()
 
             def format_log(log: Log) -> str:
                 return "\n" + str(log) + self.Style.RESET_ALL
 
-            if result.diff:
-                log_line += format_log(result.diff)
+            if full_result.diff:
+                log_line += format_log(full_result.diff)
             else:
-                log_line += format_log(result.log)
+                log_line += format_log(full_result.log)
         logger.info(log_line)
-
-        def indented_tb(tb: List[str]) -> str:
-            return "".join("  {}".format(line) for line in tb)
-
-        assert result.test_name not in self.report_index.entries, (
-            f"cannot push twice results for {result.test_name}"
-            f"\nFirst push happened at:"
-            f"\n{indented_tb(self.result_tracebacks[result.test_name])}"
-            f"\nThis one happened at:"
-            f"\n{indented_tb(tb)}"
-        )
-        self.report_index.add_result(result)
-        self.result_tracebacks[result.test_name] = tb
-        self.running_status.set_status_counters(
-            self.report_index.status_counters
-        )
 
     def add_test_error(
         self, test_name: str, message: str, tb: Optional[str] = None
@@ -813,7 +822,12 @@ class TestsuiteCore:
         )
         if tb:
             result.log += tb
-        self.add_result(result, traceback.format_stack())
+
+        self.add_result(
+            result.summary,
+            result.save(self.output_dir),
+            traceback.format_stack(),
+        )
 
     def setup_result_dirs(self) -> None:
         """Create the output directory in which the results are stored."""

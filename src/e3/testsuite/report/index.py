@@ -15,7 +15,7 @@ import os.path
 from typing import Dict, List, Optional
 import yaml
 
-from e3.testsuite.result import TestResult, TestStatus
+from e3.testsuite.result import TestResult, TestResultSummary, TestStatus
 
 
 @dataclass
@@ -23,17 +23,31 @@ class ReportIndexEntry:
     """ReportIndex entry for a single test result."""
 
     index: ReportIndex
-    test_name: str
-    status: TestStatus
-    msg: Optional[str]
+    summary: TestResultSummary
+    filename: str
+
+    @property
+    def test_name(self) -> str:
+        return self.summary.test_name
+
+    @property
+    def status(self) -> TestStatus:
+        return self.summary.status
+
+    @property
+    def msg(self) -> Optional[str]:
+        return self.summary.msg
+
+    @property
+    def time(self) -> Optional[float]:
+        return self.summary.time
 
     def load(self) -> TestResult:
-        with open(self.index.result_filename(self.test_name), "rb") as f:
+        with open(
+            os.path.join(self.index.results_dir, self.filename), "rb"
+        ) as f:
             result = yaml.safe_load(f)
-        assert isinstance(result, TestResult)
-        assert result.test_name == self.test_name
-        assert result.status == self.status
-        assert result.msg == self.msg
+        assert self.summary == result.summary
         return result
 
 
@@ -54,29 +68,18 @@ class ReportIndex:
         self.status_counters = {s: 0 for s in TestStatus}
         """Number of test result for each test status."""
 
-    def add_result(self, test_result: TestResult) -> None:
+    def add_result(self, result: TestResultSummary, filename: str) -> None:
         """Add an entry to this index for the given test result.
 
-        Note that this writes the result data in the results dir.
-        """
-        assert isinstance(test_result.test_name, str)
-        self._add_entry(
-            test_result.test_name, test_result.status, test_result.msg
-        )
-        with open(self.result_filename(test_result.test_name), "w") as fd:
-            yaml.dump(test_result, fd)
+        Note that this does not write the result data in the results dir: it is
+        up to the caller to make sure of that.
 
-    def _add_entry(
-        self,
-        test_name: str,
-        status: TestStatus,
-        msg: Optional[str],
-        write_on_disk: bool = False,
-    ) -> None:
-        """Add an entry to this index."""
-        entry = ReportIndexEntry(self, test_name, status, msg)
-        self.entries[entry.test_name] = entry
-        self.status_counters[entry.status] += 1
+        :param result: Result to add.
+        :param filename: Name of the file that contains test result data.
+        """
+        entry = ReportIndexEntry(self, result, filename)
+        self.entries[result.test_name] = entry
+        self.status_counters[result.status] += 1
 
     @classmethod
     def read(cls, results_dir: str) -> ReportIndex:
@@ -93,8 +96,14 @@ class ReportIndex:
 
         # Import all entries
         for e in doc["entries"]:
-            result._add_entry(
-                e["test_name"], TestStatus[e["status"]], e["msg"]
+            result.add_result(
+                TestResultSummary(
+                    e["test_name"],
+                    TestStatus[e["status"]],
+                    e["msg"],
+                    e["time"],
+                ),
+                e["filename"],
             )
 
         return result
@@ -110,6 +119,8 @@ class ReportIndex:
                     "test_name": e.test_name,
                     "status": e.status.name,
                     "msg": e.msg,
+                    "time": e.time,
+                    "filename": e.filename
                 }
             )
 
@@ -118,10 +129,3 @@ class ReportIndex:
             os.path.join(self.results_dir, self.INDEX_FILENAME), "w"
         ) as f:
             json.dump(doc, f)
-
-    def result_filename(self, test_name: str) -> str:
-        """Return the name of the YAML file that contains a test result.
-
-        :param test_name: Name of the test result.
-        """
-        return os.path.join(self.results_dir, f"{test_name}.yaml")
