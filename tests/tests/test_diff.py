@@ -5,8 +5,6 @@ import shutil
 import sys
 import tempfile
 
-import yaml
-
 from e3.testsuite import Testsuite as Suite
 import e3.testsuite.driver.adacore as adacore
 import e3.testsuite.driver.diff as diff
@@ -166,8 +164,7 @@ def test_double_diff():
     # When multiple diff failures are involved, we expect .expected/.out to be
     # empty, as this formalism assumes that a single output comparison. We
     # expect .diff to contain both diff's though.
-    with open(os.path.join("out", "new", "test1.yaml")) as f:
-        result = yaml.safe_load(f)
+    result = suite.report_index.entries["test1"].load()
     assert result.expected is None
     assert result.out is None
     assert result.diff is not None

@@ -10,8 +10,6 @@ import os
 from typing import List
 import warnings
 
-import yaml
-
 from e3.testsuite import TestAbort as E3TestAbort, Testsuite as Suite
 from e3.testsuite.driver import BasicTestDriver as BasicDriver
 from e3.testsuite.fragment import FragmentData
@@ -572,9 +570,8 @@ def test_multiline_message():
         def default_driver(self):
             return "default"
 
-    run_testsuite(Mysuite, args=["test1"])
-    with open(os.path.join("out", "new", "test1.yaml")) as f:
-        result = yaml.safe_load(f)
+    suite = run_testsuite(Mysuite, args=["test1"])
+    result = suite.report_index.entries["test1"].load()
     assert result.status == Status.PASS
     assert result.msg == "Ugly multiline string"
 
