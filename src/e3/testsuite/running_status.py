@@ -6,6 +6,7 @@ RunningStatus keep users informed about the progress of testsuite execution.
 
 from typing import Dict, Optional, TYPE_CHECKING
 import threading
+import time
 
 
 if TYPE_CHECKING:
@@ -15,10 +16,12 @@ if TYPE_CHECKING:
 
 
 class RunningStatus:
-    def __init__(self, filename: str):
+    def __init__(self, filename: str, update_interval: float = 1.0):
         """RunningStatus constructor.
 
         :param filename: Name of the status file to write.
+        :param update_interval: Minimum number of seconds between status file
+            updates.
         """
         self.dag: Optional[DAG] = None
         self.filename = filename
@@ -38,6 +41,9 @@ class RunningStatus:
         sets are updated in TestFragment.run, which is executed in workers
         (i.e. other threads).
         """
+
+        self.update_interval = update_interval
+        self.no_update_before = 0.0
 
     def set_dag(self, dag: DAG) -> None:
         """Set the DAG that contains TestFragment instances."""
@@ -73,6 +79,13 @@ class RunningStatus:
 
     def dump(self) -> None:
         """Write a report for this status as human-readable text to "fp"."""
+
+        # Do not update the status file more than once per second
+        now = time.time()
+        if self.update_interval and now < self.no_update_before:
+            return
+        self.no_update_before = now + self.update_interval
+
         lines = []
         with self.lock:
             if self.dag is None:

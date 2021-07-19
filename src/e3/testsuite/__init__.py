@@ -272,6 +272,14 @@ class TestsuiteCore:
             help="Output a GAIA-compatible testsuite report next to the YAML"
             " report.",
         )
+        output_group.add_argument(
+            "--status-update-interval",
+            default=1.0,
+            type=float,
+            help="Minimum number of seconds between status file updates. The"
+            " more often we update this file, the more often one will read"
+            " garbage."
+        )
 
         auto_gen_default = (
             "enabled" if self.auto_generate_text_report else "disabled"
@@ -430,7 +438,8 @@ class TestsuiteCore:
         # Create an object to report testsuite execution status to users
         from e3.testsuite.running_status import RunningStatus
         self.running_status = RunningStatus(
-            os.path.join(self.output_dir, "status")
+            os.path.join(self.output_dir, "status"),
+            self.main.args.status_update_interval,
         )
 
         # User specific startup
