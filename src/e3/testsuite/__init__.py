@@ -22,11 +22,10 @@ from typing import (
     TYPE_CHECKING,
     Tuple,
     Type,
-    cast,
 )
 
 from e3.collection.dag import DAG
-from e3.env import Env, BaseEnv
+from e3.env import Env
 from e3.fs import rm, mkdir, mv
 from e3.job.scheduler import Scheduler
 from e3.main import Main
@@ -99,6 +98,18 @@ class TestsuiteCore:
         failures (see the --max-consecutive-failures command-line option).
         """
 
+        self.use_multiprocessing = False
+        """Whether to use multi-processing for tests parallelism.
+
+        Beyond a certain level of parallelism, Python's GIL contention is too
+        high to benefit from more processors. When we reach this level, it is
+        more interesting to use multiple processes to cancel the GIL
+        contention.
+
+        The actual value for this attribute is computed once the DAG is built,
+        in the "compute_use_multiprocessing" method.
+        """
+
     # Mypy does not support decorators on properties, so keep the actual
     # implementations for deprecated properties in methods.
 
@@ -140,41 +151,23 @@ class TestsuiteCore:
         """
         return self._results()
 
-    def job_factory(
-        self,
-        uid: str,
-        data: Any,
-        predecessors: FrozenSet[str],
-        notify_end: Callable[[str], None],
-    ) -> TestFragment:
-        """Run internal function.
+    def compute_use_multiprocessing(self) -> bool:
+        """Return whether to use multi-processing for tests parallelism.
 
-        See e3.job.scheduler
+        See docstring for the "use_multiprocessing" attribute.
         """
-        from e3.testsuite.fragment import FragmentData, TestFragment
+        assert self.main.args
 
-        assert isinstance(data, FragmentData)
+        # If multiprocessing is explicitly requested, just enable it
+        if self.main.args.force_multiprocessing:
+            return True
 
-        # When passing return values from predecessors, remove current test
-        # name from the keys to ease referencing by user (the short fragment
-        # name can then be used by user without knowing the full node id).
-        key_prefix = data.driver.test_name + "."
-        key_prefix_len = len(key_prefix)
+        # In practice, we noticed that running at most 16 jobs in parallel
+        # creates neglectible GIL contention.
+        if not self.multiprocessing_supported or self.main.args.jobs <= 16:
+            return False
 
-        def filter_key(k: str) -> str:
-            if k.startswith(key_prefix):
-                return k[key_prefix_len:]
-            else:
-                return k
-
-        return TestFragment(
-            uid,
-            data.driver,
-            data.callback,
-            {filter_key(k): self.return_values[k] for k in predecessors},
-            notify_end,
-            self.running_status,
-        )
+        return True
 
     def testsuite_main(self, args: Optional[List[str]] = None) -> int:
         """Main for the main testsuite script.
@@ -362,6 +355,17 @@ class TestsuiteCore:
             " running a testsuite in a continuous integration setup, as this"
             " can make the testing process stop when there is a regression.",
         )
+        exec_group.add_argument(
+            "--force-multiprocessing",
+            action="store_true",
+            help="Force the use of subprocesses to execute tests, for"
+            " debugging purposes. This is normally automatically enabled when"
+            " both the level of requested parallelism is high enough (to make"
+            " it profitable regarding the contention of Python's GIL) and no"
+            " test fragment has dependencies on other fragments. This flag"
+            " forces the use of multiprocessing even if any of these two"
+            " conditions is false."
+        )
         parser.add_argument(
             "sublist", metavar="tests", nargs="*", default=[], help="test"
         )
@@ -388,7 +392,7 @@ class TestsuiteCore:
         self.Fore = self.colors.Fore
         self.Style = self.colors.Style
 
-        self.env = BaseEnv.from_env()
+        self.env = Env()
         self.env.enable_colors = enable_colors
         self.env.root_dir = self.root_dir
         self.env.test_dir = self.test_dir
@@ -430,6 +434,17 @@ class TestsuiteCore:
                 "", "tmp", os.path.abspath(self.main.args.temp_dir)
             )
 
+        # Create the exchange directory (to exchange data between the testsuite
+        # main and the subprocesses running test fragments). Compute the name
+        # of the file to pass environment data to subprocesses.
+        self.exchange_dir = os.path.join(self.working_dir, "exchange")
+        self.env_filename = os.path.join(self.exchange_dir, "_env.bin")
+        mkdir(self.exchange_dir)
+
+        # Make them both available to test fragments
+        self.env.exchange_dir = self.exchange_dir
+        self.env.env_filename = self.env_filename
+
         # Store in global env: target information and common paths
         self.env.output_dir = self.output_dir
         self.env.working_dir = self.working_dir
@@ -456,32 +471,31 @@ class TestsuiteCore:
         dag.check()
         self.running_status.set_dag(dag)
 
+        # Determine whether to use multiple processes for fragment execution
+        # parallelism.
+        self.use_multiprocessing = self.compute_use_multiprocessing()
+        self.env.use_multiprocessing = self.use_multiprocessing
+
+        # Record modules lookup path, including for the file corresponding to
+        # the __main__ module.  Subprocesses will need it to have access to the
+        # same modules.
+        main_module = sys.modules["__main__"]
+        self.env.modules_search_path = [
+            os.path.dirname(os.path.abspath(main_module.__file__))
+        ] + sys.path
+
+        # Now that the env is supposed to be complete, dump it for the test
+        # fragments to pick it up.
+        self.env.store(self.env_filename)
+
         # For debugging purposes, dump the final DAG to a DOT file
         with open(os.path.join(self.output_dir, "tests.dot"), "w") as fd:
             fd.write(dag.as_dot())
 
-        # Create a scheduler to run all fragments for the testsuite main loop
-        self.scheduler = Scheduler(
-            job_provider=self.job_factory,
-            tokens=self.main.args.jobs,
-            # correct_result expects specifically TestFragment instances (a Job
-            # subclass), while Scheduler only guarantees Job instances.
-            # Test drivers are supposed to register only TestFragment
-            # instances, so the following cast should be fine.
-            collect=cast(Any, self.collect_result),
-        )
-
-        # Run the tests. Note that when the testsuite aborts because of too
-        # many consecutive test failures, we still want to produce a report and
-        # exit through regular ways, to catch KeyboardInterrupt exceptions,
-        # which e3's scheduler uses to abort the execution loop, but only in
-        # such cases. In other words, let the exception propagates if it's the
-        # user that interrupted the testsuite.
-        try:
-            self.scheduler.run(dag)
-        except KeyboardInterrupt:
-            if not self.aborted_too_many_failures:  # interactive-only
-                raise
+        if self.use_multiprocessing:
+            self.run_multiprocess_mainloop(dag)
+        else:
+            self.run_standard_mainloop(dag)
 
         self.report_index.write()
         self.dump_testsuite_result()
@@ -717,10 +731,11 @@ class TestsuiteCore:
         with open(os.path.join(self.output_dir, "comment"), "w") as f:
             self.write_comment_file(f)
 
-    def collect_result(self, job: TestFragment) -> bool:
-        """Run internal function.
+    def collect_result(self, fragment: TestFragment) -> None:
+        """Import test results from ``fragment`` into testsuite reports.
 
-        :param job: A job that is finished.
+        :param fragment: Test fragment (just completed) from which to import
+            test results.
         """
         assert self.main.args
 
@@ -729,10 +744,8 @@ class TestsuiteCore:
         max_consecutive_failures = self.main.args.max_consecutive_failures
         consecutive_failures = 0
 
-        self.return_values[job.uid] = job.return_value
-
-        while job.result_queue:
-            result, filename, tb = job.result_queue.pop()
+        while fragment.result_queue:
+            result, filename, tb = fragment.result_queue.pop()
 
             self.add_result(result, filename, tb)
 
@@ -751,8 +764,6 @@ class TestsuiteCore:
                     raise KeyboardInterrupt
             else:
                 consecutive_failures = 0
-
-        return False
 
     def add_result(self,
                    result: TestResultSummary,
@@ -885,6 +896,112 @@ class TestsuiteCore:
                         )
                     )
 
+    def run_standard_mainloop(self, dag: DAG) -> None:
+        """Run the main loop to execute test fragments in threads."""
+        assert self.main.args is not None
+
+        from e3.job import Job
+        from e3.testsuite.fragment import FragmentData, ThreadTestFragment
+
+        def job_factory(
+            uid: str,
+            data: Any,
+            predecessors: FrozenSet[str],
+            notify_end: Callable[[str], None],
+        ) -> ThreadTestFragment:
+            """Turn a DAG item into a ThreadTestFragment instance."""
+            assert isinstance(data, FragmentData)
+
+            # When passing return values from predecessors, remove current test
+            # name from the keys to ease referencing by user (the short
+            # fragment name can then be used by user without knowing the full
+            # node id).
+            key_prefix = data.driver.test_name + "."
+            key_prefix_len = len(key_prefix)
+
+            def filter_key(k: str) -> str:
+                if k.startswith(key_prefix):
+                    return k[key_prefix_len:]
+                else:
+                    return k
+
+            return ThreadTestFragment(
+                uid,
+                data.driver,
+                data.callback,
+                {filter_key(k): self.return_values[k] for k in predecessors},
+                notify_end,
+                self.running_status,
+            )
+
+        def collect_result(job: Job) -> bool:
+            """Collect test results from the given fragment."""
+            assert isinstance(job, ThreadTestFragment)
+            self.return_values[job.uid] = job.return_value
+            self.collect_result(job)
+
+            # In the e3.job.scheduler API, collect returning "True" means
+            # "requeue the job". We never want to do that.
+            return False
+
+        # Create a scheduler to run all fragments for the testsuite main loop
+        scheduler = Scheduler(
+            job_provider=job_factory,
+            tokens=self.main.args.jobs,
+            collect=collect_result,
+        )
+
+        # Run the tests. Note that when the testsuite aborts because of too
+        # many consecutive test failures, we still want to produce a report and
+        # exit through regular ways, to catch KeyboardInterrupt exceptions,
+        # which e3's scheduler uses to abort the execution loop, but only in
+        # such cases. In other words, let the exception propagates if it's the
+        # user that interrupted the testsuite.
+        try:
+            scheduler.run(dag)
+        except KeyboardInterrupt:
+            if not self.aborted_too_many_failures:  # interactive-only
+                raise
+
+    def run_multiprocess_mainloop(self, dag: DAG) -> None:
+        """Run the main loop to execute test fragments in subprocesses."""
+        assert self.main.args is not None
+
+        from e3.testsuite.fragment import FragmentData, ProcessTestFragment
+        from e3.testsuite.multiprocess_scheduler import MultiprocessScheduler
+
+        def job_factory(uid: str,
+                        data: FragmentData,
+                        slot: int) -> ProcessTestFragment:
+            """Turn a DAG item into a ProcessTestFragment instance."""
+            assert data.callback_by_name
+            return ProcessTestFragment(
+                uid,
+                data.driver,
+                data.name,
+                slot,
+                self.running_status,
+                self.env,
+            )
+
+        def collect_result(job: ProcessTestFragment) -> None:
+            """Collect test results from the given fragment."""
+            job.collect_result()
+            self.collect_result(job)
+
+        scheduler: MultiprocessScheduler[FragmentData, ProcessTestFragment] = (
+            MultiprocessScheduler(
+                dag, job_factory, collect_result, jobs=self.main.args.jobs
+            )
+        )
+
+        # See corresponding code/comment in run_multithread_mainloop
+        try:
+            scheduler.run()
+        except KeyboardInterrupt:
+            if not self.aborted_too_many_failures:  # interactive-only
+                raise
+
     # Unlike the previous methods, the following ones are supposed to be
     # overriden.
 
@@ -1011,6 +1128,25 @@ class TestsuiteCore:
         """
         raise NotImplementedError
 
+    @property
+    def multiprocessing_supported(self) -> bool:
+        """Return whether running test fragments in subprocesses is supported.
+
+        When multiprocessing is enabled (see the "use_multiprocessing"
+        attribute), test fragments are executed in a separate process, and the
+        propagation of their return values is disabled (FragmentData's
+        "previous_values" argument is always an empty dict).
+
+        This means that multiprocessing can work only if test drivers and all
+        code used by test fragments can be imported by subprocesses (for
+        instance, class defined in the testsuite entry point are unavailable)
+        and if test drivers don't use the "previous_values" mechanism.
+
+        Testsuite authors can use the "--force-multiprocessing" testsuite
+        option to check if this works.
+        """
+        raise NotImplementedError
+
 
 class Testsuite(TestsuiteCore):
     """Testsuite class.
@@ -1085,3 +1221,7 @@ class Testsuite(TestsuiteCore):
 
     def adjust_dag_dependencies(self, dag: DAG) -> None:
         pass
+
+    @property
+    def multiprocessing_supported(self) -> bool:
+        return False

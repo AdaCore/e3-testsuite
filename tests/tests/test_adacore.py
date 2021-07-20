@@ -10,7 +10,12 @@ from e3.testsuite.driver.adacore import AdaCoreLegacyTestDriver as ACDriver
 import e3.testsuite.testcase_finder as testcase_finder
 from e3.testsuite.result import TestStatus as Status
 
-from .utils import extract_results, run_testsuite, testsuite_logs
+from .utils import (
+    MultiSchedulingSuite,
+    extract_results,
+    run_testsuite,
+    testsuite_logs,
+)
 
 
 def test_adacore():
@@ -83,7 +88,7 @@ def test_optfile(caplog):
     class Mydriver(ACDriver):
         test_control_creator = control.AdaCoreLegacyTestControlCreator(["foo"])
 
-    class Mysuite(Suite):
+    class Mysuite(MultiSchedulingSuite):
         tests_subdir = "adacore-tests"
         test_driver_map = {"adacore": Mydriver}
         default_driver = "adacore"

@@ -37,6 +37,7 @@ setup(
             "e3-test = e3.testsuite.main:main",
             "e3-testsuite-report = e3.testsuite.report.display:main",
             "e3-find-skipped-tests = e3.testsuite.find_skipped_tests:main",
+            "e3-run-test-fragment = e3.testsuite.fragment:run_fragment",
         ]
     },
 )

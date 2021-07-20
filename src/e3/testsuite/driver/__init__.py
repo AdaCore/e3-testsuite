@@ -21,7 +21,12 @@ class TestDriver(object, metaclass=abc.ABCMeta):
     All drivers declared in a testsuite should inherit from this class
     """
 
-    def __init__(self, env: e3.env.BaseEnv, test_env: Dict[str, Any]) -> None:
+    Fore: Any
+    Style: Any
+
+    test_env_filename: str
+
+    def __init__(self, env: e3.env.Env, test_env: Dict[str, Any]) -> None:
         """Initialize a TestDriver instance.
 
         :param env: The testsuite environment. This mirrors the
@@ -38,7 +43,7 @@ class TestDriver(object, metaclass=abc.ABCMeta):
               that this test driver is free to create (if needed) in order to
               run the testcase.
         """
-        self.env: e3.env.BaseEnv = env
+        self.env: e3.env.Env = env
         assert isinstance(env.options, argparse.Namespace)
         self.testsuite_options: argparse.Namespace = env.options
 
@@ -103,17 +108,21 @@ class TestDriver(object, metaclass=abc.ABCMeta):
         """
         from e3.testsuite.fragment import FragmentData
 
+        callback_by_name = False
+
         if after is not None:
             after = [self.test_name + "." + k for k in after]
 
         if fun is None:
             fun = getattr(self, name)
+            callback_by_name = True
 
         fragment = FragmentData(
             uid=f"{self.test_name}.{name}",
             driver=self,
             name=name,
             callback=fun,
+            callback_by_name=callback_by_name,
         )
 
         dag.update_vertex(

@@ -50,6 +50,7 @@ Topics
    api_testsuite
    api_testcase_finder
    adacore
+   multiprocessing
 
 
 Indices and tables

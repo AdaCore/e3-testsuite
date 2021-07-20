@@ -79,7 +79,6 @@ class RunningStatus:
 
     def dump(self) -> None:
         """Write a report for this status as human-readable text to "fp"."""
-
         # Do not update the status file more than once per second
         now = time.time()
         if self.update_interval and now < self.no_update_before:

@@ -5,9 +5,7 @@ This checks the behavior of the Testsuite, TestDriver and BasicTestDriver
 classes.
 """
 
-import logging
 import os
-from typing import List
 import warnings
 
 from e3.testsuite import TestAbort as E3TestAbort, Testsuite as Suite
@@ -15,7 +13,6 @@ from e3.testsuite.driver import (
     TestDriver as Driver,
     BasicTestDriver as BasicDriver,
 )
-from e3.testsuite.fragment import FragmentData
 from e3.testsuite.report.index import ReportIndex
 from e3.testsuite.result import (
     TestResult as Result,
@@ -25,6 +22,7 @@ from e3.testsuite.result import (
 from e3.testsuite.testcase_finder import TestFinder as Finder, ParsedTest
 
 from .utils import (
+    MultiSchedulingSuite,
     check_result_dirs,
     check_result_from_prefix,
     extract_results,
@@ -195,7 +193,7 @@ class TestAbort:
 
             self.push_result()
 
-    class Mysuite(Suite):
+    class Mysuite(MultiSchedulingSuite):
         tests_subdir = "simple-tests"
 
         @property
@@ -206,12 +204,18 @@ class TestAbort:
         def default_driver(self):
             return "default"
 
-    def test(self):
-        suite = run_testsuite(self.Mysuite)
+    def run_check(self, multiprocessing):
+        suite = run_testsuite(self.Mysuite, multiprocessing=multiprocessing)
         assert extract_results(suite) == {
             "test1": Status.PASS,
             "test2": Status.PASS,
         }
+
+    def test_multithread(self):
+        self.run_check(multiprocessing=False)
+
+    def test_multiprocess(self):
+        self.run_check(multiprocessing=True)
 
 
 class TestExceptionInDriver:
@@ -222,15 +226,22 @@ class TestExceptionInDriver:
             raise AttributeError("expected exception")
 
         def analyze(self, prev, slot):
-            self.result.log += f"Previous values: {prev}\n"
-            prev_value = prev["run"]
-            if isinstance(prev_value, Exception):
+            # In multiprocessing mode, there is no return value propagation, so
+            # there is nothing to check here.
+            if self.env.use_multiprocessing:
                 self.result.set_status(Status.PASS, "ok!")
             else:
-                self.result.set_status(Status.FAIL, "unexpected return value")
+                self.result.log += f"Previous values: {prev}\n"
+                prev_value = prev["run"]
+                if isinstance(prev_value, Exception):
+                    self.result.set_status(Status.PASS, "ok!")
+                else:
+                    self.result.set_status(
+                        Status.FAIL, "unexpected return value"
+                    )
             self.push_result()
 
-    class Mysuite(Suite):
+    class Mysuite(MultiSchedulingSuite):
         tests_subdir = "simple-tests"
 
         @property
@@ -241,8 +252,8 @@ class TestExceptionInDriver:
         def default_driver(self):
             return "default"
 
-    def test(self):
-        suite = run_testsuite(self.Mysuite)
+    def run_check(self, multiprocessing):
+        suite = run_testsuite(self.Mysuite, multiprocessing=multiprocessing)
 
         results = extract_results(suite)
 
@@ -259,6 +270,12 @@ class TestExceptionInDriver:
         assert keys[0].startswith("test1.run__except")
         assert keys[1].startswith("test2.run__except")
         assert set(results.values()) == {Status.ERROR}
+
+    def test_multithread(self):
+        self.run_check(multiprocessing=False)
+
+    def test_multiprocess(self):
+        self.run_check(multiprocessing=True)
 
 
 class TestNotExistingTempDir:
@@ -720,7 +737,7 @@ class TestMaxConsecutiveFailures:
             self.result.set_status(Status.FAIL)
             self.push_result()
 
-    class Mysuite(Suite):
+    class Mysuite(MultiSchedulingSuite):
         tests_subdir = "simple-tests"
         default_driver = "default"
 
@@ -728,13 +745,21 @@ class TestMaxConsecutiveFailures:
         def test_driver_map(self):
             return {"default": TestMaxConsecutiveFailures.MyDriver}
 
-    def test(self, caplog):
+    def run_check(self, caplog, multiprocessing):
         suite = run_testsuite(
-            self.Mysuite, args=["--max-consecutive-failures=1", "-j1"]
+            self.Mysuite,
+            args=["--max-consecutive-failures=1", "-j1"],
+            multiprocessing=multiprocessing,
         )
         logs = {r.getMessage() for r in caplog.records}
         assert len(suite.report_index.entries) == 1
         assert "Too many consecutive failures, aborting the testsuite" in logs
+
+    def test_multithread(self, caplog):
+        self.run_check(caplog, multiprocessing=False)
+
+    def test_multiprocess(self, caplog):
+        self.run_check(caplog, multiprocessing=True)
 
 
 class TestShowTimeInfo:
@@ -962,7 +987,7 @@ class TestInterTestDeps:
             )
             self.push_result()
 
-    class Mysuite(Suite):
+    class Mysuite(MultiSchedulingSuite):
         tests_subdir = "."
 
         @staticmethod
@@ -1003,8 +1028,8 @@ class TestInterTestDeps:
                 fg.driver.test_env["unit_names"] = unit_names
                 dag.update_vertex(vertex_id=fg.uid, predecessors=unit_uids)
 
-    def test(self):
-        suite = run_testsuite(self.Mysuite)
+    def run_check(self, multiprocessing):
+        suite = run_testsuite(self.Mysuite, multiprocessing=multiprocessing)
         assert extract_results(suite) == {
             "unit_0": Status.PASS,
             "unit_1": Status.PASS,
@@ -1013,3 +1038,9 @@ class TestInterTestDeps:
             "unit_4": Status.PASS,
             "sum": Status.PASS,
         }
+
+    def test_multithread(self):
+        self.run_check(multiprocessing=False)
+
+    def test_multiprocess(self):
+        self.run_check(multiprocessing=True)

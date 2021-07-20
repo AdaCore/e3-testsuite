@@ -5,6 +5,45 @@ import os.path
 from e3.testsuite import Testsuite
 from e3.testsuite.report.index import ReportIndex
 from e3.testsuite.result import Log, TestResult as Result
+from e3.testsuite.testcase_finder import ParsedTest
+
+
+class MultiSchedulingSuite(Testsuite):
+    """Helper to manually select the scheduler when running the testsuite."""
+
+    def add_options(self, parser):
+        parser.add_argument("--multiprocessing", action="store_true")
+
+    def compute_use_multiprocessing(self):
+        return self.main.args.multiprocessing
+
+
+def create_testsuite(test_names, driver_cls, ts_cls=Testsuite):
+    """Create a helper testsuite class.
+
+    The point of this function is to provide a simple mean to create a
+    testsuite & its tests with no filesystem support.
+
+    :param test_names: List of names for tests to run.
+    :param driver_cls: Test driver to use for these tests.
+    :param ts_cls: Testsuite base class.
+    """
+    tests = [
+        ParsedTest(
+            test_name=test_name,
+            driver_cls=driver_cls,
+            test_env={},
+            test_dir=".",
+            test_matcher=None,
+        )
+        for test_name in test_names
+    ]
+
+    class MySuite(ts_cls):
+        def get_test_list(self, sublist):
+            return tests
+
+    return MySuite
 
 
 def check_result_dirs(new=None, old=None, new_dir=None, old_dir=None):
@@ -55,17 +94,19 @@ def extract_results(testsuite):
     }
 
 
-def run_testsuite_status(cls, args=None):
+def run_testsuite_status(cls, args=None, multiprocessing=False):
     """Instantiate a Testsuite subclass, run it and return it and its sttus."""
     args = list(args) if args is not None else []
+    if multiprocessing:
+        args.append("--multiprocessing")
     suite = cls()
     return (suite, suite.testsuite_main(args))
 
 
-def run_testsuite(cls, args=None, expect_failure=False):
+def run_testsuite(cls, args=None, multiprocessing=False, expect_failure=False):
     """Instantiate a Testsuite subclass and run it."""
     args = args if args is not None else []
-    suite, status = run_testsuite_status(cls, args)
+    suite, status = run_testsuite_status(cls, args, multiprocessing)
     if expect_failure:
         assert status != 0
     else:

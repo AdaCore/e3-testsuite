@@ -124,6 +124,7 @@ class AdaCoreLegacyTestDriver(DiffTestDriver):
         assert isinstance(self.env.discs, list)
 
         # Make sure the test script is present in the working directory
+        assert self.test_control.opt_results is not None
         script_filename = self.test_control.opt_results["CMD"]
         self.script_file = self.working_dir("src", script_filename)
         if not os.path.isfile(self.script_file):
