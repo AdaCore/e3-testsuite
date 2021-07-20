@@ -11,7 +11,12 @@ import e3.testsuite.driver.classic as classic
 from e3.testsuite.report.index import ReportIndex
 from e3.testsuite.result import TestStatus as Status
 
-from .utils import extract_results, run_testsuite, testsuite_logs
+from .utils import (
+    MultiSchedulingSuite,
+    extract_results,
+    run_testsuite,
+    testsuite_logs,
+)
 
 
 def test_control_interpret():
@@ -159,52 +164,64 @@ class DummyDriver(classic.ClassicTestDriver):
         pass
 
 
-def test_classic(caplog):
+class TestClassic:
     """Check that ClassicTestDriver works as expected."""
 
-    class Mysuite(Suite):
+    class Mysuite(MultiSchedulingSuite):
         tests_subdir = "classic-tests"
         test_driver_map = {
             "script-driver": ScriptDriver,
             "dummy-driver": DummyDriver,
         }
 
-    # Look for tests using a relative path to check that test directories are
-    # properly converted to absolute paths (see abs-test-dir).
-    tests_subdir = os.path.relpath(
-        os.path.join(
-            os.path.abspath(os.path.dirname(__file__)), Mysuite.tests_subdir
-        ),
-    )
+    def run_check(self, caplog, multiprocessing):
+        # Look for tests using a relative path to check that test directories
+        # are properly converted to absolute paths (see abs-test-dir).
+        tests_subdir = os.path.relpath(
+            os.path.join(
+                os.path.abspath(os.path.dirname(__file__)),
+                self.Mysuite.tests_subdir,
+            ),
+        )
 
-    suite = run_testsuite(Mysuite, args=["--truncate-logs=0", tests_subdir])
-    assert extract_results(suite) == {
-        "simple": Status.PASS,
-        "catch-error-pass": Status.PASS,
-        "catch-error-fail": Status.FAIL,
-        "skipped": Status.SKIP,
-        "xfailed": Status.XFAIL,
-        "xpassed": Status.XPASS,
-        "errored": Status.ERROR,
-        "force-skip": Status.SKIP,
-        "invalid-control": Status.ERROR,
-        "dummy": Status.PASS,
-        "with-output": Status.FAIL,
-        "binary-output": Status.FAIL,
-        "invalid-utf8-output": Status.ERROR,
-        "suspicious-test-opt": Status.PASS,
-        "abs-test-dir": Status.PASS,
-        "long-logs": Status.FAIL,
-    }
+        suite = run_testsuite(
+            self.Mysuite,
+            args=["--truncate-logs=0", tests_subdir, "-E"],
+            multiprocessing=multiprocessing,
+        )
+        assert extract_results(suite) == {
+            "simple": Status.PASS,
+            "catch-error-pass": Status.PASS,
+            "catch-error-fail": Status.FAIL,
+            "skipped": Status.SKIP,
+            "xfailed": Status.XFAIL,
+            "xpassed": Status.XPASS,
+            "errored": Status.ERROR,
+            "force-skip": Status.SKIP,
+            "invalid-control": Status.ERROR,
+            "dummy": Status.PASS,
+            "with-output": Status.FAIL,
+            "binary-output": Status.FAIL,
+            "invalid-utf8-output": Status.ERROR,
+            "suspicious-test-opt": Status.PASS,
+            "abs-test-dir": Status.PASS,
+            "long-logs": Status.FAIL,
+        }
 
-    log = (
-        'suspicious-test-opt: "test.opt" file found whereas only "control"'
-        " entries are considered"
-    )
-    assert log in testsuite_logs(caplog)
+        log = (
+            'suspicious-test-opt: "test.opt" file found whereas only "control"'
+            " entries are considered"
+        )
+        assert log in testsuite_logs(caplog)
 
-    # Check that XPASS result prints the XFAIL message
-    assert suite.report_index.entries["xpassed"].msg == "XFAIL message"
+        # Check that XPASS result prints the XFAIL message
+        assert suite.report_index.entries["xpassed"].msg == "XFAIL message"
+
+    def test_multithreading(self, caplog):
+        self.run_check(caplog, multiprocessing=False)
+
+    # TODO: somehow forward logs emitted in multiprocess test fragments to the
+    # testsuite's main logging system.
 
 
 def test_long_logs(caplog):
