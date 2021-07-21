@@ -138,7 +138,7 @@ def test_diff_rewriting():
         check_test_out("bad-utf-8", ["héllo"], encoding="utf-8")
 
 
-def test_double_diff():
+class TestDoubleDiff:
     """Check proper result constructions for multiple diff failures."""
 
     class MyDriver(diff.DiffTestDriver):
@@ -156,20 +156,24 @@ def test_double_diff():
 
     class Mysuite(Suite):
         tests_subdir = "simple-tests"
-        test_driver_map = {"default": MyDriver}
 
-    suite = run_testsuite(Mysuite, args=["test1"])
-    assert extract_results(suite) == {"test1": Status.FAIL}
+        @property
+        def test_driver_map(self):
+            return {"default": TestDoubleDiff.MyDriver}
 
-    # When multiple diff failures are involved, we expect .expected/.out to be
-    # empty, as this formalism assumes that a single output comparison. We
-    # expect .diff to contain both diff's though.
-    result = suite.report_index.entries["test1"].load()
-    assert result.expected is None
-    assert result.out is None
-    assert result.diff is not None
-    assert "first diff" in result.diff
-    assert "second diff" in result.diff
+    def test(self):
+        suite = run_testsuite(self.Mysuite, args=["test1"])
+        assert extract_results(suite) == {"test1": Status.FAIL}
+
+        # When multiple diff failures are involved, we expect .expected/.out to be
+        # empty, as this formalism assumes that a single output comparison. We
+        # expect .diff to contain both diff's though.
+        result = suite.report_index.entries["test1"].load()
+        assert result.expected is None
+        assert result.out is None
+        assert result.diff is not None
+        assert "first diff" in result.diff
+        assert "second diff" in result.diff
 
 
 def test_failure_reason():
