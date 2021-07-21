@@ -9,8 +9,9 @@ from e3.testsuite.result import TestResult as Result, TestStatus as Status
 from .utils import run_testsuite
 
 
-def test_basic():
+class TestBasic:
     """Check that the test status at each step with no parallelism."""
+
     fragments = [
         ("frag_a", Status.PASS),
         ("frag_b", Status.FAIL),
@@ -61,12 +62,13 @@ def test_basic():
         ),
     }
 
+    @staticmethod
     def check_status(label):
         with open(os.path.join("out", "new", "status")) as f:
             actual = f.read()
         assert (
-            actual == expected_statuses[label]
-        ), f"Unexpected status file at {label}"
+            actual == TestBasic.expected_statuses[label]
+        ), f"Unexpected status file at {label}: {actual}"
 
     class MyDriver(Driver):
         def add_test(self, dag):
@@ -74,32 +76,47 @@ def test_basic():
             # result.
             if self.test_name == "test1":
                 prev = None
-                for name, status in fragments:
+                for name, _ in TestBasic.fragments:
                     self.add_fragment(
                         dag,
                         name,
-                        self.callback_for(name, status),
+                        None,
                         after=[prev] if prev else [],
                     )
                     prev = name
 
-        def callback_for(self, name, status):
-            def run(prev, slot):
-                check_status(name)
+        def frag_a(self, prev, slot):
+            self.run("frag_a", prev, slot)
 
-                result = Result(name, self.test_env)
-                result.set_status(status)
-                self.push_result(result)
+        def frag_b(self, prev, slot):
+            self.run("frag_b", prev, slot)
 
-            return run
+        def frag_c(self, prev, slot):
+            self.run("frag_c", prev, slot)
 
-    class Mysuite(Suite):
-        tests_subdir = "simple-tests"
-        test_driver_map = {"default": MyDriver}
+        def frag_d(self, prev, slot):
+            self.run("frag_d", prev, slot)
 
-        @property
-        def default_driver(self):
-            return "default"
+        def run(self, name, prev, slot):
+            TestBasic.check_status(name)
 
-    run_testsuite(Mysuite, args=["-j1", "--show-error-output"])
-    check_status("final")
+            result = Result(name, self.test_env)
+            for fragment_name, status in TestBasic.fragments:
+                if fragment_name == name:
+                    result.set_status(status)
+                    break
+            else:
+                assert False
+            self.push_result(result)
+
+    def test(self):
+        class Mysuite(Suite):
+            tests_subdir = "simple-tests"
+            test_driver_map = {"default": self.MyDriver}
+            default_driver = "default"
+
+        run_testsuite(
+            Mysuite,
+            args=["-j1", "--show-error-output", "--status-update-interval=0"],
+        )
+        self.check_status("final")

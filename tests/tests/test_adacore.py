@@ -89,7 +89,7 @@ def test_optfile(caplog):
         default_driver = "adacore"
 
         def set_up(self):
-            super(Mysuite, self).set_up()
+            super().set_up()
             self.env.discs = []
             self.env.test_environ = dict(os.environ)
 

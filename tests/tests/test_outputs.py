@@ -4,7 +4,7 @@ import os.path
 import shutil
 
 from e3.testsuite import Testsuite as Suite
-from e3.testsuite.driver import BasicTestDriver as BasicDriver
+from e3.testsuite.driver import TestDriver as Driver
 from e3.testsuite.result import TestStatus as Status
 
 from .utils import check_result_dirs, run_testsuite
@@ -13,24 +13,25 @@ from .utils import check_result_dirs, run_testsuite
 # Helpers for all tests in this module
 
 
-class MyDriver(BasicDriver):
-    return_status = Status.PASS
+class MyDriver(Driver):
+    def add_test(self, dag):
+        self.add_fragment(dag, "run")
 
     def run(self, prev, slot):
-        pass
-
-    def analyze(self, prev, slot):
-        self.result.set_status(self.return_status)
+        self.result.set_status(self.env.return_status)
         self.push_result()
 
 
 class Mysuite(Suite):
     tests_subdir = "simple-tests"
     test_driver_map = {"default": MyDriver}
+    default_driver = "default"
 
-    @property
-    def default_driver(self):
-        return "default"
+    def add_options(self, parser):
+        parser.add_argument("return_status")
+
+    def set_up(self):
+        self.env.return_status = Status[self.main.args.return_status]
 
 
 results_pass = {"test1": Status.PASS, "test2": Status.PASS}
@@ -40,8 +41,7 @@ results_skip = {"test1": Status.SKIP, "test2": Status.SKIP}
 
 def run(status, args=None):
     args = args if args is not None else []
-    MyDriver.return_status = status
-    run_testsuite(Mysuite, args=args)
+    run_testsuite(Mysuite, args=args + [status.name])
 
 
 # Actual tests

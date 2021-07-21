@@ -237,7 +237,7 @@ def test_long_logs(caplog):
     ]
 
 
-def test_cleanup_failure():
+class TestCleanupFailure:
     """Check that error recovery for working dir cleanup works as expected."""
 
     class MyDriver(classic.ClassicTestDriver):
@@ -251,55 +251,62 @@ def test_cleanup_failure():
 
     class Mysuite(Suite):
         tests_subdir = "simple-tests"
-        test_driver_map = {"default": MyDriver}
+
+        @property
+        def test_driver_map(self):
+            return {"default": TestCleanupFailure.MyDriver}
+
         default_driver = "default"
 
-    suite = run_testsuite(Mysuite, args=["-E"])
-    assert extract_results(suite) == {
-        "test1": Status.PASS,
-        "test2": Status.PASS,
-        "test1__tear_down": Status.ERROR,
-        "test2__tear_down": Status.ERROR,
-    }
+    def test(self):
+        suite = run_testsuite(self.Mysuite)
+        assert extract_results(suite) == {
+            "test1": Status.PASS,
+            "test2": Status.PASS,
+            "test1__tear_down": Status.ERROR,
+            "test2__tear_down": Status.ERROR,
+        }
 
-    index = ReportIndex.read("out/new")
-    r = index.entries["test1__tear_down"].load()
+        index = ReportIndex.read("out/new")
+        r = index.entries["test1__tear_down"].load()
 
-    assert re.match(
-        "Error while removing the working directory .*test1:\n"
-        "\n"
-        "Traceback (?:.|\n)*\n"
-        "RuntimeError: some cleanup failure\n"
-        "\n"
-        "Remaining files:\n"
-        f"  test.yaml\n"
-        f"  foo\n"
-        f"  foo{os.path.sep}bar.txt\n",
-        r.log,
-    )
+        assert re.match(
+            "Error while removing the working directory .*test1:\n"
+            "\n"
+            "Traceback (?:.|\n)*\n"
+            "RuntimeError: some cleanup failure\n"
+            "\n"
+            "Remaining files:\n"
+            f"  test.yaml\n"
+            f"  foo\n"
+            f"  foo{os.path.sep}bar.txt\n",
+            r.log,
+        )
 
 
-def test_ignore_env():
+class TestIgnoreEnv:
     """Check that shell's ignore_env argument works as expected."""
-    env_printer = os.path.join(
-        os.path.dirname(os.path.abspath(__file__)), "env_printer.py"
-    )
-    os.environ["E3_TESTSUITE_VAR1"] = "var1-value"
 
-    def run(expected_output, **kwargs):
-        class MyDriver(classic.ClassicTestDriver):
-            def run(self):
-                self.shell(
-                    [sys.executable, env_printer],
-                    env={"E3_TESTSUITE_VAR2": "var2-value"},
-                    **kwargs,
-                )
-                self.result.out = self.output
+    class MyDriver(classic.ClassicTestDriver):
+        def run(self):
+            self.shell(
+                [sys.executable, self.env.env_printer],
+                env={"E3_TESTSUITE_VAR2": "var2-value"},
+                **self.env.kwargs,
+            )
+            self.result.out = self.output
+
+    def run(self, expected_output, **kwargs):
+        env_printer = self.env_printer
 
         class Mysuite(Suite):
             tests_subdir = "simple-tests"
-            test_driver_map = {"default": MyDriver}
+            test_driver_map = {"default": TestIgnoreEnv.MyDriver}
             default_driver = "default"
+
+            def set_up(self):
+                self.env.env_printer = env_printer
+                self.env.kwargs = kwargs
 
         suite = run_testsuite(Mysuite, args=["-E", "test1"])
         assert extract_results(suite) == {"test1": Status.PASS}
@@ -309,15 +316,21 @@ def test_ignore_env():
         lines = [line.strip() for line in r.out.splitlines()]
         assert lines == expected_output
 
-    run(
-        ["E3_TESTSUITE_VAR1=var1-value", "E3_TESTSUITE_VAR2=var2-value"],
-        ignore_environ=False,
-    )
-    run(["E3_TESTSUITE_VAR2=var2-value"], ignore_environ=True)
-    run(["E3_TESTSUITE_VAR2=var2-value"])
+    def test(self):
+        self.env_printer = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)), "env_printer.py"
+        )
+        os.environ["E3_TESTSUITE_VAR1"] = "var1-value"
+
+        self.run(
+            ["E3_TESTSUITE_VAR1=var1-value", "E3_TESTSUITE_VAR2=var2-value"],
+            ignore_environ=False,
+        )
+        self.run(["E3_TESTSUITE_VAR2=var2-value"], ignore_environ=True)
+        self.run(["E3_TESTSUITE_VAR2=var2-value"])
 
 
-def test_may_have_timed_out():
+class TestMayHaveTimedOut:
     """Check the ClassicTestDriver.process_may_have_timed_out method."""
 
     class MyDriver(classic.ClassicTestDriver):
@@ -334,10 +347,11 @@ def test_may_have_timed_out():
             assert not check(0, matching_msg)
             assert check(2, matching_msg)
 
-    class Mysuite(Suite):
-        tests_subdir = "simple-tests"
-        test_driver_map = {"default": MyDriver}
-        default_driver = "default"
+    def test(self):
+        class Mysuite(Suite):
+            tests_subdir = "simple-tests"
+            test_driver_map = {"default": self.MyDriver}
+            default_driver = "default"
 
-    suite = run_testsuite(Mysuite, args=["-E", "test1"])
-    assert extract_results(suite) == {"test1": Status.PASS}
+        suite = run_testsuite(Mysuite, args=["-E", "test1"])
+        assert extract_results(suite) == {"test1": Status.PASS}

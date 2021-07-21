@@ -2,6 +2,7 @@
 
 import os.path
 
+from e3.testsuite import Testsuite
 from e3.testsuite.report.index import ReportIndex
 from e3.testsuite.result import Log, TestResult as Result
 
@@ -56,7 +57,7 @@ def extract_results(testsuite):
 
 def run_testsuite_status(cls, args=None):
     """Instantiate a Testsuite subclass, run it and return it and its sttus."""
-    args = args if args is not None else []
+    args = list(args) if args is not None else []
     suite = cls()
     return (suite, suite.testsuite_main(args))
 
