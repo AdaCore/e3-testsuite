@@ -1,6 +1,7 @@
 25.0 (Not released yet)
 =======================
 
+* Fix the `--max-consecutive-failures` command line option.
 * Introduce multi-processing for test fragment execution.
 * Write command line options to the comment file by default.
 * `AdaCoreLegacyDriver`: add the `TIMEOUT` failure reason on rlimit abort.

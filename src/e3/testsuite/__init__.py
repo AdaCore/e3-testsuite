@@ -742,7 +742,6 @@ class TestsuiteCore:
         # Keep track of the number of consecutive failures seen so far if it
         # reaches the maximum number allowed, we must abort the testsuite.
         max_consecutive_failures = self.main.args.max_consecutive_failures
-        consecutive_failures = 0
 
         while fragment.result_queue:
             result, filename, tb = fragment.result_queue.pop()
@@ -752,10 +751,10 @@ class TestsuiteCore:
             # Update the number of consecutive failures, aborting the testsuite
             # if appropriate
             if result.status in (TestStatus.ERROR, TestStatus.FAIL):
-                consecutive_failures += 1
+                self.consecutive_failures += 1
                 if (
                     max_consecutive_failures > 0
-                    and consecutive_failures >= max_consecutive_failures
+                    and self.consecutive_failures >= max_consecutive_failures
                 ):
                     self.aborted_too_many_failures = True
                     logger.error(
@@ -763,7 +762,7 @@ class TestsuiteCore:
                     )
                     raise KeyboardInterrupt
             else:
-                consecutive_failures = 0
+                self.consecutive_failures = 0
 
     def add_result(self,
                    result: TestResultSummary,

@@ -6,6 +6,7 @@ classes.
 """
 
 import os
+import time
 import warnings
 
 from e3.testsuite import TestAbort as E3TestAbort, Testsuite as Suite
@@ -25,6 +26,7 @@ from .utils import (
     MultiSchedulingSuite,
     check_result_dirs,
     check_result_from_prefix,
+    create_testsuite,
     extract_results,
     run_testsuite,
     run_testsuite_status,
@@ -729,37 +731,39 @@ class TestFailureExitCode:
 class TestMaxConsecutiveFailures:
     """Check that --max-consecutive-failures works as expected."""
 
-    class MyDriver(BasicDriver):
-        def run(self, prev, slot):
-            pass
+    class MyDriver(Driver):
+        def add_test(self, dag):
+            self.add_fragment(dag, "run")
 
-        def analyze(self, prev, slot):
+        def run(self, prev, slot):
+            # For the multiprocessing/multi-jobs check, adding delay to one
+            # test allows the others to fail before, thus trigger the testsuite
+            # aborting while that test is still running, and thus exercize
+            # code that waits for workers after abortion.
+            if self.env.args.jobs > 1 and self.test_name == "a":
+                time.sleep(1)
             self.result.set_status(Status.FAIL)
             self.push_result()
 
-    class Mysuite(MultiSchedulingSuite):
-        tests_subdir = "simple-tests"
-        default_driver = "default"
-
-        @property
-        def test_driver_map(self):
-            return {"default": TestMaxConsecutiveFailures.MyDriver}
-
-    def run_check(self, caplog, multiprocessing):
+    def run_check(self, caplog, n_failures, multiprocessing, jobs=1):
         suite = run_testsuite(
-            self.Mysuite,
-            args=["--max-consecutive-failures=1", "-j1"],
+            create_testsuite(
+                ["a", "b", "c", "d"], self.MyDriver, MultiSchedulingSuite
+            ),
+            args=[f"--max-consecutive-failures={n_failures}", f"-j{jobs}"],
             multiprocessing=multiprocessing,
         )
         logs = {r.getMessage() for r in caplog.records}
-        assert len(suite.report_index.entries) == 1
+        assert len(suite.report_index.entries) == n_failures
         assert "Too many consecutive failures, aborting the testsuite" in logs
 
     def test_multithread(self, caplog):
-        self.run_check(caplog, multiprocessing=False)
+        self.run_check(caplog, n_failures=1, multiprocessing=False)
+        self.run_check(caplog, n_failures=2, multiprocessing=False)
 
     def test_multiprocess(self, caplog):
-        self.run_check(caplog, multiprocessing=True)
+        self.run_check(caplog, n_failures=2, multiprocessing=True)
+        self.run_check(caplog, n_failures=2, multiprocessing=True, jobs=4)
 
 
 class TestShowTimeInfo:
