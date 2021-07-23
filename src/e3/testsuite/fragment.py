@@ -28,14 +28,13 @@ import e3.env
 from e3.fs import rm
 import e3.job
 from e3.os.process import DEVNULL, PIPE, Run, STDOUT
-from e3.testsuite.driver import TestDriver
+from e3.testsuite.driver import ResultQueue, TestDriver
 import e3.testsuite.multiprocess_scheduler
 from e3.testsuite.result import TestResult, TestStatus
 
 
 if TYPE_CHECKING:
     from e3.testsuite.running_status import RunningStatus
-    from e3.testsuite.result import ResultQueue
 
 
 class FragmentCallback(Protocol):
@@ -257,7 +256,7 @@ class ProcessTestFragment(
         # then forward them to this fragment's.
         self.driver.result_queue = []
         self.extract_result_queue()
-        self.result_queue.extend(self.driver.result_queue)
+        self.result_queue = self.driver.result_queue
 
         # Now cleanup temporary files and declare this fragment as completed
         rm(self.exchange_file)

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import abc
 import argparse
+from dataclasses import dataclass
 import os.path
 import traceback
 from typing import Any, Dict, List, Optional, TYPE_CHECKING
@@ -9,10 +10,46 @@ from typing import Any, Dict, List, Optional, TYPE_CHECKING
 import e3.collection.dag
 import e3.env
 
-from e3.testsuite.result import ResultQueue, TestResult
+from e3.testsuite.report.gaia import (
+    GAIAResultFiles,
+    dump_result_logs_if_needed,
+)
+from e3.testsuite.result import TestResult, TestResultSummary
 
 if TYPE_CHECKING:
     from e3.testsuite.fragment import FragmentCallback
+
+
+@dataclass(frozen=True)
+class ResultQueueItem:
+    """Information to integrate a test result in a testsuite report.
+
+    Test drivers create test results. They travel from there to the testsuite
+    final report through various queues. This class gathers all the information
+    needed for the various stages of this pipeline.
+    """
+
+    result: TestResultSummary
+    """Summary for this test result."""
+
+    filename: str
+    """Name of the file that contains test result data."""
+
+    traceback: List[str]
+    """Stack trace for this result's push time.
+
+    This stack trace corresponds to the code that led the TestResult instance
+    to be included in the testsuite report.
+    """
+
+    gaia_results: Optional[GAIAResultFiles]
+    """GAIA files for this result.
+
+    This is None if no GAIA report is requested.
+    """
+
+
+ResultQueue = List[ResultQueueItem]
 
 
 class TestDriver(object, metaclass=abc.ABCMeta):
@@ -76,11 +113,13 @@ class TestDriver(object, metaclass=abc.ABCMeta):
         # testsuite main know about this result.
         output_dir = self.env.output_dir
         assert isinstance(output_dir, str)
+
         self.result_queue.append(
-            (
+            ResultQueueItem(
                 result.summary,
                 result.save(self.env.output_dir),
                 traceback.format_stack(),
+                dump_result_logs_if_needed(self.env, result, output_dir),
             )
         )
 
