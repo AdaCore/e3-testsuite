@@ -12,10 +12,15 @@ from __future__ import annotations
 from dataclasses import dataclass
 import json
 import os.path
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Set
 import yaml
 
-from e3.testsuite.result import TestResult, TestResultSummary, TestStatus
+from e3.testsuite.result import (
+    FailureReason,
+    TestResult,
+    TestResultSummary,
+    TestStatus,
+)
 
 
 @dataclass
@@ -39,8 +44,16 @@ class ReportIndexEntry:
         return self.summary.msg
 
     @property
+    def failure_reasons(self) -> Set[FailureReason]:
+        return self.summary.failure_reasons
+
+    @property
     def time(self) -> Optional[float]:
         return self.summary.time
+
+    @property
+    def info(self) -> Dict[str, str]:
+        return self.summary.info
 
     def load(self) -> TestResult:
         with open(
@@ -101,7 +114,9 @@ class ReportIndex:
                     e["test_name"],
                     TestStatus[e["status"]],
                     e["msg"],
+                    set(FailureReason[fr] for fr in e["failure_reasons"]),
                     e["time"],
+                    e["info"],
                 ),
                 e["filename"],
             )
@@ -119,7 +134,9 @@ class ReportIndex:
                     "test_name": e.test_name,
                     "status": e.status.name,
                     "msg": e.msg,
+                    "failure_reasons": [fr.name for fr in e.failure_reasons],
                     "time": e.time,
+                    "info": e.info,
                     "filename": e.filename
                 }
             )

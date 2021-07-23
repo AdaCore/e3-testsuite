@@ -31,11 +31,15 @@ from e3.job.scheduler import Scheduler
 from e3.main import Main
 from e3.os.process import quote_arg
 from e3.testsuite._helpers import deprecated
-from e3.testsuite.report.gaia import dump_gaia_report
+from e3.testsuite.report.gaia import (
+    GAIAResultFiles,
+    dump_gaia_report,
+    dump_result_logs_if_needed,
+)
 from e3.testsuite.report.display import generate_report, summary_line
 from e3.testsuite.report.index import ReportIndex
 from e3.testsuite.report.xunit import dump_xunit_report
-from e3.testsuite.result import Log, TestResult, TestResultSummary, TestStatus
+from e3.testsuite.result import Log, TestResult, TestStatus
 from e3.testsuite.testcase_finder import (
     ParsedTest,
     ProbingError,
@@ -46,7 +50,7 @@ from e3.testsuite.utils import ColorConfig, isatty
 
 
 if TYPE_CHECKING:
-    from e3.testsuite.driver import TestDriver
+    from e3.testsuite.driver import ResultQueueItem, TestDriver
     from e3.testsuite.fragment import TestFragment
 
 
@@ -445,6 +449,9 @@ class TestsuiteCore:
         self.env.exchange_dir = self.exchange_dir
         self.env.env_filename = self.env_filename
 
+        self.gaia_result_files: Dict[str, GAIAResultFiles] = {}
+        """Mapping from test names to files for results in the GAIA report."""
+
         # Store in global env: target information and common paths
         self.env.output_dir = self.output_dir
         self.env.working_dir = self.working_dir
@@ -502,7 +509,7 @@ class TestsuiteCore:
         if self.main.args.xunit_output:
             dump_xunit_report(self, self.main.args.xunit_output)
         if self.main.args.gaia_output:
-            dump_gaia_report(self, self.output_dir)
+            dump_gaia_report(self, self.output_dir, self.gaia_result_files)
 
         # Clean everything
         self.tear_down()
@@ -744,13 +751,13 @@ class TestsuiteCore:
         max_consecutive_failures = self.main.args.max_consecutive_failures
 
         while fragment.result_queue:
-            result, filename, tb = fragment.result_queue.pop()
+            item = fragment.result_queue.pop()
 
-            self.add_result(result, filename, tb)
+            self.add_result(item)
 
             # Update the number of consecutive failures, aborting the testsuite
             # if appropriate
-            if result.status in (TestStatus.ERROR, TestStatus.FAIL):
+            if item.result.status in (TestStatus.ERROR, TestStatus.FAIL):
                 self.consecutive_failures += 1
                 if (
                     max_consecutive_failures > 0
@@ -764,55 +771,54 @@ class TestsuiteCore:
             else:
                 self.consecutive_failures = 0
 
-    def add_result(self,
-                   result: TestResultSummary,
-                   filename: str,
-                   tb: List[str]) -> None:
+    def add_result(self, item: ResultQueueItem) -> None:
         """Add a test result to the result index and log it.
 
-        :param result: Test result to add.
-        :param filename: Name of the file that contains test result data.
-        :param tb: Traceback for the code that created this result, for
-            debugging purposes.
+        :param item: Result queue item for the result to add.
         """
         assert self.main.args
 
+        status = item.result.status
+        test_name = item.result.test_name
+
         # The test results that reach this point are special: there were
         # serialized/deserialized through YAML, so the Log layer disappeared.
-        assert result.status is not None
+        assert status is not None
 
         # Ensure that we don't have two results with the same test name
 
         def indented_tb(tb: List[str]) -> str:
             return "".join("  {}".format(line) for line in tb)
 
-        assert result.test_name not in self.report_index.entries, (
-            f"cannot push twice results for {result.test_name}"
+        assert test_name not in self.report_index.entries, (
+            f"cannot push twice results for {test_name}"
             f"\nFirst push happened at:"
-            f"\n{indented_tb(self.result_tracebacks[result.test_name])}"
+            f"\n{indented_tb(self.result_tracebacks[test_name])}"
             f"\nThis one happened at:"
-            f"\n{indented_tb(tb)}"
+            f"\n{indented_tb(item.traceback)}"
         )
 
         # Now that the result is validated, add it to our internals
-        self.report_index.add_result(result, filename)
-        self.result_tracebacks[result.test_name] = tb
+        self.report_index.add_result(item.result, item.filename)
+        self.result_tracebacks[test_name] = item.traceback
         self.running_status.set_status_counters(
             self.report_index.status_counters
         )
+        if item.gaia_results:
+            self.gaia_result_files[test_name] = item.gaia_results
 
         # Log the test result. If error output is requested and the test
         # failed unexpectedly, show the detailed logs.
         log_line = summary_line(
-            result, self.colors, self.main.args.show_time_info
+            item.result, self.colors, self.main.args.show_time_info
         )
-        if self.main.args.show_error_output and result.status not in (
+        if self.main.args.show_error_output and status not in (
             TestStatus.PASS,
             TestStatus.XFAIL,
             TestStatus.XPASS,
             TestStatus.SKIP,
         ):
-            full_result = self.report_index.entries[result.test_name].load()
+            full_result = self.report_index.entries[test_name].load()
 
             def format_log(log: Log) -> str:
                 return "\n" + str(log) + self.Style.RESET_ALL
@@ -833,6 +839,8 @@ class TestsuiteCore:
         :param str message: Error message.
         :param tb: Optional traceback for the error.
         """
+        from e3.testsuite.driver import ResultQueueItem
+
         result = TestResult(
             f"{test_name}__except{len(self.report_index.entries)}",
             env={},
@@ -843,9 +851,12 @@ class TestsuiteCore:
             result.log += tb
 
         self.add_result(
-            result.summary,
-            result.save(self.output_dir),
-            traceback.format_stack(),
+            ResultQueueItem(
+                result.summary,
+                result.save(self.output_dir),
+                traceback.format_stack(),
+                dump_result_logs_if_needed(self.env, result, self.output_dir),
+            )
         )
 
     def setup_result_dirs(self) -> None:

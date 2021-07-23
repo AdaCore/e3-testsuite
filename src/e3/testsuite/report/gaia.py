@@ -5,10 +5,13 @@ GAIA is AdaCore's internal Web analyzer.
 
 from __future__ import annotations
 
+import dataclasses
 import os.path
-from typing import TYPE_CHECKING, Union
+import tempfile
+from typing import Dict, Optional, Set, TYPE_CHECKING, Union
 
-from e3.testsuite.result import FailureReason, TestResult, TestStatus
+import e3.env
+from e3.testsuite.result import FailureReason, Log, TestResult, TestStatus
 
 # Import TestsuiteCore only for typing, as this creates a circular import
 if TYPE_CHECKING:
@@ -40,29 +43,150 @@ Map FailureReason values to equivalent GAIA-compatible test statuses.
 """
 
 
-def gaia_status(result: TestResult) -> str:
-    """Return the GAIA-compatible status that describes this result the best.
+def gaia_status(
+    status: TestStatus,
+    failure_reasons: Set[FailureReason]
+) -> str:
+    """Return the GAIA-compatible status that describes a result the best.
 
-    :param result: Result to analyze.
+    :param status: Status for the result.
+    :param failure_reasons: Set of failure reason for the result.
     """
-    assert result.status is not None
-
     # Translate test failure status to the GAIA status that is most appropriate
     # given the failure reasons.
-    if result.status == TestStatus.FAIL and result.failure_reasons:
+    if status == TestStatus.FAIL and failure_reasons:
         for reason in FailureReason:
-            if reason in result.failure_reasons:
+            if reason in failure_reasons:
                 return FAILURE_REASON_MAP[reason]
-    return STATUS_MAP[result.status]
+    return STATUS_MAP[status]
 
 
-def dump_gaia_report(testsuite: TestsuiteCore, output_dir: str) -> None:
+@dataclasses.dataclass(frozen=True)
+class GAIAResultFiles:
+    """Filenames for a given result in a GAIA report.
+
+    In a GAIA testsuite report, each result is described as one entry (line) in
+    the "results" text file, and several optional files. This object contains
+    the names for the files, when present, corresponding to a given result.
+    """
+
+    log: Optional[str]
+    expected: Optional[str]
+    out: Optional[str]
+    diff: Optional[str]
+    time: Optional[str]
+    info: Optional[str]
+
+
+def dump_result_logs(result: TestResult, output_dir: str) -> GAIAResultFiles:
+    """Write log files to describe a result in a GAIA report.
+
+    :param result: Result to describe in the GAIA report.
+    :param output_dir: Directory where to create the various files involved.
+    """
+    log_file: Optional[str] = None
+    expected_file: Optional[str] = None
+    out_file: Optional[str] = None
+    diff_file: Optional[str] = None
+    time_file: Optional[str] = None
+    info_file: Optional[str] = None
+
+    def unwrap_log(log: Union[Log, str, bytes]) -> Union[str, bytes]:
+        return log.log if isinstance(log, Log) else log
+
+    def write_log(log: Union[str, bytes], file_ext: str) -> str:
+        mode: str
+        encoding: Optional[str]
+
+        mode, encoding = (
+            ("wb", None)
+            if isinstance(log, bytes)
+            else ("w", "utf-8")
+        )
+
+        with tempfile.NamedTemporaryFile(
+            prefix="gaia-result-",
+            suffix=file_ext,
+            dir=output_dir,
+            mode=mode,
+            encoding=encoding,
+            delete=False,
+        ) as f:
+            f.write(log)
+            return f.name
+
+    if result.log:
+        log = unwrap_log(result.log)
+        assert isinstance(log, str)
+        log_file = write_log(log, ".log")
+
+    if result.expected is not None:
+        expected = unwrap_log(result.expected)
+        assert isinstance(expected, (str, bytes))
+        expected_file = write_log(expected, ".expected")
+
+    if result.out is not None:
+        out = unwrap_log(result.out)
+        assert isinstance(out, (str, bytes))
+        out_file = write_log(out, ".out")
+
+    if result.diff is not None:
+        diff = unwrap_log(result.diff)
+        assert isinstance(diff, (str, bytes))
+        diff_file = write_log(diff, ".diff")
+
+    if result.time is not None:
+        # Nanoseconds granularity (9 decimals for seconds) should be
+        # enough for any valuable time measurement. Rounding allows
+        # predictable floating-point value representation.
+        time_file = write_log("{:.9f}".format(result.time), ".time")
+
+    if result.info:
+        # Sort entries to have a deterministic output
+        info_file = write_log(
+            "\n".join(
+                "{}:{}".format(key, value)
+                for key, value in sorted(result.info.items())
+            ),
+            ".info",
+        )
+
+    return GAIAResultFiles(
+        log_file, expected_file, out_file, diff_file, time_file, info_file
+    )
+
+
+def dump_result_logs_if_needed(
+    env: e3.env.Env,
+    result: TestResult,
+    output_dir: str,
+) -> Optional[GAIAResultFiles]:
+    """Shortcut to call dump_result_logs if a GAIA report is requested."""
+    return (
+        dump_result_logs(result, output_dir)
+        if env.options.gaia_output is not None
+        else None
+    )
+
+
+def dump_gaia_report(
+    testsuite: TestsuiteCore,
+    output_dir: str,
+    result_files: Dict[str, GAIAResultFiles],
+) -> None:
     """Dump a GAIA-compatible testsuite report.
 
     :param testsuite: Testsuite instance, which have run its testcases, for
         which to generate the report.
     :param output_dir: Directory in which to emit the report.
+    :param result_files: If the log files for each result have already been
+        generated, mapping from test names to result file names.
     """
+    # If the result files are already generated, make sure we have exactly one
+    # set of files per test result.
+    if result_files is not None:
+        assert set(result_files) == set(testsuite.report_index.entries)
+
     # If there is a list of discriminants (i.e. in legacy AdaCore testsuites:
     # see AdaCoreLegacyTestDriver), include it in the report.
     discs = getattr(testsuite.env, "discs", None)
@@ -78,51 +202,16 @@ def dump_gaia_report(testsuite: TestsuiteCore, output_dir: str) -> None:
         os.path.join(output_dir, "results"), "w", encoding="utf-8"
     ) as results_fd:
         for entry in testsuite.report_index.entries.values():
-            result = entry.load()
-
             # Add an entry for it in the "results" index file
-            message = result.msg or ""
-            results_fd.write(
-                "{}:{}:{}\n".format(
-                    result.test_name, gaia_status(result), message
-                )
-            )
+            message = entry.msg or ""
+            status = gaia_status(entry.status, entry.failure_reasons)
+            results_fd.write(f"{entry.test_name}:{status}:{message}\n")
 
-            # If there are logs, put them in dedicated files
-            def write_log(log: Union[str, bytes], file_ext: str) -> None:
-                filename = os.path.join(
-                    output_dir, result.test_name + file_ext
-                )
-                if isinstance(log, bytes):
-                    with open(filename, "wb") as bytes_f:
-                        bytes_f.write(log)
-                else:
-                    with open(filename, "w", encoding="utf-8") as str_f:
-                        str_f.write(log)
-
-            if result.log:
-                assert isinstance(result.log, str)
-                write_log(result.log, ".log")
-            if result.expected is not None:
-                assert isinstance(result.expected, (str, bytes))
-                write_log(result.expected, ".expected")
-            if result.out is not None:
-                assert isinstance(result.out, (str, bytes))
-                write_log(result.out, ".out")
-            if result.diff is not None:
-                assert isinstance(result.diff, (str, bytes))
-                write_log(result.diff, ".diff")
-            if result.time is not None:
-                # Nanoseconds granularity (9 decimals for seconds) should be
-                # enough for any valuable time measurement. Rounding allows
-                # predictable floating-point value representation.
-                write_log("{:.9f}".format(result.time), ".time")
-            if result.info:
-                # Sort entries to have a deterministic output
-                write_log(
-                    "\n".join(
-                        "{}:{}".format(key, value)
-                        for key, value in sorted(result.info.items())
-                    ),
-                    ".info",
-                )
+            # Result files are already generated: move them where expected
+            files = result_files[entry.test_name]
+            for ext, filename in dataclasses.asdict(files).items():
+                if filename is not None:
+                    new_filename = os.path.join(
+                        output_dir, f"{entry.test_name}.{ext}"
+                    )
+                    os.rename(filename, new_filename)

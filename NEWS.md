@@ -1,6 +1,7 @@
 25.0 (Not released yet)
 =======================
 
+* Make `--gaia-output` (report formatted for GAIA) faster.
 * Fix the `--max-consecutive-failures` command line option.
 * Introduce multi-processing for test fragment execution.
 * Write command line options to the comment file by default.

@@ -7,18 +7,7 @@ from dataclasses import dataclass
 from enum import Enum, auto
 import logging
 import tempfile
-from typing import (
-    Any,
-    AnyStr,
-    Dict,
-    Iterator,
-    Generic,
-    List,
-    Optional,
-    Set,
-    Tuple,
-    cast,
-)
+from typing import Any, AnyStr, Dict, Iterator, Generic, Optional, Set, cast
 
 import yaml
 
@@ -316,7 +305,7 @@ class TestResult(yaml.YAMLObject):
         """
         with tempfile.NamedTemporaryFile(
             mode="w",
-            prefix=self.test_name,
+            prefix=self.test_name + "-",
             suffix=".yaml",
             dir=output_dir,
             delete=False,
@@ -327,7 +316,12 @@ class TestResult(yaml.YAMLObject):
     @property
     def summary(self) -> TestResultSummary:
         return TestResultSummary(
-            self.test_name, self.status, self.msg, self.time
+            self.test_name,
+            self.status,
+            self.msg,
+            self.failure_reasons,
+            self.time,
+            self.info,
         )
 
 
@@ -404,11 +398,6 @@ class TestResultSummary:
     test_name: str
     status: TestStatus
     msg: Optional[str]
+    failure_reasons: Set[FailureReason]
     time: Optional[float]
-
-
-# List of test results instances, with associated filename (where result
-# details are saved) and tracebacks (i.e. stack trace corresponding to code
-# that led a TestResult instance to be included in a testsuite reports, used
-# for debugging when that instance is rejected later on).
-ResultQueue = List[Tuple[TestResultSummary, str, List[str]]]
+    info: Dict[str, str]

@@ -872,8 +872,12 @@ class TestReadReportIndex:
             key: entry.summary for key, entry in index.entries.items()
         }
         assert summaries == {
-            "test1": ResultSummary("test1", Status.PASS, None, None),
-            "test2": ResultSummary("test2", Status.PASS, None, None),
+            "test1": ResultSummary(
+                "test1", Status.PASS, None, set(), None, {}
+            ),
+            "test2": ResultSummary(
+                "test2", Status.PASS, None, set(), None, {}
+            ),
         }
 
 
