@@ -556,7 +556,9 @@ class TestsuiteCore:
 
             # Include all information, except logs for successful tests, which
             # is just too verbose.
-            with open(os.path.join(self.output_dir, "report"), "w") as f:
+            with open(
+                os.path.join(self.output_dir, "report"), "w", encoding="utf-8"
+            ) as f:
                 generate_report(
                     output_file=f,
                     new_index=self.report_index,
