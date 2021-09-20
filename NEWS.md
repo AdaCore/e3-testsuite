@@ -1,6 +1,8 @@
 25.0 (Not released yet)
 =======================
 
+* `TestsuiteCore.testsuite_main`: force UTF-8 for text report
+  generation.
 * Introduce the `--cleanup-mode` command line option.
 * Make `--gaia-output` (report formatted for GAIA) faster.
 * Fix the `--max-consecutive-failures` command line option.
