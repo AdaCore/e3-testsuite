@@ -9,6 +9,7 @@ from typing import Any, Dict, List, Optional, Union
 import e3.collection.dag
 from e3.fs import rm, sync_tree
 from e3.os.process import DEVNULL, PIPE, Run, STDOUT, quote_arg
+from e3.testsuite import CleanupMode
 from e3.testsuite.utils import DummyColors
 from e3.testsuite.control import (
     TestControl,
@@ -369,32 +370,48 @@ class ClassicTestDriver(TestDriver):
 
         See set_up's docstring for the rationale behind this API.
         """
-        if self.working_dir_cleanup_enabled:
-            # If an error occurs during working dir cleanup, create a dedicated
-            # error message and dump the content of the working directory tree
-            # to help investigation.
-            wd = self.working_dir()
-            try:
-                self.cleanup_working_dir()
-            except Exception:
-                result = TestResult(
-                    f"{self.test_name}__tear_down",
-                    env=self.test_env,
-                    status=TestStatus.ERROR,
+        # Do nothing if cleanup is disabled, not requested for this result or
+        # disabled for this driver.
+        if (
+            self.env.cleanup_mode == CleanupMode.NONE
+            or (
+                self.env.cleanup_mode == CleanupMode.PASSING
+                and self.result.status in (
+                    TestStatus.FAIL,
+                    TestStatus.XFAIL,
+                    TestStatus.XPASS,
+                    TestStatus.ERROR,
                 )
+            )
+            or not self.working_dir_cleanup_enabled
+        ):
+            return
 
-                result.log += (
-                    f"Error while removing the working directory {wd}:\n\n"
-                )
-                result.log += traceback.format_exc()
-                result.log += "\nRemaining files:\n"
-                for dirpath, _dirnames, filenames in os.walk(wd):
-                    if dirpath != wd:
-                        result.log += f"  {os.path.relpath(dirpath, wd)}\n"
-                    for f in filenames:
-                        fpath = os.path.join(dirpath, f)
-                        result.log += f"  {os.path.relpath(fpath, wd)}\n"
-                self.push_result(result)
+        # If an error occurs during working dir cleanup, create a dedicated
+        # error message and dump the content of the working directory tree
+        # to help investigation.
+        wd = self.working_dir()
+        try:
+            self.cleanup_working_dir()
+        except Exception:
+            result = TestResult(
+                f"{self.test_name}__tear_down",
+                env=self.test_env,
+                status=TestStatus.ERROR,
+            )
+
+            result.log += (
+                f"Error while removing the working directory {wd}:\n\n"
+            )
+            result.log += traceback.format_exc()
+            result.log += "\nRemaining files:\n"
+            for dirpath, _dirnames, filenames in os.walk(wd):
+                if dirpath != wd:
+                    result.log += f"  {os.path.relpath(dirpath, wd)}\n"
+                for f in filenames:
+                    fpath = os.path.join(dirpath, f)
+                    result.log += f"  {os.path.relpath(fpath, wd)}\n"
+            self.push_result(result)
 
     def run_wrapper(self, prev: Dict[str, Any], slot: int) -> None:
         # Make the slot (unique identifier for active jobs at a specific time)

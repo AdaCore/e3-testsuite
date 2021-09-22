@@ -1,5 +1,6 @@
 """Tests for the e3.testsuite.driver.classic module."""
 
+import glob
 import os
 import os.path
 import re
@@ -13,6 +14,7 @@ from e3.testsuite.result import TestStatus as Status
 
 from .utils import (
     MultiSchedulingSuite,
+    create_testsuite,
     extract_results,
     run_testsuite,
     testsuite_logs,
@@ -252,6 +254,85 @@ def test_long_logs(caplog):
         "b5",
         "b6",
     ]
+
+
+class TestCleanupMode:
+    """Check that --cleanup-mode works as expected."""
+
+    class ControlCreator(crtl.TestControlCreator):
+        def create(self, driver):
+            name = driver.test_name
+            return crtl.TestControl(xfail="xpass" in name or "xfail" in name)
+
+    class MyDriver(classic.ClassicTestDriver):
+
+        copy_test_directory = False
+
+        @property
+        def test_control_creator(self):
+            return TestCleanupMode.ControlCreator()
+
+        def run(self):
+            os.mkdir(self.working_dir())
+            with open(self.working_dir("flag.txt"), "w"):
+                pass
+
+            if "error" in self.test_name:
+                raise classic.TestAbortWithError("error")
+            if "fail" in self.test_name:
+                raise classic.TestAbortWithFailure("failure")
+
+    EXPECTED_RESULTS = {
+        "pass": Status.PASS,
+        "with_fail": Status.FAIL,
+        "with_xfail": Status.XFAIL,
+        "with_xpass": Status.XPASS,
+        "with_error": Status.ERROR,
+    }
+
+    FAILING_TESTS = {"with_fail", "with_xfail", "with_xpass", "with_error"}
+    ALL_TESTS = set(EXPECTED_RESULTS)
+
+    def run(self, tmp_path, args, expected_dirs):
+        suite = run_testsuite(
+            create_testsuite(list(self.EXPECTED_RESULTS), self.MyDriver),
+            args=args + ["-t", str(tmp_path)],
+        )
+        assert extract_results(suite) == self.EXPECTED_RESULTS
+
+        # Compute the list of working spaces left, i.e. directories that
+        # contain the "flag.txt" file.
+        working_dirs = {
+            os.path.basename(os.path.dirname(d))
+            for d in glob.glob(str(tmp_path / "*" / "*" / "flag.txt"))
+        }
+
+        assert working_dirs == expected_dirs
+
+    # Check the default behavior
+    def test_default(self, tmp_path):
+        self.run(tmp_path, [], self.FAILING_TESTS)
+
+    # Check all possible --cleanup-mode values
+    def test_cm_none(self, tmp_path):
+        self.run(tmp_path, ["--cleanup-mode=none"], self.ALL_TESTS)
+
+    def test_cm_passing(self, tmp_path):
+        self.run(tmp_path, ["--cleanup-mode=passing"], self.FAILING_TESTS)
+
+    def test_cm_all(self, tmp_path):
+        self.run(tmp_path, ["--cleanup-mode=all"], set())
+
+    # Check --disable-cleanup alone, and that --cleanup-mode has precedence
+    def test_dc(self, tmp_path):
+        self.run(tmp_path, ["--disable-cleanup"], self.ALL_TESTS)
+
+    def test_cm_dc(self, tmp_path):
+        self.run(
+            tmp_path,
+            ["--disable-cleanup", "--cleanup-mode=all"],
+            set(),
+        )
 
 
 class TestCleanupFailure:

@@ -1,6 +1,7 @@
 25.0 (Not released yet)
 =======================
 
+* Introduce the `--cleanup-mode` command line option.
 * Make `--gaia-output` (report formatted for GAIA) faster.
 * Fix the `--max-consecutive-failures` command line option.
 * Introduce multi-processing for test fragment execution.
