@@ -15,6 +15,7 @@ from e3.testsuite.report.gaia import (
     dump_result_logs_if_needed,
 )
 from e3.testsuite.result import TestResult, TestResultSummary
+from e3.testsuite.utils import CleanupMode
 
 if TYPE_CHECKING:
     from e3.testsuite.fragment import FragmentCallback
@@ -198,7 +199,7 @@ class TestDriver(object, metaclass=abc.ABCMeta):
         whole testsuite are removed incrementally. This is necessary to avoid
         creating huge temporary directories when executing big testsuites.
         """
-        return self.testsuite_options.enable_cleanup
+        return self.env.cleanup_mode != CleanupMode.NONE
 
 
 class BasicTestDriver(TestDriver, metaclass=abc.ABCMeta):

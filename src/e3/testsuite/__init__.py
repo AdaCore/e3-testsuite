@@ -46,7 +46,12 @@ from e3.testsuite.testcase_finder import (
     TestFinder,
     YAMLTestFinder,
 )
-from e3.testsuite.utils import ColorConfig, isatty
+from e3.testsuite.utils import (
+    CleanupMode,
+    ColorConfig,
+    enum_to_cmdline_args_map,
+    isatty,
+)
 
 
 if TYPE_CHECKING:
@@ -203,12 +208,23 @@ class TestsuiteCore:
             " friendly. If no directory is provided, use the local"
             ' "tmp" directory',
         )
+
+        cleanup_mode_map = enum_to_cmdline_args_map(CleanupMode)
+        temp_group.add_argument(
+            "--cleanup-mode",
+            choices=list(cleanup_mode_map),
+            help="Control the cleanup of working spaces.\n"
+            + "\n".join(
+                f"{name}: {CleanupMode.descriptions()[value]}"
+                for name, value in cleanup_mode_map.items()
+            )
+        )
         temp_group.add_argument(
             "--disable-cleanup",
-            dest="enable_cleanup",
-            action="store_false",
-            default=True,
-            help="disable cleanup of working space",
+            action="store_true",
+            help="Disable cleanup of working spaces. This option is deprecated"
+            " and will disappear in a future version of e3-testsuite. Please"
+            " use --cleanup-mode instead."
         )
 
         output_group = parser.add_argument_group(
@@ -408,6 +424,21 @@ class TestsuiteCore:
         self.setup_result_dirs()
         self.report_index = ReportIndex(self.output_dir)
 
+        # Set the cleanup mode from command-line arguments
+        if self.main.args.cleanup_mode is not None:
+            self.env.cleanup_mode = (
+                cleanup_mode_map[self.main.args.cleanup_mode]
+            )
+        elif self.main.args.disable_cleanup:
+            logger.warning(
+                "--disable-cleanup is deprecated and will disappear in a"
+                " future version of e3-testsuite. Please use --cleanup-mode"
+                " instead."
+            )
+            self.env.cleanup_mode = CleanupMode.NONE
+        else:
+            self.env.cleanup_mode = CleanupMode.default()
+
         # Prepare the working directory, where tests will run. Keep the working
         # dir as short as possible, to avoid the risk of having a path that's
         # too long (a problem often seen on Windows, or when using WRS tools
@@ -423,7 +454,7 @@ class TestsuiteCore:
             self.working_dir = os.path.abspath(self.main.args.dev_temp)
             rm(self.working_dir, recursive=True)
             mkdir(self.working_dir)
-            self.main.args.enable_cleanup = False
+            self.env.cleanup_mode = CleanupMode.NONE
 
         else:
             # If the temp dir is supposed to be randomized, we need to create a
@@ -1204,7 +1235,7 @@ class Testsuite(TestsuiteCore):
     def tear_down(self) -> None:
         assert self.main.args
 
-        if self.main.args.enable_cleanup:
+        if self.env.cleanup_mode == CleanupMode.ALL:
             rm(self.working_dir, True)
 
     def write_comment_file(self, comment_file: IO[str]) -> None:
