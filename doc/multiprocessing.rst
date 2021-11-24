@@ -67,3 +67,20 @@ automatically enable multiprocessing (this is done only when the parallelism
 level is considered high enough for this strategy to run faster), you have to
 override the ``Testsuite.multiprocessing_supported`` property so that it
 returns ``True`` (it returns ``False`` by default).
+
+
+Advanced control of multiprocessing
+-----------------------------------
+
+Some testsuites may have test driver code that does not work in multithreading
+contexts (use of global variables, environment variables, and the like). For
+such testsuites, multiprocessing is not necessarily useful for performance, but
+is actually needed for correct execution.
+
+These testsuites can override the ``Testsuite.compute_use_multiprocessing``
+method to override the default automatic behavior (using multiprocessing
+beyond some CPU cores threshold), and always enable it. Note that this will
+make the ``--force-multiprocessing`` command line option useless.
+
+Note that this possibility is a workaround for test driver code architectural
+issues, and should not be considered as a proper way to deal with parallelism.

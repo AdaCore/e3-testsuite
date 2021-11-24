@@ -163,20 +163,12 @@ class TestsuiteCore:
     def compute_use_multiprocessing(self) -> bool:
         """Return whether to use multi-processing for tests parallelism.
 
-        See docstring for the "use_multiprocessing" attribute.
+        See docstring for the "use_multiprocessing" attribute. Subclasses are
+        free to override this to take control of when multiprocessing is
+        enabled. Note that this will disregard the "--force-multiprocessing"
+        command line option.
         """
-        assert self.main.args
-
-        # If multiprocessing is explicitly requested, just enable it
-        if self.main.args.force_multiprocessing:
-            return True
-
-        # In practice, we noticed that running at most 16 jobs in parallel
-        # creates neglectible GIL contention.
-        if not self.multiprocessing_supported or self.main.args.jobs <= 16:
-            return False
-
-        return True
+        raise NotImplementedError
 
     def testsuite_main(self, args: Optional[List[str]] = None) -> int:
         """Main for the main testsuite script.
@@ -1268,3 +1260,17 @@ class Testsuite(TestsuiteCore):
     @property
     def multiprocessing_supported(self) -> bool:
         return False
+
+    def compute_use_multiprocessing(self) -> bool:
+        assert self.main.args
+
+        # If multiprocessing is explicitly requested, just enable it
+        if self.main.args.force_multiprocessing:
+            return True
+
+        # In practice, we noticed that running at most 16 jobs in parallel
+        # creates neglectible GIL contention.
+        if not self.multiprocessing_supported or self.main.args.jobs <= 16:
+            return False
+
+        return True
