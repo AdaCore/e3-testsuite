@@ -226,6 +226,7 @@ def test_gaia_discs():
     # "env.discs" contains a list of strings.
     test_discs([], "")
     test_discs(["foo", "bar"], "foo bar\n")
+    test_discs("a,b,c", "a b c\n")
 
 
 def test_timeout():

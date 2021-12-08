@@ -1,6 +1,7 @@
 25.0 (Not released yet)
 =======================
 
+* `--gaia-output`: create the `discs` file in more cases.
 * `TestsuiteCore.testsuite_main`: force UTF-8 for text report
   generation.
 * Introduce the `--cleanup-mode` command line option.
