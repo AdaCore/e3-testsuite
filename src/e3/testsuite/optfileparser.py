@@ -7,6 +7,7 @@ context.
 
 from __future__ import annotations
 
+import argparse
 import logging
 import os.path
 import re
@@ -285,3 +286,35 @@ class OptFileParse:
 
         result = result.rstrip()
         return result
+
+
+def main(argv: Optional[List[str]] = None) -> None:
+    parser = argparse.ArgumentParser(
+        description="Evaluate test.opt against set of tags"
+    )
+    parser.add_argument(
+        "opt_filename", help='The name of the "opt" file to read and evaluate'
+    )
+    parser.add_argument(
+        "tags_list",
+        metavar="TAG",
+        nargs="*",
+        help="A tag. For ease of use, this program also supports"
+        " the use of a comma-separated list of tags.",
+    )
+    args = parser.parse_args(argv)
+
+    # Build the system_tags list from the list of tags passed on
+    # the command line. The tags which include a comma are considered
+    # to be a comma-separated lists of tags, so split those into
+    # sub-list of system tags.
+    system_tags = []
+    for tag in args.tags_list:
+        system_tags.extend(tag.split(","))
+
+    opt_result = OptFileParse(system_tags, args.opt_filename)
+    print(str(opt_result))
+
+
+if __name__ == "__main__":
+    main()

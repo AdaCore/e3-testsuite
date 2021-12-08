@@ -2,6 +2,7 @@
 
 import os.path
 
+from e3.os.process import Run
 from e3.testsuite.optfileparser import BadFormattingError, OptFileParse
 
 
@@ -147,3 +148,45 @@ def test_required():
 
     of = parse_file("required.opt", "linux,ada,c")
     assert not of.is_dead
+
+
+def run_opt_parser_script(filename, tags=None):
+    """Call e3-opt-parser and returning the corresponding e3.os.process.Run object."""
+    parser_cmd = [
+        "e3-opt-parser",
+        os.path.join(os.path.dirname(__file__), "optfiles", filename),
+    ]
+    if tags is not None:
+        parser_cmd.extend(tags)
+    return Run(parser_cmd)
+
+
+def test_main():
+    """Test the function called by the command-line wrapper to OptFileParse."""
+    p = run_opt_parser_script("tags.opt", None)
+    assert p.status == 0
+    assert (
+        p.out
+        == """\
+cmd="default.cmd"
+xfail=""
+"""
+    )
+
+    p = run_opt_parser_script("tags.opt", ["linux"])
+    assert p.status == 0
+    assert (
+        p.out
+        == """\
+cmd="linux.cmd"
+"""
+    )
+
+    p = run_opt_parser_script("tags.opt", ["linux", "powerpc"])
+    assert p.status == 0
+    assert (
+        p.out
+        == """\
+cmd="linux.cmd"
+"""
+    )
