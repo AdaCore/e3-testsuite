@@ -8,7 +8,7 @@ from __future__ import annotations
 import dataclasses
 import os.path
 import tempfile
-from typing import Dict, Optional, Set, TYPE_CHECKING, Union
+from typing import Dict, List, Optional, Set, TYPE_CHECKING, Union
 
 import e3.env
 from e3.testsuite.result import FailureReason, Log, TestResult, TestStatus
@@ -189,8 +189,21 @@ def dump_gaia_report(
 
     # If there is a list of discriminants (i.e. in legacy AdaCore testsuites:
     # see AdaCoreLegacyTestDriver), include it in the report.
-    discs = getattr(testsuite.env, "discs", None)
-    if isinstance(discs, list) and all(isinstance(d, str) for d in discs):
+    #
+    # Just like OptFileParse, accept either a string (comma-separated list of
+    # discriminant names) or a list of strings (list of discriminant names).
+    # Create the "discs" file if we had either one, even if the list is empty,
+    # but don't create this file otherwise.
+    discs_attr = getattr(testsuite.env, "discs", None)
+    discs: Optional[List[str]] = None
+    if isinstance(discs_attr, str):
+        discs = discs_attr.split(",")
+    elif (
+        isinstance(discs_attr, list)
+        and all(isinstance(d, str) for d in discs_attr)
+    ):
+        discs = discs_attr
+    if discs is not None:
         with open(
             os.path.join(output_dir, "discs"), "w", encoding="utf-8"
         ) as discs_fd:
