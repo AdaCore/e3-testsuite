@@ -114,7 +114,7 @@ class ReportIndex:
                     e["test_name"],
                     TestStatus[e["status"]],
                     e["msg"],
-                    set(FailureReason[fr] for fr in e["failure_reasons"]),
+                    {FailureReason[fr] for fr in e["failure_reasons"]},
                     e["time"],
                     e["info"],
                 ),
