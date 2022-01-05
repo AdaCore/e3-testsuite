@@ -106,7 +106,7 @@ class TestBasic:
                     result.set_status(status)
                     break
             else:
-                assert False
+                raise AssertionError(f"invalid fragment name: {name}")
             self.push_result(result)
 
     def test(self):
