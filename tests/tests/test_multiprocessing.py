@@ -27,7 +27,7 @@ class TestEnable:
             )
             self.push_result()
 
-    def run_testsuite(self, enable_expected, args=[], supported=None):
+    def run_testsuite(self, enable_expected, args=None, supported=None):
         """Run a testsuite with a single test with MyDriver."""
         MySuite = create_testsuite(["single_test"], TestEnable.MyDriver)
         if supported is not None:
