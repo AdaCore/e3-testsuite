@@ -6,9 +6,11 @@ classes.
 """
 
 import os
+import re
 import time
 import warnings
 
+from e3.fs import mkdir
 from e3.testsuite import TestAbort as E3TestAbort, Testsuite as Suite
 from e3.testsuite.driver import (
     TestDriver as Driver,
@@ -305,7 +307,44 @@ class TestNotExistingTempDir:
         # message.
         run_testsuite(self.Mysuite, ["--temp-dir=tmp"], expect_failure=True)
         logs = testsuite_logs(caplog)
-        assert "temp dir 'tmp' does not exist" in logs
+        assert any(
+            re.search("temp dir '.*tmp' does not exist", entry)
+            for entry in logs
+        )
+
+
+class TestNoRandomTestDir:
+    """Check support for --no-random-temp-subdir."""
+
+    class MyDriver(BasicDriver):
+        def run(self, prev, slot):
+            mkdir(self.working_dir())
+            return True
+
+        def analyze(self, prev, slot):
+            self.result.set_status(Status.PASS)
+            self.push_result()
+
+    class Mysuite(Suite):
+        tests_subdir = "simple-tests"
+
+        @property
+        def test_driver_map(self):
+            return {"default": TestNoRandomTestDir.MyDriver}
+
+        default_driver = "default"
+
+    def test(self, tmp_path):
+        run_testsuite(
+            self.Mysuite,
+            [
+                f"--temp-dir={tmp_path}",
+                "--no-random-temp-subdir",
+                "--cleanup-mode=none",
+            ],
+        )
+        assert os.path.isdir(str(tmp_path / "test1"))
+        assert os.path.isdir(str(tmp_path / "test2"))
 
 
 class TestDevMode:
