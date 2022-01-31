@@ -189,16 +189,26 @@ class TestsuiteCore:
             "-t", "--temp-dir", metavar="DIR", default=Env().tmp_dir
         )
         temp_group.add_argument(
+            "--no-random-temp-subdir",
+            dest="random_temp_subdir",
+            action="store_false",
+            help="Disable the creation of a random subdirectory in the"
+            " temporary directory. Use this when you know that you have"
+            " exclusive access to the temporary directory (needed in order to"
+            " avoid name clashes there) to get a deterministic path for"
+            " testsuite temporaries."
+        )
+        temp_group.add_argument(
             "-d",
             "--dev-temp",
+            metavar="DIR",
             nargs="?",
             default=None,
             const="tmp",
-            help="Unlike --temp-dir, use this very directory to store"
-            " testsuite temporaries (i.e. no random subdirectory). Also"
-            " automatically disable temp dir cleanup, to be developer"
-            " friendly. If no directory is provided, use the local"
-            ' "tmp" directory',
+            help="Convenience shortcut for dev setups: forces `-t DIR"
+            " --no-random-temp-subdir --cleanup-mode=none` and cleans up `DIR`"
+            ' first. If no directory is provided, use the local "tmp"'
+            " directory."
         )
 
         cleanup_mode_map = enum_to_cmdline_args_map(CleanupMode)
@@ -431,35 +441,36 @@ class TestsuiteCore:
         else:
             self.env.cleanup_mode = CleanupMode.default()
 
-        # Prepare the working directory, where tests will run. Keep the working
-        # dir as short as possible, to avoid the risk of having a path that's
-        # too long (a problem often seen on Windows, or when using WRS tools
-        # that have their own max path limitations).
+        # Settings for temporary directory creation
+        temp_dir: str = self.main.args.temp_dir
+        random_temp_subdir: bool = self.main.args.random_temp_subdir
+
+        # The "--dev-temp" option forces several settings
+        if self.main.args.dev_temp:
+            self.env.cleanup_mode = CleanupMode.NONE
+            temp_dir = self.main.args.dev_temp
+            random_temp_subdir = False
+
+        # Now actually setup the temporary directory: make sure we start from a
+        # clean directory if we use a deterministic directory.
         #
         # Note that we do make sure that working_dir is an absolute path, as we
         # are likely to be changing directories when running each test. A
         # relative path would no longer work under those circumstances.
-        if self.main.args.dev_temp:
-            # Use a temporary directory for developers: make sure it is an
-            # empty directory and disable cleanup to ease post-mortem
-            # investigation.
-            self.working_dir = os.path.abspath(self.main.args.dev_temp)
+        temp_dir = os.path.abspath(temp_dir)
+        if not random_temp_subdir:
+            self.working_dir = temp_dir
             rm(self.working_dir, recursive=True)
             mkdir(self.working_dir)
-            self.env.cleanup_mode = CleanupMode.NONE
 
-        else:
+        elif not os.path.isdir(temp_dir):
             # If the temp dir is supposed to be randomized, we need to create a
             # subdirectory, so check that the parent directory exists first.
-            if not os.path.isdir(self.main.args.temp_dir):
-                logger.critical(
-                    "temp dir '%s' does not exist", self.main.args.temp_dir
-                )
-                return 1
+            logger.critical("temp dir '%s' does not exist", temp_dir)
+            return 1
 
-            self.working_dir = tempfile.mkdtemp(
-                "", "tmp", os.path.abspath(self.main.args.temp_dir)
-            )
+        else:
+            self.working_dir = tempfile.mkdtemp("", "tmp", temp_dir)
 
         # Create the exchange directory (to exchange data between the testsuite
         # main and the subprocesses running test fragments). Compute the name
