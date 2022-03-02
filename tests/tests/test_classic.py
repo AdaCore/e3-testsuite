@@ -84,19 +84,16 @@ def test_control_interpret():
     )
 
     # Precedence to the first control whose condition is true
-    assert (
-        expect_result(
-            {
-                "control": [
-                    ["SKIP", "False", "entry 1"],
-                    ["XFAIL", "True", "entry 2"],
-                    ["SKIP", "False", "entry 3"],
-                    ["SKIP", "True", "entry 4"],
-                ]
-            }
-        )
-        == (False, True, "entry 2")
-    )
+    assert expect_result(
+        {
+            "control": [
+                ["SKIP", "False", "entry 1"],
+                ["XFAIL", "True", "entry 2"],
+                ["SKIP", "False", "entry 3"],
+                ["SKIP", "True", "entry 4"],
+            ]
+        }
+    ) == (False, True, "entry 2")
 
     # Use variables from test_env
     assert expect_result(
