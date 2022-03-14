@@ -18,7 +18,10 @@ from typing import (
 
 from e3.testsuite.report.index import ReportIndex, ReportIndexEntry
 from e3.testsuite.result import (
-    FailureReason, TestResult, TestResultSummary, TestStatus
+    FailureReason,
+    TestResult,
+    TestResultSummary,
+    TestStatus,
 )
 from e3.testsuite.utils import ColorConfig
 

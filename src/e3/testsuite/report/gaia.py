@@ -44,8 +44,7 @@ Map FailureReason values to equivalent GAIA-compatible test statuses.
 
 
 def gaia_status(
-    status: TestStatus,
-    failure_reasons: Set[FailureReason]
+    status: TestStatus, failure_reasons: Set[FailureReason]
 ) -> str:
     """Return the GAIA-compatible status that describes a result the best.
 
@@ -99,9 +98,7 @@ def dump_result_logs(result: TestResult, output_dir: str) -> GAIAResultFiles:
         encoding: Optional[str]
 
         mode, encoding = (
-            ("wb", None)
-            if isinstance(log, bytes)
-            else ("w", "utf-8")
+            ("wb", None) if isinstance(log, bytes) else ("w", "utf-8")
         )
 
         with tempfile.NamedTemporaryFile(
@@ -198,9 +195,8 @@ def dump_gaia_report(
     discs: Optional[List[str]] = None
     if isinstance(discs_attr, str):
         discs = discs_attr.split(",")
-    elif (
-        isinstance(discs_attr, list)
-        and all(isinstance(d, str) for d in discs_attr)
+    elif isinstance(discs_attr, list) and all(
+        isinstance(d, str) for d in discs_attr
     ):
         discs = discs_attr
     if discs is not None:

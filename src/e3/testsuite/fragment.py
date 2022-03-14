@@ -96,9 +96,7 @@ class TestFragment:
 
     @staticmethod
     def static_push_error_result(
-        uid: str,
-        index: int,
-        driver: TestDriver
+        uid: str, index: int, driver: TestDriver
     ) -> None:
         """Generate a test result to log the exception and traceback.
 

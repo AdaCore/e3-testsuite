@@ -249,9 +249,8 @@ class AdaCoreLegacyTestDriver(DiffTestDriver):
             elif os.path.exists(default_baseline_file):
                 os.remove(default_baseline_file)
 
-        if (
-            self.test_process is not None
-            and self.process_may_have_timed_out(self.test_process)
+        if self.test_process is not None and self.process_may_have_timed_out(
+            self.test_process
         ):
             self.result.failure_reasons.add(FailureReason.TIMEOUT)
             result.append("test timed out")
