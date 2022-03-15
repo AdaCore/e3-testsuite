@@ -23,7 +23,7 @@ def check_call(
     cmd: List[str],
     test_name: Optional[str] = None,
     result: Optional[TestResult] = None,
-    **kwargs: Any
+    **kwargs: Any,
 ) -> Run:
     if "cwd" not in kwargs and "working_dir" in driver.test_env:
         kwargs["cwd"] = driver.test_env["working_dir"]

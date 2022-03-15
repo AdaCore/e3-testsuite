@@ -137,7 +137,7 @@ class ReportIndex:
                     "failure_reasons": [fr.name for fr in e.failure_reasons],
                     "time": e.time,
                     "info": e.info,
-                    "filename": e.filename
+                    "filename": e.filename,
                 }
             )
 

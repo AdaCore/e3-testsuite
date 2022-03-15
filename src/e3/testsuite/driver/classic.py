@@ -376,7 +376,8 @@ class ClassicTestDriver(TestDriver):
             self.env.cleanup_mode == CleanupMode.NONE
             or (
                 self.env.cleanup_mode == CleanupMode.PASSING
-                and self.result.status in (
+                and self.result.status
+                in (
                     TestStatus.FAIL,
                     TestStatus.XFAIL,
                     TestStatus.XPASS,

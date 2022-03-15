@@ -196,7 +196,7 @@ class TestsuiteCore:
             " temporary directory. Use this when you know that you have"
             " exclusive access to the temporary directory (needed in order to"
             " avoid name clashes there) to get a deterministic path for"
-            " testsuite temporaries."
+            " testsuite temporaries.",
         )
         temp_group.add_argument(
             "-d",
@@ -208,7 +208,7 @@ class TestsuiteCore:
             help="Convenience shortcut for dev setups: forces `-t DIR"
             " --no-random-temp-subdir --cleanup-mode=none` and cleans up `DIR`"
             ' first. If no directory is provided, use the local "tmp"'
-            " directory."
+            " directory.",
         )
 
         cleanup_mode_map = enum_to_cmdline_args_map(CleanupMode)
@@ -219,14 +219,14 @@ class TestsuiteCore:
             + "\n".join(
                 f"{name}: {CleanupMode.descriptions()[value]}"
                 for name, value in cleanup_mode_map.items()
-            )
+            ),
         )
         temp_group.add_argument(
             "--disable-cleanup",
             action="store_true",
             help="Disable cleanup of working spaces. This option is deprecated"
             " and will disappear in a future version of e3-testsuite. Please"
-            " use --cleanup-mode instead."
+            " use --cleanup-mode instead.",
         )
 
         output_group = parser.add_argument_group(
@@ -293,7 +293,7 @@ class TestsuiteCore:
             type=float,
             help="Minimum number of seconds between status file updates. The"
             " more often we update this file, the more often one will read"
-            " garbage."
+            " garbage.",
         )
 
         auto_gen_default = (
@@ -386,7 +386,7 @@ class TestsuiteCore:
             " it profitable regarding the contention of Python's GIL) and no"
             " test fragment has dependencies on other fragments. This flag"
             " forces the use of multiprocessing even if any of these two"
-            " conditions is false."
+            " conditions is false.",
         )
         parser.add_argument(
             "sublist", metavar="tests", nargs="*", default=[], help="test"
@@ -428,9 +428,9 @@ class TestsuiteCore:
 
         # Set the cleanup mode from command-line arguments
         if self.main.args.cleanup_mode is not None:
-            self.env.cleanup_mode = (
-                cleanup_mode_map[self.main.args.cleanup_mode]
-            )
+            self.env.cleanup_mode = cleanup_mode_map[
+                self.main.args.cleanup_mode
+            ]
         elif self.main.args.disable_cleanup:
             logger.warning(
                 "--disable-cleanup is deprecated and will disappear in a"
@@ -493,6 +493,7 @@ class TestsuiteCore:
 
         # Create an object to report testsuite execution status to users
         from e3.testsuite.running_status import RunningStatus
+
         self.running_status = RunningStatus(
             os.path.join(self.output_dir, "status"),
             self.main.args.status_update_interval,
@@ -925,11 +926,8 @@ class TestsuiteCore:
         # contain results. If not, this info will be unused at best, or lead to
         # incorrect behavior.
         self.old_output_dir = None
-        if (
-            os.path.exists(old_output_dir)
-            and os.path.exists(
-                os.path.join(old_output_dir, ReportIndex.INDEX_FILENAME)
-            )
+        if os.path.exists(old_output_dir) and os.path.exists(
+            os.path.join(old_output_dir, ReportIndex.INDEX_FILENAME)
         ):
             self.old_output_dir = old_output_dir
 
@@ -1016,9 +1014,9 @@ class TestsuiteCore:
         from e3.testsuite.fragment import FragmentData, ProcessTestFragment
         from e3.testsuite.multiprocess_scheduler import MultiprocessScheduler
 
-        def job_factory(uid: str,
-                        data: FragmentData,
-                        slot: int) -> ProcessTestFragment:
+        def job_factory(
+            uid: str, data: FragmentData, slot: int
+        ) -> ProcessTestFragment:
             """Turn a DAG item into a ProcessTestFragment instance."""
             assert data.callback_by_name
             return ProcessTestFragment(
@@ -1035,10 +1033,10 @@ class TestsuiteCore:
             job.collect_result()
             self.collect_result(job)
 
-        scheduler: MultiprocessScheduler[FragmentData, ProcessTestFragment] = (
-            MultiprocessScheduler(
-                dag, job_factory, collect_result, jobs=self.main.args.jobs
-            )
+        scheduler: MultiprocessScheduler[
+            FragmentData, ProcessTestFragment
+        ] = MultiprocessScheduler(
+            dag, job_factory, collect_result, jobs=self.main.args.jobs
         )
 
         # See corresponding code/comment in run_multithread_mainloop
@@ -1247,11 +1245,7 @@ class Testsuite(TestsuiteCore):
         # Sensible default: just write the command line used to run the
         # testsuite. Testsuites can override or reuse this.
         quoted_cmdline = " ".join(quote_arg(arg) for arg in sys.argv)
-        comment_file.write(
-            f"Testsuite options:"
-            f"\n  {quoted_cmdline}"
-            f"\n"
-        )
+        comment_file.write(f"Testsuite options:\n  {quoted_cmdline}\n")
 
     @property
     def default_max_consecutive_failures(self) -> int:

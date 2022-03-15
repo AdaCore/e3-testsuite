@@ -82,7 +82,4 @@ def enum_to_cmdline_args_map(enum_cls: Type[EnumType]) -> Dict[str, EnumType]:
     This helps exposing enums for options on the command-line. This turns
     alternative names into lower case and replaces underscores with dashes.
     """
-    return {
-        value.name.lower().replace("_", "-"): value
-        for value in enum_cls
-    }
+    return {value.name.lower().replace("_", "-"): value for value in enum_cls}
