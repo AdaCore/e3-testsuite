@@ -1,8 +1,9 @@
 e3-testsuite
 ============
 
-Generic testsuite framework in Python. Supports Python 3.8+. Full documentation
-available on [Read the Docs](https://e3-testsuite.readthedocs.io/en/latest/).
+Generic testsuite framework in Python. Supports Python 3.9 and Python 3.10.
+Full documentation available on [Read the
+Docs](https://e3-testsuite.readthedocs.io/en/latest/).
 
 
 Installation
