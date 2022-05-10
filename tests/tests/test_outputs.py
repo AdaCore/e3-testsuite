@@ -39,9 +39,11 @@ results_fail = {"test1": Status.FAIL, "test2": Status.FAIL}
 results_skip = {"test1": Status.SKIP, "test2": Status.SKIP}
 
 
-def run(status, args=None):
+def run(status, args=None, expect_failure=False):
     args = args if args is not None else []
-    run_testsuite(Mysuite, args=args + [status.name])
+    run_testsuite(
+        Mysuite, args=args + [status.name], expect_failure=expect_failure
+    )
 
 
 # Actual tests
@@ -56,7 +58,7 @@ def test_default():
 
     # Then do a second one. We expect the "new" directory to just get replaced,
     # and still have no "old" directory.
-    run(Status.FAIL)
+    run(Status.FAIL, expect_failure=True)
     check_result_dirs(new=results_fail)
     assert not os.path.exists(os.path.join("out", "old"))
 
@@ -74,7 +76,7 @@ def test_output_dir(tmp_path):
 
     # Run it a second time. We expect the new results to replace the previous
     # ones in the "new" directory and still not to have any old results.
-    run(Status.FAIL, args)
+    run(Status.FAIL, args, expect_failure=True)
     check_result_dirs(new=results_fail, new_dir=new_dir)
     assert not old_path.exists()
 
@@ -98,7 +100,7 @@ def test_rotation(tmp_path):
         # Run it a second time. We expect the previous "new" directory to be
         # renamed to "old", and the new results to be written to a fresh "new"
         # directory.
-        run(Status.FAIL, args)
+        run(Status.FAIL, args, expect_failure=True)
         check_result_dirs(
             new=results_fail,
             new_dir=new_dir,

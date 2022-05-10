@@ -187,6 +187,7 @@ class TestClassic:
             self.Mysuite,
             args=["--truncate-logs=0", tests_subdir, "-E"],
             multiprocessing=multiprocessing,
+            expect_failure=True,
         )
         assert extract_results(suite) == {
             "simple": Status.PASS,
@@ -231,7 +232,9 @@ def test_long_logs(caplog):
         test_driver_map = {"script-driver": ScriptDriver}
 
     suite = run_testsuite(
-        Mysuite, args=["--truncate-logs=3", "long-logs", "--gaia-output"]
+        Mysuite,
+        args=["--truncate-logs=3", "long-logs", "--gaia-output"],
+        expect_failure=True,
     )
     assert extract_results(suite) == {"long-logs": Status.FAIL}
 
@@ -294,6 +297,7 @@ class TestCleanupMode:
         suite = run_testsuite(
             create_testsuite(list(self.EXPECTED_RESULTS), self.MyDriver),
             args=args + ["-t", str(tmp_path)],
+            expect_failure=True,
         )
         assert extract_results(suite) == self.EXPECTED_RESULTS
 
@@ -354,7 +358,7 @@ class TestCleanupFailure:
         default_driver = "default"
 
     def test(self):
-        suite = run_testsuite(self.Mysuite)
+        suite = run_testsuite(self.Mysuite, expect_failure=True)
         assert extract_results(suite) == {
             "test1": Status.PASS,
             "test2": Status.PASS,

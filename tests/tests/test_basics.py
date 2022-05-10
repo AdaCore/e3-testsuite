@@ -257,7 +257,9 @@ class TestExceptionInDriver:
             return "default"
 
     def run_check(self, multiprocessing):
-        suite = run_testsuite(self.Mysuite, multiprocessing=multiprocessing)
+        suite = run_testsuite(
+            self.Mysuite, multiprocessing=multiprocessing, expect_failure=True
+        )
 
         results = extract_results(suite)
 
@@ -411,7 +413,7 @@ class TestInvalidYAML:
     def test(self):
         # The testsuite is supposed to run to completion (valid tests have
         # run), but it ends with an error status code.
-        suite = run_testsuite(self.Mysuite)
+        suite = run_testsuite(self.Mysuite, expect_failure=True)
         results = suite.report_index.entries
 
         assert len(results) == 4
@@ -456,7 +458,7 @@ class TestMissingDriver:
             return {"default": TestMissingDriver.MyDriver}
 
     def test(self):
-        suite = run_testsuite(self.Mysuite)
+        suite = run_testsuite(self.Mysuite, expect_failure=True)
         check_result_from_prefix(
             suite,
             "valid__except",
@@ -487,7 +489,7 @@ class TestInvalidDriver:
             return {"default": TestInvalidDriver.MyDriver}
 
     def test(self):
-        suite = run_testsuite(self.Mysuite)
+        suite = run_testsuite(self.Mysuite, expect_failure=True)
         check_result_from_prefix(
             suite,
             "test1__except",
@@ -519,7 +521,7 @@ class TestDuplicateName:
             return "foo"
 
     def test(self):
-        suite = run_testsuite(self.Mysuite)
+        suite = run_testsuite(self.Mysuite, expect_failure=True)
         assert len(suite.report_index.entries) == 2
         assert suite.report_index.entries["foo"].status == Status.PASS
         check_result_from_prefix(
@@ -556,7 +558,9 @@ class TestShowErrorOutput:
             return {"default": TestShowErrorOutput.MyDriver}
 
     def test(self, caplog):
-        run_testsuite(self.Mysuite, ["--show-error-output"])
+        run_testsuite(
+            self.Mysuite, ["--show-error-output"], expect_failure=True
+        )
         logs = testsuite_logs(caplog)
         assert any("Work is being done" in message for message in logs)
 
@@ -761,10 +765,10 @@ class TestFailureExitCode:
         assert status == expected_status
 
     def test(self):
-        self.check(self.Mysuite, [], 0)
+        self.check(self.Mysuite, ["--failure-exit-code=0"], 0)
+        self.check(self.Mysuite, [], 1)
         self.check(self.Mysuite, ["--failure-exit-code=1"], 1)
         self.check(self.Mysuite2, [], 2)
-        self.check(self.Mysuite2, ["--failure-exit-code=1"], 1)
 
 
 class TestMaxConsecutiveFailures:
@@ -791,6 +795,7 @@ class TestMaxConsecutiveFailures:
             ),
             args=[f"--max-consecutive-failures={n_failures}", f"-j{jobs}"],
             multiprocessing=multiprocessing,
+            expect_failure=True,
         )
         logs = {r.getMessage() for r in caplog.records}
         assert len(suite.report_index.entries) == n_failures

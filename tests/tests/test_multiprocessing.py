@@ -89,7 +89,11 @@ class TestCollectError:
     def run_testsuite(self, test_name):
         MySuite = create_testsuite([test_name], TestCollectError.MyDriver)
         results = extract_results(
-            run_testsuite(MySuite, args=["--force-multiprocessing", "-E"])
+            run_testsuite(
+                MySuite,
+                args=["--force-multiprocessing", "-E"],
+                expect_failure=True,
+            )
         )
         keys = sorted(results)
         assert len(keys) == 1

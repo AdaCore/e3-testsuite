@@ -32,7 +32,9 @@ class TestBasic:
             default_driver = "default"
 
         xunit_file = "xunit.xml"
-        run_testsuite(Mysuite, ["--xunit-output", xunit_file])
+        run_testsuite(
+            Mysuite, ["--xunit-output", xunit_file], expect_failure=True
+        )
 
         # For now, just check that this produces a valid XML file
         ET.parse(xunit_file)

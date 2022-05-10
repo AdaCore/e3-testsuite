@@ -54,7 +54,7 @@ def test_diff():
         tests_subdir = "diff-tests"
         test_driver_map = {"diff-script-driver": DiffScriptDriver}
 
-    suite = run_testsuite(Mysuite, args=["-E"])
+    suite = run_testsuite(Mysuite, args=["-E"], expect_failure=True)
     assert extract_results(suite) == {
         "plain-pass": Status.PASS,
         "plain-fail": Status.FAIL,
@@ -118,7 +118,7 @@ def test_diff_rewriting():
         check_test_out("bad-utf-8", ["héllo"], encoding="utf-8")
 
         # Run the testsuite in rewrite mode
-        suite = run_testsuite(Mysuite, args=["-rE"])
+        suite = run_testsuite(Mysuite, args=["-rE"], expect_failure=True)
         assert extract_results(suite) == {
             "adacore": Status.FAIL,
             "plain": Status.FAIL,
@@ -162,7 +162,9 @@ class TestDoubleDiff:
             return {"default": TestDoubleDiff.MyDriver}
 
     def test(self):
-        suite = run_testsuite(self.Mysuite, args=["test1"])
+        suite = run_testsuite(
+            self.Mysuite, args=["test1"], expect_failure=True
+        )
         assert extract_results(suite) == {"test1": Status.FAIL}
 
         # When multiple diff failures are involved, we expect .expected/.out to be
@@ -184,7 +186,9 @@ def test_failure_reason():
         test_driver_map = {"diff-script-driver": DiffScriptDriver}
 
     suite = run_testsuite(
-        Mysuite, args=["plain-pass", "plain-fail", "--gaia-output"]
+        Mysuite,
+        args=["plain-pass", "plain-fail", "--gaia-output"],
+        expect_failure=True,
     )
     assert extract_results(suite) == {
         "plain-pass": Status.PASS,
