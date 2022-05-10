@@ -44,7 +44,7 @@ class TestGAIA:
 
         # Run the testsuite, expecting no failure
         suite = Mysuite(os.path.dirname(__file__))
-        assert suite.testsuite_main(["--gaia-output"]) == 0
+        assert suite.testsuite_main(["--gaia-output"]) == 1
 
         # Check the content of the GAIA output: first, the summary
         with open(os.path.join("out", "new", "results")) as f:

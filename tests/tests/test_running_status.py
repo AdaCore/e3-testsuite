@@ -118,5 +118,6 @@ class TestBasic:
         run_testsuite(
             Mysuite,
             args=["-j1", "--show-error-output", "--status-update-interval=0"],
+            expect_failure=True,
         )
         self.check_status("final")

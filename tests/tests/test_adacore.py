@@ -31,7 +31,7 @@ def test_adacore():
 
         test_finders = [testcase_finder.AdaCoreLegacyTestFinder(ACDriver)]
 
-    suite = run_testsuite(Mysuite1, ["-E"])
+    suite = run_testsuite(Mysuite1, ["-E"], expect_failure=True)
     assert extract_results(suite) == {
         # Check that test.sh are picked up
         "0000-097": Status.PASS,
@@ -163,7 +163,7 @@ def test_rewriting(caplog):
         check_baselines("nondefault-empty", {"baseline.out": ["Hello"]})
         check_baselines("xfail-diff", {"test.out": ["World"]})
 
-        suite = run_testsuite(Mysuite, args=["-r"])
+        suite = run_testsuite(Mysuite, args=["-r"], expect_failure=True)
         assert extract_results(suite) == {
             "default-nodiff": Status.PASS,
             "default-diff": Status.FAIL,
@@ -242,7 +242,9 @@ def test_timeout():
             self.env.discs = []
             self.env.test_environ = dict(os.environ)
 
-    suite = run_testsuite(Mysuite, ["--gaia-output", "-E"])
+    suite = run_testsuite(
+        Mysuite, ["--gaia-output", "-E"], expect_failure=True
+    )
     assert extract_results(suite) == {
         "pass": Status.PASS,
         "timedout": Status.FAIL,

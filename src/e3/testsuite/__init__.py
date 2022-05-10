@@ -1253,7 +1253,7 @@ class Testsuite(TestsuiteCore):
 
     @property
     def default_failure_exit_code(self) -> int:
-        return 0
+        return 1
 
     @property
     def auto_generate_text_report(self) -> bool:
