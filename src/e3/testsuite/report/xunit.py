@@ -30,7 +30,7 @@ def dump_xunit_report(ts: TestsuiteCore, filename: str) -> None:
     status_to_counter = {
         TestStatus.PASS: None,
         TestStatus.FAIL: "failures",
-        TestStatus.XFAIL: "failures",
+        TestStatus.XFAIL: "skipped",
         TestStatus.XPASS: None,
         TestStatus.VERIFY: None,
         TestStatus.SKIP: "skipped",
