@@ -10,7 +10,7 @@ import re
 import time
 import warnings
 
-from e3.fs import mkdir
+from e3.fs import mkdir, mv
 from e3.testsuite import TestAbort as E3TestAbort, Testsuite as Suite
 from e3.testsuite.driver import (
     TestDriver as Driver,
@@ -1096,3 +1096,25 @@ class TestInterTestDeps:
 
     def test_multiprocess(self):
         self.run_check(multiprocessing=True)
+
+
+def test_results_relocation(tmp_path):
+    """Check that results stored on the filesystem are relocatable."""
+    old_dir = str(tmp_path / "old")
+    new_dir = str(tmp_path / "new")
+
+    # Create a report in "old_dir"
+    mkdir(old_dir)
+    old_index = ReportIndex(old_dir)
+    for r in [
+        Result("foo", status=Status.PASS),
+        Result("bar", status=Status.FAIL),
+    ]:
+        old_index.add_result(r.summary, r.save(old_dir))
+    old_index.write()
+
+    # Move it to "new_dir", and check that we can still load its entries
+    mv(old_dir, new_dir)
+    new_index = ReportIndex.read(new_dir)
+    assert new_index.entries["foo"].load().status == Status.PASS
+    assert new_index.entries["bar"].load().status == Status.FAIL

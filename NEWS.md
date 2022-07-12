@@ -1,6 +1,7 @@
 25.0 (Not released yet)
 =======================
 
+* Testsuite reports on the filesystem are relocatable now.
 * XUnit reports: count `XFAIL` test results as `skipped` instead of `failures`.
 * Introduce the `--no-random-temp-subdir` option.
 * `--gaia-output`: create the `discs` file in more cases.
