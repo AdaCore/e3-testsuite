@@ -6,6 +6,7 @@ import binascii
 from dataclasses import dataclass
 from enum import Enum, auto
 import logging
+import os.path
 import tempfile
 from typing import Any, AnyStr, Dict, Iterator, Generic, Optional, Set, cast
 
@@ -300,8 +301,8 @@ class TestResult(yaml.YAMLObject):
 
         :param output_dir: Name of the directory in which to write the test
             result.
-        :return: The name of the file written. It is generated from the
-            testname.
+        :return: The base filename of the file written. It is generated from
+            the testname.
         """
         with tempfile.NamedTemporaryFile(
             mode="w",
@@ -311,7 +312,7 @@ class TestResult(yaml.YAMLObject):
             delete=False,
         ) as f:
             yaml.dump(self, f)
-            return f.name
+            return os.path.basename(f.name)
 
     @property
     def summary(self) -> TestResultSummary:
