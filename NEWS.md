@@ -1,5 +1,5 @@
-25.0 (Not released yet)
-=======================
+25.0 (2022-08-31)
+=================
 
 * Testsuite reports on the filesystem are relocatable now.
 * XUnit reports: count `XFAIL` test results as `skipped` instead of `failures`.
