@@ -146,3 +146,11 @@ class ReportIndex:
             os.path.join(self.results_dir, self.INDEX_FILENAME), "w"
         ) as f:
             json.dump(doc, f)
+
+    @property
+    def has_failures(self) -> bool:
+        """Return whether there is at least one FAIL/ERROR test status."""
+        return (
+            self.status_counters[TestStatus.FAIL] > 0
+            or self.status_counters[TestStatus.ERROR] > 0
+        )

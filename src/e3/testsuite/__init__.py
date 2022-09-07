@@ -574,18 +574,14 @@ class TestsuiteCore:
                     show_time_info=True,
                 )
 
-        # Return the appropriate status code: 1 when there is a framework
-        # issue, the failure status code from the --failure-exit-code=N option
-        # when there is a least one testcase failure, or 0.
-        statuses = {
-            s
-            for s, count in self.report_index.status_counters.items()
-            if count
-        }
-        if TestStatus.FAIL in statuses or TestStatus.ERROR in statuses:
-            return self.main.args.failure_exit_code
-        else:
-            return 0
+        # Return the appropriate status code: the failure status code from the
+        # --failure-exit-code=N option when there is a least one testcase
+        # failure, or 0.
+        return (
+            self.main.args.failure_exit_code
+            if self.report_index.has_failures
+            else 0
+        )
 
     def get_test_list(self, sublist: List[str]) -> List[ParsedTest]:
         """Retrieve the list of tests.
