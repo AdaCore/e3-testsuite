@@ -11,12 +11,21 @@ from e3.testsuite.result import FailureReason, TestStatus as Status
 from .utils import create_report, create_result, run_testsuite
 
 
-def run(results, argv, tmp_path, capsys):
+def run_status(results, argv, tmp_path, capsys):
     create_report(results, tmp_path)
-    main(argv)
+    status = main(argv)
     captured = capsys.readouterr()
     assert not captured.err
-    return captured.out
+    return status, captured.out
+
+
+def run(results, argv, tmp_path, capsys, expect_failure=False):
+    status, out = run_status(results, argv, tmp_path, capsys)
+    if expect_failure:
+        assert status != 0
+    else:
+        assert status == 0
+    return out
 
 
 basic_results = [
@@ -477,3 +486,24 @@ def test_auto_generate(tmp_path):
     # generated
     run_testsuite(MyDerivedSuite, args=args + ["--no-generate-text-report"])
     check_report(False)
+
+
+def test_failure_exit_code(tmp_path, capsys):
+    """Check that --failure-exit-code works as expected."""
+
+    def check(statuses, expected_exit_code):
+        status, _ = run_status(
+            [
+                create_result(f"t{i}", status)
+                for i, status in enumerate(statuses)
+            ],
+            ["--failure-exit-code=10", str(tmp_path)],
+            tmp_path,
+            capsys,
+        )
+        assert status == expected_exit_code
+
+    check([Status.PASS, Status.PASS, Status.XFAIL, Status.SKIP], 0)
+    check([Status.PASS, Status.FAIL], 10)
+    check([Status.PASS, Status.ERROR], 10)
+    check([Status.FAIL, Status.ERROR], 10)

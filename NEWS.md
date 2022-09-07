@@ -1,6 +1,8 @@
 26.0 (Not released yet)
 =======================
 
+* Add support for `--failure-exit-code` in `e3-testsuite-report`.
+
 25.0 (2022-08-31)
 =================
 

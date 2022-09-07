@@ -76,6 +76,16 @@ args_parser.add_argument(
     help="Directory that contains the report to load. By default, use"
     " 'out/new' from the current directory.",
 )
+args_parser.add_argument(
+    "--failure-exit-code",
+    metavar="N",
+    type=int,
+    default=0,
+    help="Exit code to use when at least one test result shows a"
+    " failure/error. By default, this is 0. This option is useful when running"
+    " this script in a continuous integration setup, as this can make the"
+    " testing process stop when there is a regression.",
+)
 
 
 class SupportsLessThan(Protocol):
@@ -451,6 +461,13 @@ def main(argv: Optional[List[str]] = None) -> None:
         show_error_output=args.show_error_output,
         show_time_info=args.show_time_info,
     )
+
+    # Return the appropriate status code: the failure status code from the
+    # --failure-exit-code=N option when there is a least one testcase failure,
+    # or 0.
+    return (args.failure_exit_code
+            if new_index.has_failures
+            else 0)
 
 
 if __name__ == "__main__":  # interactive-only
