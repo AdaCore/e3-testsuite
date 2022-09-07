@@ -81,7 +81,7 @@ class TestsuiteCore:
     def __init__(
         self,
         root_dir: Optional[str] = None,
-        testsuite_name: str = "Untitled testsute",
+        testsuite_name: str = "Untitled testsuite",
     ) -> None:
         """Testsuite constructor.
 
@@ -542,7 +542,11 @@ class TestsuiteCore:
         self.report_index.write()
         self.dump_testsuite_result()
         if self.main.args.xunit_output:
-            dump_xunit_report(self, self.main.args.xunit_output)
+            dump_xunit_report(
+                self.testsuite_name,
+                self.report_index,
+                self.main.args.xunit_output,
+            )
         if self.main.args.gaia_output:
             dump_gaia_report(self, self.output_dir, self.gaia_result_files)
 
