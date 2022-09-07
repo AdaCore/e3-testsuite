@@ -3,25 +3,21 @@
 from __future__ import annotations
 
 import xml.etree.ElementTree as etree
-from typing import TYPE_CHECKING
 
+from e3.testsuite.report.index import ReportIndex
 from e3.testsuite.result import TestStatus
 
-# Import TestsuiteCore only for typing, as this creates a circular import
-if TYPE_CHECKING:
-    from e3.testsuite import TestsuiteCore
 
-
-def dump_xunit_report(ts: TestsuiteCore, filename: str) -> None:
+def dump_xunit_report(name: str, index: ReportIndex, filename: str) -> None:
     """
     Dump a testsuite report to `filename` in the standard XUnit XML format.
 
-    :param ts: Testsuite instance, which have run its testcases, for which to
-        generate the report.
+    :param name: Name for the teststuite report.
+    :param index: Report index for the testsuite results to report.
     :param filename: Name of the text file to write.
     """
-    testsuites = etree.Element("testsuites", name=ts.testsuite_name)
-    testsuite = etree.Element("testsuite", name=ts.testsuite_name)
+    testsuites = etree.Element("testsuites", name=name)
+    testsuite = etree.Element("testsuite", name=name)
     testsuites.append(testsuite)
 
     # Counters for each category of test in XUnit. We map TestStatus to
@@ -47,7 +43,7 @@ def dump_xunit_report(ts: TestsuiteCore, filename: str) -> None:
     }
 
     # Now create a <testcase> element for each test
-    for test_name, entry in sorted(ts.report_index.entries.items()):
+    for test_name, entry in sorted(index.entries.items()):
         result = entry.load()
 
         # The only class involved in testcases (that we know of in this

@@ -17,6 +17,7 @@ from typing import (
 )
 
 from e3.testsuite.report.index import ReportIndex, ReportIndexEntry
+from e3.testsuite.report.xunit import dump_xunit_report
 from e3.testsuite.result import (
     FailureReason,
     TestResult,
@@ -62,6 +63,21 @@ args_parser.add_argument(
     "--show-time-info",
     action="store_true",
     help="Display time information for test results, if available.",
+)
+args_parser.add_argument(
+    "--xunit-name",
+    dest="xunit_name",
+    metavar="NAME",
+    default="Untitled testsuite",
+    help="Name to use as the XUnit report name.",
+)
+args_parser.add_argument(
+    "--xunit-output",
+    dest="xunit_output",
+    metavar="FILE",
+    help="Output testsuite report to the given file in the standard XUnit XML"
+    " format. This is useful to display results in continuous build systems"
+    " such as Jenkins.",
 )
 args_parser.add_argument(
     "--old-result-dir",
@@ -461,6 +477,9 @@ def main(argv: Optional[List[str]] = None) -> None:
         show_error_output=args.show_error_output,
         show_time_info=args.show_time_info,
     )
+
+    if args.xunit_output:
+        dump_xunit_report(args.xunit_name, new_index, args.xunit_output)
 
     # Return the appropriate status code: the failure status code from the
     # --failure-exit-code=N option when there is a least one testcase failure,

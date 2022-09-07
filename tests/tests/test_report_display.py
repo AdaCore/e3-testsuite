@@ -2,6 +2,7 @@
 
 import os.path
 import shutil
+import xml.etree.ElementTree as ET
 
 from e3.testsuite import Testsuite as Suite
 from e3.testsuite.driver import BasicTestDriver as BasicDriver
@@ -507,3 +508,17 @@ def test_failure_exit_code(tmp_path, capsys):
     check([Status.PASS, Status.FAIL], 10)
     check([Status.PASS, Status.ERROR], 10)
     check([Status.FAIL, Status.ERROR], 10)
+
+
+def test_xunit_output(tmp_path, capsys):
+    """Check that --xunit-output generates a report."""
+    xunit_file = str(tmp_path / "xunit.xml")
+    run(
+        [create_result("foo", Status.PASS)],
+        ["--xunit-output", xunit_file, str(tmp_path)],
+        tmp_path,
+        capsys,
+    )
+
+    # Just check that this produces a valid XML file
+    ET.parse(xunit_file)
