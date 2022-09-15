@@ -9,6 +9,7 @@ import os
 import re
 import sys
 import tempfile
+import time
 import traceback
 from typing import (
     Any,
@@ -177,6 +178,8 @@ class TestsuiteCore:
         :return: The testsuite status code (0 for success, a positive for
             failure).
         """
+        start_time = time.time()
+
         self.main = Main(platform_args=True)
 
         # Add common options
@@ -539,6 +542,11 @@ class TestsuiteCore:
         else:
             self.run_standard_mainloop(dag)
 
+        # Compute the duration for this testsuite run
+        end_time = time.time()
+        self.report_index.duration = end_time - start_time
+
+        # Dump the testsuite report in all the requested formats
         self.report_index.write()
         self.dump_testsuite_result()
         if self.main.args.xunit_output:

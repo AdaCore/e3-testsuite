@@ -2,10 +2,22 @@
 
 from __future__ import annotations
 
+from typing import Optional
 import xml.etree.ElementTree as etree
 
 from e3.testsuite.report.index import ReportIndex
 from e3.testsuite.result import TestStatus
+
+
+def add_time_attribute(elt: etree.Element,
+                       duration: Optional[float]) -> None:
+    """Optionally add a "time" attribute.
+
+    If ``duration`` is a float, add the corresponding "time" attribute to
+    ``elt``.
+    """
+    if duration is not None:
+        elt.set("time", "{:0.3f}".format(duration))
 
 
 def dump_xunit_report(name: str, index: ReportIndex, filename: str) -> None:
@@ -15,10 +27,15 @@ def dump_xunit_report(name: str, index: ReportIndex, filename: str) -> None:
     :param name: Name for the teststuite report.
     :param index: Report index for the testsuite results to report.
     :param filename: Name of the text file to write.
+    :param duration: Optional number of seconds for the total duration of the
+        testsuite run.
     """
     testsuites = etree.Element("testsuites", name=name)
     testsuite = etree.Element("testsuite", name=name)
     testsuites.append(testsuite)
+
+    add_time_attribute(testsuites, index.duration)
+    add_time_attribute(testsuite, index.duration)
 
     # Counters for each category of test in XUnit. We map TestStatus to
     # these.
@@ -84,6 +101,8 @@ def dump_xunit_report(name: str, index: ReportIndex, filename: str) -> None:
             system_out = etree.Element("system-out")
             system_out.text = str(result.log)
             testcase.append(system_out)
+
+        add_time_attribute(testcase, result.time)
 
     # Include counters in <testsuite> and <testsuites> elements
     for key, count in sorted(counters.items()):
