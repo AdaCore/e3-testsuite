@@ -81,6 +81,11 @@ class ReportIndex:
         self.status_counters = {s: 0 for s in TestStatus}
         """Number of test result for each test status."""
 
+        self.duration: Optional[float] = None
+        """
+        Optional number of seconds for the total duration of the testsuite run.
+        """
+
     def add_result(self, result: TestResultSummary, filename: str) -> None:
         """Add an entry to this index for the given test result.
 
@@ -101,6 +106,14 @@ class ReportIndex:
 
         with open(os.path.join(results_dir, cls.INDEX_FILENAME)) as f:
             doc = json.load(f)
+
+        # Pick the optional testsuite duration. Even though we now always
+        # include this information (either a float or null) in the index JSON,
+        # we still want to be able to read indexes from old versions of
+        # e3-testsuite.
+        duration = doc.get("duration")
+        if duration is not None:
+            result.duration = float(duration)
 
         # Basic sanity checking on the index file format
         assert (
@@ -127,7 +140,11 @@ class ReportIndex:
         """Write the index on disk."""
         # Create the JSON document to be the index file content
         entries: List[dict] = []
-        doc = {"magic": self.INDEX_MAGIC, "entries": entries}
+        doc = {
+            "magic": self.INDEX_MAGIC,
+            "duration": self.duration,
+            "entries": entries,
+        }
         for e in self.entries.values():
             entries.append(
                 {
