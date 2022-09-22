@@ -1,6 +1,7 @@
 26.0 (Not released yet)
 =======================
 
+* Make `DiffTestDriver` perform a full match for regexp baselines.
 * Fix memory leaks for test driver data.
 * Include total testsuite and testcase durations in XUnit reports.
 * Add support for `--xunit-output` in `e3-testsuite-report`.

@@ -10,7 +10,7 @@ import e3.testsuite.driver.adacore as adacore
 import e3.testsuite.driver.diff as diff
 from e3.testsuite.result import TestStatus as Status
 
-from .utils import extract_results, run_testsuite
+from .utils import create_testsuite, extract_results, run_testsuite
 
 
 class DiffScriptDriver(diff.DiffTestDriver):
@@ -73,6 +73,25 @@ def test_diff():
         "line-endings-strict": Status.FAIL,
         "refine-baseline": Status.PASS,
     }
+
+
+def test_regexp_fullmatch():
+    """Check that DiffTestDriver does a full match over regexp baselines."""
+    # The "abcd" regexp baseline should not be able to match "abcde" (it used
+    # to).
+
+    class MyDriver(diff.DiffTestDriver):
+        @property
+        def baseline(self):
+            return (None, "abcd", True)
+
+        def run(self):
+            self.output += "abcde"
+
+    suite = run_testsuite(
+        create_testsuite(["mytest"], MyDriver), expect_failure=True
+    )
+    assert extract_results(suite) == {"mytest": Status.FAIL}
 
 
 def test_diff_rewriting():

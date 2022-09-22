@@ -408,7 +408,7 @@ class DiffTestDriver(ClassicTestDriver):
         )
         refined_actual = refiners.refine(actual)
 
-        match = regexp.match(refined_actual)
+        match = regexp.fullmatch(refined_actual)
         if match:
             return []
 
