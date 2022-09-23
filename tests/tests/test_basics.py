@@ -5,10 +5,12 @@ This checks the behavior of the Testsuite, TestDriver and BasicTestDriver
 classes.
 """
 
+import gc
 import os
 import re
 import time
 import warnings
+import weakref
 
 from e3.fs import mkdir, mv
 from e3.testsuite import TestAbort as E3TestAbort, Testsuite as Suite
@@ -16,6 +18,7 @@ from e3.testsuite.driver import (
     TestDriver as Driver,
     BasicTestDriver as BasicDriver,
 )
+from e3.testsuite.driver.diff import DiffTestDriver as DiffDriver
 from e3.testsuite.report.index import ReportIndex
 from e3.testsuite.result import (
     TestResult as Result,
@@ -1118,3 +1121,88 @@ def test_results_relocation(tmp_path):
     new_index = ReportIndex.read(new_dir)
     assert new_index.entries["foo"].load().status == Status.PASS
     assert new_index.entries["bar"].load().status == Status.FAIL
+
+
+class TestMemleak:
+    """Check the absence of memory leaks in a testsuite run."""
+
+    class MySuite(MultiSchedulingSuite):
+        def adjust_dag_dependencies(self, dag):
+            # Create our mapping to test fragments for convenience below
+            self.test_fragments = {}
+            for fg in dag.vertex_data.values():
+                if fg.matches(TestMemleak.MyDriver, "run_wrapper"):
+                    self.test_fragments[fg.driver.test_name] = fg
+            t1 = self.test_fragments["t1"]
+            t2 = self.test_fragments["t2"]
+
+            # Create weakrefs to critical objects so that we can check later,
+            # after a full GC collection, that no references to them are left.
+            self.test_wr = weakref.WeakValueDictionary()
+
+            # Make sure that t2 is executed after t1
+            dag.update_vertex(vertex_id=t2.uid, predecessors=[t1.uid])
+
+            # Flags to make sure that conditional code in collect_result were
+            # executed.
+            self.t1_result_collected = False
+            self.test_succeeded = False
+
+        def collect_result(self, fragment):
+            # Before the actual "collect_result" method has a chance to remove
+            # the last references to various data that we want to check, create
+            # weak references to them.
+            if fragment.uid is self.test_fragments["t1"].uid:
+                driver = fragment.driver
+                result = driver.result
+
+                for key, value in [
+                    ("t1_driver", driver),
+                    ("t1_result_log", result.log),
+                    # The "output" attribute is set during the test execution,
+                    # so in multiprocessing mode, it is never set for the
+                    # TestDriver instance in the testsuite "master" process.
+                    ("t1_output", getattr(driver, "output", None)),
+                    ("t1_result_out", result.out),
+                    ("t1_result_expected", result.expected),
+                ]:
+                    if value is not None:
+                        self.test_wr[key] = value
+                self.t1_result_collected = True
+
+            super().collect_result(fragment)
+
+            # By the time we collect results for t2, all the refs for t1 should
+            # be gone (they used to leak until the testsuite itself got
+            # collected). Trigger a GC collection and check the absence of
+            # weakref, which proves the absence of refs left to the critical
+            # objects.
+            if fragment.uid == self.test_fragments["t2"].uid:
+                gc.collect()
+                assert dict(self.test_wr) == {}
+                self.test_succeeded = True
+
+    class MyDriver(DiffDriver):
+        @property
+        def baseline(self):
+            return (None, "", False)
+
+        def run(self):
+            self.result.log += "This is some log"
+            self.output += "This is some output"
+
+    def run_check(self, multiprocessing):
+        suite = run_testsuite(
+            create_testsuite(["t1", "t2"], self.MyDriver, self.MySuite),
+            ["--failure-exit-code=0"],
+            multiprocessing=multiprocessing,
+        )
+        assert extract_results(suite) == {"t1": Status.FAIL, "t2": Status.FAIL}
+        assert suite.t1_result_collected
+        assert suite.test_succeeded
+
+    def test_multithread(self):
+        self.run_check(multiprocessing=False)
+
+    def test_multiprocess(self):
+        self.run_check(multiprocessing=True)

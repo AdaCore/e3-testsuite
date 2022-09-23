@@ -7,6 +7,7 @@ Test drivers can split the execution of their test in multiple test fragments.
 Each fragment is an atomic task, which can be dispatched to a separate worker.
 """
 
+import abc
 import argparse
 from dataclasses import dataclass
 import pickle
@@ -42,7 +43,7 @@ class FragmentCallback(Protocol):
         ...
 
 
-@dataclass(frozen=True)
+@dataclass
 class FragmentData:
     """Data for a job unit in the testsuite.
 
@@ -71,6 +72,17 @@ class FragmentData:
         return isinstance(self.driver, driver_cls) and (
             name is None or self.name == name
         )
+
+    def clear_driver_data(self) -> None:
+        """Remove references to ``TestDriver`` instances and related data.
+
+        Doing this is necessary after each fragment is complete to keep memory
+        consumption under control for big testsuites: test driver instances may
+        contain a lot of data.
+        """
+        joker: Any = None
+        self.driver = joker
+        self.callback = joker
 
 
 class TestFragment:
@@ -123,6 +135,16 @@ class TestFragment:
         """Shortcut for static_push_error_result on the current fragment."""
         self.static_push_error_result(self.uid, self.index, self.driver)
 
+    @abc.abstractmethod
+    def clear_driver_data(self) -> None:
+        """Remove references to ``TestDriver`` instances and related data.
+
+        Doing this is necessary after each fragment is complete to keep memory
+        consumption under control for big testsuites: test driver instances may
+        contain a lot of data.
+        """
+        pass
+
 
 class ThreadTestFragment(e3.job.Job, TestFragment):
     """Run a test fragment in a thread."""
@@ -149,6 +171,11 @@ class ThreadTestFragment(e3.job.Job, TestFragment):
         self.previous_values = previous_values
         self.running_status = running_status
         self.result_queue: ResultQueue = driver.result_queue
+
+    def clear_driver_data(self) -> None:
+        joker: Any = None
+        self.data = joker
+        self.driver = joker
 
     def run(self) -> None:
         """Run the test fragment."""
@@ -214,6 +241,10 @@ class ProcessTestFragment(
         self.running_status = running_status
         self.result_queue = []
         super().__init__(uid, driver, callback_name, slot, env)
+
+    def clear_driver_data(self) -> None:
+        joker: Any = None
+        self.driver = joker
 
     def start(self) -> Run:
         self.running_status.start(self)

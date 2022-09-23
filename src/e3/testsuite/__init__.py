@@ -816,6 +816,15 @@ class TestsuiteCore:
             else:
                 self.consecutive_failures = 0
 
+        # Now that this fragment is completed, make sure to remove all
+        # references to its test drivers so that it can be garbage collected.
+        # This is necessary to keep memory consumption under control for big
+        # testsuites.
+        dag = self.running_status.dag
+        assert dag is not None
+        dag.vertex_data[fragment.uid].clear_driver_data()
+        fragment.clear_driver_data()
+
     def add_result(self, item: ResultQueueItem) -> None:
         """Add a test result to the result index and log it.
 

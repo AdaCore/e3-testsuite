@@ -1,6 +1,7 @@
 26.0 (Not released yet)
 =======================
 
+* Fix memory leaks for test driver data.
 * Include total testsuite and testcase durations in XUnit reports.
 * Add support for `--xunit-output` in `e3-testsuite-report`.
 * Add support for `--failure-exit-code` in `e3-testsuite-report`.
