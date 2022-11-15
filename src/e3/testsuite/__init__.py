@@ -414,6 +414,11 @@ class TestsuiteCore:
         else:  # interactive-only
             enable_colors = True
             self.main.args.show_error_output = True
+
+        # If explicitly requested, disable colors
+        if self.main.args.nocolor:
+            enable_colors = False
+
         self.colors = ColorConfig(enable_colors)
         self.Fore = self.colors.Fore
         self.Style = self.colors.Style
