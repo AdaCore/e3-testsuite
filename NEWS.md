@@ -1,6 +1,7 @@
 26.0 (Not released yet)
 =======================
 
+* Disable the use of ANSI sequences in logging when `--nocolor` is passed.
 * Make `DiffTestDriver` perform a full match for regexp baselines.
 * Fix memory leaks for test driver data.
 * Include total testsuite and testcase durations in XUnit reports.
