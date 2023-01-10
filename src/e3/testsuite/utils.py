@@ -3,8 +3,15 @@
 from __future__ import annotations
 
 from enum import Enum, auto
+import os
 import sys
-from typing import AnyStr, Dict, IO, Optional, Type, TypeVar
+from typing import AnyStr, Dict, IO, Optional, Type, TypeVar, TYPE_CHECKING
+
+from e3.os.fs import unixpath
+from e3.os.process import quote_arg
+
+if TYPE_CHECKING:
+    from e3.env import Env
 
 
 def isatty(stream: IO[AnyStr]) -> bool:
@@ -83,3 +90,36 @@ def enum_to_cmdline_args_map(enum_cls: Type[EnumType]) -> Dict[str, EnumType]:
     alternative names into lower case and replaces underscores with dashes.
     """
     return {value.name.lower().replace("_", "-"): value for value in enum_cls}
+
+
+def dump_environ(filename: str, env: Env) -> None:
+    """Dump environment variables into a sourceable file."""
+    with open(os.path.join(filename), "w") as f:
+        for var_name in sorted(os.environ):
+            if (
+                # Ignore environment variables whose names will make
+                # the "export" commands invalid. Such variables (for
+                # instance PROGRAMFILES(X86) on Windows systems) are
+                # generally set system-wide, so capturing them here is
+                # not useful.
+                "(" in var_name
+                # Also ignore variables known to be readonly on Cygwin
+                # systems. Other users are unlikely to be affected.
+                or var_name in ("PROFILEREAD", "SHELLOPTS")
+            ):
+                continue
+
+            var_value = os.environ[var_name]
+
+            # For Cygwin tools, turn Windows-style dirnames to
+            # Unix-style ones for PATH.
+            if (
+                var_name == "PATH"
+                and env.build.os.name == "windows"
+                and os.path.pathsep in var_value
+            ):
+                var_value = ":".join(
+                    unixpath(p) for p in var_value.split(os.path.pathsep)
+                )
+
+            f.write(f"export {var_name}={quote_arg(var_value)}\n")
