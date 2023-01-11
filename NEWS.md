@@ -1,6 +1,7 @@
 26.0 (Not released yet)
 =======================
 
+* Make it easier to generate a GAIA-compatible report without a testsuite run.
 * Disable the use of ANSI sequences in logging when `--nocolor` is passed.
 * Make `DiffTestDriver` perform a full match for regexp baselines.
 * Fix memory leaks for test driver data.

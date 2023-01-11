@@ -562,7 +562,12 @@ class TestsuiteCore:
                 self.main.args.xunit_output,
             )
         if self.main.args.gaia_output:
-            dump_gaia_report(self, self.output_dir, self.gaia_result_files)
+            dump_gaia_report(
+                report_index=self.report_index,
+                output_dir=self.output_dir,
+                discs=getattr(self.env, "discs", None),
+                result_files=self.gaia_result_files,
+            )
 
         # Clean everything
         self.tear_down()
