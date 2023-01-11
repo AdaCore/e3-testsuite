@@ -123,7 +123,7 @@ def create_report(results, tmp_path):
     """Create a report index in "tmp_path" for the given results."""
     index = ReportIndex(tmp_path)
     for r in results:
-        index.add_result(r, r.save(tmp_path))
+        index.add_result(r.summary, r.save(tmp_path))
     index.write()
     return index
 
@@ -133,6 +133,8 @@ def create_result(
     status,
     msg="",
     log="",
+    out=None,
+    expected=None,
     diff=None,
     time=None,
     failure_reasons=None,
@@ -140,6 +142,10 @@ def create_result(
     """Create a TestResult instance."""
     result = Result(name, status=status, msg=msg)
     result.log += log
+    if out is not None:
+        result.out = Log(out)
+    if expected is not None:
+        result.expected = Log(expected)
     if diff is not None:
         result.diff = Log(diff)
     result.time = time

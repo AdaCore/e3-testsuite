@@ -15,7 +15,7 @@ from e3.testsuite.result import FailureReason, Log, TestResult, TestStatus
 
 # Import TestsuiteCore only for typing, as this creates a circular import
 if TYPE_CHECKING:
-    from e3.testsuite import TestsuiteCore
+    from e3.testsuite.report.index import ReportIndex
 
 
 STATUS_MAP = {
@@ -166,58 +166,74 @@ def dump_result_logs_if_needed(
     )
 
 
+def dump_discriminants(discs: object, output_dir: str) -> None:
+    """
+    Dump discriminants for a GAIA-compatible testsuite report.
+
+    :param discs: List of discriminants to dump.  Just like OptFileParse,
+        accept either a string (comma-separated list of discriminant names) or
+        a list of strings (list of discriminant names). Do nothing in other
+        cases.
+    :param output_dir: Directory in which to emit the report.
+    """
+    # Create the "discs" file if we had a supported type for "discs", even if
+    # the list is empty, but don't create this file otherwise.
+    discs_list: Optional[List[str]] = None
+    if isinstance(discs, str):
+        discs_list = discs.split(",")
+    elif isinstance(discs, list) and all(isinstance(d, str) for d in discs):
+        discs_list = discs
+    if discs_list is not None:
+        with open(
+            os.path.join(output_dir, "discs"), "w", encoding="utf-8"
+        ) as f:
+            if discs_list:
+                f.write(" ".join(discs_list))
+                f.write("\n")
+
+
 def dump_gaia_report(
-    testsuite: TestsuiteCore,
+    report_index: ReportIndex,
     output_dir: str,
-    result_files: Dict[str, GAIAResultFiles],
+    discs: object = None,
+    result_files: Optional[Dict[str, GAIAResultFiles]] = None,
 ) -> None:
     """Dump a GAIA-compatible testsuite report.
 
-    :param testsuite: Testsuite instance, which have run its testcases, for
-        which to generate the report.
+    :param report_index: ReportIndex instance for all the test results to
+        include in the report.
     :param output_dir: Directory in which to emit the report.
+    :param discs: List of discriminants associated to the testsuite report, if
+        any. See "dump_discriminants" for the expected format.
     :param result_files: If the log files for each result have already been
-        generated, mapping from test names to result file names.
+        generated, mapping from test names to result file names. None
+        otherwise.
     """
     # If the result files are already generated, make sure we have exactly one
     # set of files per test result.
     if result_files is not None:
-        assert set(result_files) == set(testsuite.report_index.entries)
+        assert set(result_files) == set(report_index.entries)
 
     # If there is a list of discriminants (i.e. in legacy AdaCore testsuites:
     # see AdaCoreLegacyTestDriver), include it in the report.
-    #
-    # Just like OptFileParse, accept either a string (comma-separated list of
-    # discriminant names) or a list of strings (list of discriminant names).
-    # Create the "discs" file if we had either one, even if the list is empty,
-    # but don't create this file otherwise.
-    discs_attr = getattr(testsuite.env, "discs", None)
-    discs: Optional[List[str]] = None
-    if isinstance(discs_attr, str):
-        discs = discs_attr.split(",")
-    elif isinstance(discs_attr, list) and all(
-        isinstance(d, str) for d in discs_attr
-    ):
-        discs = discs_attr
-    if discs is not None:
-        with open(
-            os.path.join(output_dir, "discs"), "w", encoding="utf-8"
-        ) as discs_fd:
-            if discs:
-                discs_fd.write(" ".join(discs))
-                discs_fd.write("\n")
+    dump_discriminants(discs, output_dir)
 
     with open(
         os.path.join(output_dir, "results"), "w", encoding="utf-8"
     ) as results_fd:
-        for entry in testsuite.report_index.entries.values():
+        for entry in report_index.entries.values():
             # Add an entry for it in the "results" index file
             message = entry.msg or ""
             status = gaia_status(entry.status, entry.failure_reasons)
             results_fd.write(f"{entry.test_name}:{status}:{message}\n")
 
-            # Result files are already generated: move them where expected
-            files = result_files[entry.test_name]
+            # Generate result files if they are not generated yet, then move
+            # them where expected.
+            files = (
+                dump_result_logs(entry.load(), output_dir)
+                if result_files is None else
+                result_files[entry.test_name]
+            )
             for ext, filename in dataclasses.asdict(files).items():
                 if filename is not None:
                     new_filename = os.path.join(
