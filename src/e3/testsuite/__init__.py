@@ -30,7 +30,6 @@ from e3.env import Env
 from e3.fs import rm, mkdir, mv
 from e3.job.scheduler import Scheduler
 from e3.main import Main
-from e3.os.fs import unixpath
 from e3.os.process import quote_arg
 from e3.testsuite._helpers import deprecated
 from e3.testsuite.report.gaia import (
@@ -51,6 +50,7 @@ from e3.testsuite.testcase_finder import (
 from e3.testsuite.utils import (
     CleanupMode,
     ColorConfig,
+    dump_environ,
     enum_to_cmdline_args_map,
     isatty,
 )
@@ -955,37 +955,7 @@ class TestsuiteCore:
             self.old_output_dir = old_output_dir
 
         if args.dump_environ:
-            with open(os.path.join(self.output_dir, "environ.sh"), "w") as f:
-                for var_name in sorted(os.environ):
-                    if (
-                        # Ignore environment variables whose names will make
-                        # the "export" commands invalid. Such variables (for
-                        # instance PROGRAMFILES(X86) on Windows systems) are
-                        # generally set system-wide, so capturing them here is
-                        # not useful.
-                        "(" in var_name
-
-                        # Also ignore variables known to be readonly on Cygwin
-                        # systems. Other users are unlikely to be affected.
-                        or var_name in ("PROFILEREAD", "SHELLOPTS")
-                    ):
-                        continue
-
-                    var_value = os.environ[var_name]
-
-                    # For Cygwin tools, turn Windows-style dirnames to
-                    # Unix-style ones for PATH.
-                    if (
-                        var_name == "PATH"
-                        and self.env.build.os.name == "windows"
-                        and os.path.pathsep in var_value
-                    ):
-                        var_value = ":".join(
-                            unixpath(p)
-                            for p in var_value.split(os.path.pathsep)
-                        )
-
-                    f.write(f"export {var_name}={quote_arg(var_value)}\n")
+            dump_environ(os.path.join(self.output_dir, "environ.sh"), self.env)
 
     def run_standard_mainloop(self, dag: DAG) -> None:
         """Run the main loop to execute test fragments in threads."""
