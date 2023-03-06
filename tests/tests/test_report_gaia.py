@@ -63,9 +63,12 @@ def test_basics(tmp_path):
                 "foo2:DIFF:baseline diff\n"
                 "foo3:XFAIL:\n"
             ),
+            "foo1.result": "OK:foo1 is ok\n",
             "foo1.log": "Logs for foo1.\n",
+            "foo2.result": "DIFF:baseline diff\n",
             "foo2.out": "foo\nbar\n",
             "foo2.expected": "foo\nbar\nbaz\n",
             "foo2.diff": "<some-diff>",
+            "foo3.result": "XFAIL:\n",
         },
     )

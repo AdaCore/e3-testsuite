@@ -69,6 +69,7 @@ class GAIAResultFiles:
     the names for the files, when present, corresponding to a given result.
     """
 
+    result: Optional[str]
     log: Optional[str]
     expected: Optional[str]
     out: Optional[str]
@@ -112,6 +113,10 @@ def dump_result_logs(result: TestResult, output_dir: str) -> GAIAResultFiles:
             f.write(log)
             return f.name
 
+    status = gaia_status(result.status, result.failure_reasons)
+    comment = result.msg or ""
+    result_file = write_log(f"{status}:{comment}\n", ".result")
+
     if result.log:
         log = unwrap_log(result.log)
         assert isinstance(log, str)
@@ -149,7 +154,13 @@ def dump_result_logs(result: TestResult, output_dir: str) -> GAIAResultFiles:
         )
 
     return GAIAResultFiles(
-        log_file, expected_file, out_file, diff_file, time_file, info_file
+        result_file,
+        log_file,
+        expected_file,
+        out_file,
+        diff_file,
+        time_file,
+        info_file,
     )
 
 
