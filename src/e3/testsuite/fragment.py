@@ -143,7 +143,7 @@ class TestFragment:
         consumption under control for big testsuites: test driver instances may
         contain a lot of data.
         """
-        pass
+        ...
 
 
 class ThreadTestFragment(e3.job.Job, TestFragment):
