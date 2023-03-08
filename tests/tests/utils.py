@@ -138,9 +138,11 @@ def create_result(
     diff=None,
     time=None,
     failure_reasons=None,
+    encoding=None,
 ):
     """Create a TestResult instance."""
     result = Result(name, status=status, msg=msg)
+    result.env = {}
     result.log += log
     if out is not None:
         result.out = Log(out)
@@ -151,4 +153,8 @@ def create_result(
     result.time = time
     if failure_reasons:
         result.failure_reasons.update(failure_reasons)
+
+    if encoding:
+        result.env["encoding"] = encoding
+
     return result
