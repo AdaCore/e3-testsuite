@@ -151,7 +151,7 @@ def test_required():
 
 
 def run_opt_parser_script(filename, tags=None):
-    """Call e3-opt-parser and returning the corresponding e3.os.process.Run object."""
+    """Call e3-opt-parser and return the corresponding Run object."""
     parser_cmd = [
         "e3-opt-parser",
         os.path.join(os.path.dirname(__file__), "optfiles", filename),

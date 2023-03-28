@@ -530,10 +530,12 @@ class TestsuiteCore:
         # Record modules lookup path, including for the file corresponding to
         # the __main__ module.  Subprocesses will need it to have access to the
         # same modules.
-        main_module = sys.modules["__main__"]
-        self.env.modules_search_path = [
-            os.path.dirname(os.path.abspath(main_module.__file__))
-        ] + sys.path
+        self.env.modules_search_path = list(sys.path)
+        main_module_file = sys.modules["__main__"].__file__
+        if main_module_file is not None:
+            self.env.modules_search_path.insert(
+                0, os.path.dirname(os.path.abspath(main_module_file))
+            )
 
         # Now that the env is supposed to be complete, dump it for the test
         # fragments to pick it up.
@@ -627,7 +629,6 @@ class TestsuiteCore:
         def add_testcase(
             pattern: Optional[Pattern[str]], test: ParsedTest
         ) -> None:
-
             # Do not add this testcase if its test-specific matcher does not
             # match the requested pattern.
             if test.test_matcher and not matches_pattern(

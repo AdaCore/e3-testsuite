@@ -306,6 +306,7 @@ class ProcessTestFragment(
                 status=TestStatus.ERROR,
                 msg="Worker process stopped with an error",
             )
+            assert self.process.out is not None
             result.log += self.process.out
             self.driver.push_result(result)
             return

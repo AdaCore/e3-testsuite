@@ -242,8 +242,8 @@ def dump_gaia_report(
             # them where expected.
             files = (
                 dump_result_logs(entry.load(), output_dir)
-                if result_files is None else
-                result_files[entry.test_name]
+                if result_files is None
+                else result_files[entry.test_name]
             )
             for ext, filename in dataclasses.asdict(files).items():
                 if filename is not None:

@@ -20,7 +20,7 @@
 # -- Project information -----------------------------------------------------
 
 project = "e3-testsuite"
-copyright = "2020, AdaCore"
+project_copyright = "2020, AdaCore"
 author = "AdaCore"
 
 # The short X.Y version

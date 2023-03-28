@@ -232,8 +232,8 @@ class ClassicTestDriver(TestDriver):
         # Testsuites sometimes need to deal with binary data (or unknown
         # encodings, which is equivalent), so always use subp.raw_out.
         stdout: Union[str, bytes]
+        assert isinstance(subp.raw_out, bytes)
         stdout = subp.raw_out
-        assert isinstance(stdout, bytes)
         encoding = encoding or self.default_encoding
         if encoding != "binary":
             try:
