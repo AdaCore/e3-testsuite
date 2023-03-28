@@ -265,7 +265,6 @@ class TestCleanupMode:
             return crtl.TestControl(xfail="xpass" in name or "xfail" in name)
 
     class MyDriver(classic.ClassicTestDriver):
-
         copy_test_directory = False
 
         @property

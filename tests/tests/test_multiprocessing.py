@@ -64,7 +64,8 @@ class TestEnable:
 class TestCollectError:
     """Check issues in result collection are properly handled.
 
-    * check_process_error checks that non-zero subprocess exit codes are reported.
+    * check_process_error checks that non-zero subprocess exit codes are
+      reported.
     * check_unpicklable checks that corrupted process outputs are reported.
     """
 

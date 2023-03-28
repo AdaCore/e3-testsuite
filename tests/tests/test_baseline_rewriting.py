@@ -184,7 +184,7 @@ def test_no_report(tmp_path):
     except RewritingError as exc:
         br.print_error(str(exc))
     else:
-        assert False
+        raise AssertionError()
 
 
 def test_gaia_short_status(tmp_path):

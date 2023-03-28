@@ -62,7 +62,8 @@ class TestBasic:
             return "default"
 
     def test(self):
-        # Run the testsuite and check both the in-memory report and the on-disk one
+        # Run the testsuite and check both the in-memory report and the on-disk
+        # one.
         result = {"test1": Status.PASS, "test2": Status.PASS}
         suite = run_testsuite(self.Mysuite)
         assert extract_results(suite) == result

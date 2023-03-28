@@ -9,8 +9,7 @@ from e3.testsuite.report.index import ReportIndex
 from e3.testsuite.result import TestStatus
 
 
-def add_time_attribute(elt: etree.Element,
-                       duration: Optional[float]) -> None:
+def add_time_attribute(elt: etree.Element, duration: Optional[float]) -> None:
     """Optionally add a "time" attribute.
 
     If ``duration`` is a float, add the corresponding "time" attribute to

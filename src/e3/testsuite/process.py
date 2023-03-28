@@ -45,6 +45,7 @@ def check_call(
     # investigation.
     result.log += "Status code: {}\n".format(process.status)
     result.log += "Output:\n"
+    assert process.out is not None
     result.log += process.out
 
     if process.status != 0:

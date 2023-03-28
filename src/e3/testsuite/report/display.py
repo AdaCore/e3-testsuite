@@ -320,7 +320,6 @@ def generate_report(
     failure_reason_stats = sorted_counters(count_failure_reasons, key=get_key)
 
     if stats:
-
         # If this information is available, report new skipped tests and
         # removed tests.
         if old_index:
@@ -484,9 +483,7 @@ def main(argv: Optional[List[str]] = None) -> None:
     # Return the appropriate status code: the failure status code from the
     # --failure-exit-code=N option when there is a least one testcase failure,
     # or 0.
-    return (args.failure_exit_code
-            if new_index.has_failures
-            else 0)
+    return args.failure_exit_code if new_index.has_failures else 0
 
 
 if __name__ == "__main__":  # interactive-only

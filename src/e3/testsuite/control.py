@@ -122,7 +122,7 @@ class YAMLTestControlCreator(TestControlCreator):
 
         for i, entry in enumerate(control, 1):
 
-            def error(message: str) -> NoReturn:
+            def error(message: str, i: int = i) -> NoReturn:
                 raise ValueError("entry #{}: {}".format(i, message))
 
             if (

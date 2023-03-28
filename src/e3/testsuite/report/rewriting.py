@@ -95,9 +95,9 @@ class BaseBaselineRewriter(abc.ABC):
             f"could not find testsuite results in {results_dir}"
         )
 
-    def rewrite_from_index(self,
-                           summary: RewritingSummary,
-                           index: ReportIndex) -> None:
+    def rewrite_from_index(
+        self, summary: RewritingSummary, index: ReportIndex
+    ) -> None:
         """Rewrite baselines from a native e3-testsuite report index."""
         for test_name, entry in index.entries.items():
             # Only rewrite the output of (not expected) failed tests, and which
@@ -133,9 +133,9 @@ class BaseBaselineRewriter(abc.ABC):
                     summary, test_name, "test aborted because of an error"
                 )
 
-    def rewrite_from_gaia(self,
-                          summary: RewritingSummary,
-                          results: list[str]) -> None:
+    def rewrite_from_gaia(
+        self, summary: RewritingSummary, results: list[str]
+    ) -> None:
         """Rewrite baselines from a GAIA report."""
         for filename in results:
             test_name = os.path.splitext(os.path.basename(filename))[0]
@@ -184,19 +184,20 @@ class BaseBaselineRewriter(abc.ABC):
                     summary, test_name, "test status is CRASH/PROBLEM/TIMEOUT"
                 )
 
-    def handle_test_error(self,
-                          summary: RewritingSummary,
-                          test_name: str,
-                          reason: str) -> None:
+    def handle_test_error(
+        self, summary: RewritingSummary, test_name: str, reason: str
+    ) -> None:
         """Notify users that a test result is an error."""
         summary.errors.add(test_name)
         self.print_warning(f"cannot update baseline for {test_name}: {reason}")
 
-    def handle_test_diff(self,
-                         summary: RewritingSummary,
-                         test_name: str,
-                         new_baseline: bytes | str,
-                         encoding: str) -> None:
+    def handle_test_diff(
+        self,
+        summary: RewritingSummary,
+        test_name: str,
+        new_baseline: bytes | str,
+        encoding: str,
+    ) -> None:
         """Rewrite the baseline of a single test."""
         filename = self.baseline_filename(test_name)
         baseline_exists = os.path.exists(filename)

@@ -186,9 +186,9 @@ class TestDoubleDiff:
         )
         assert extract_results(suite) == {"test1": Status.FAIL}
 
-        # When multiple diff failures are involved, we expect .expected/.out to be
-        # empty, as this formalism assumes that a single output comparison. We
-        # expect .diff to contain both diff's though.
+        # When multiple diff failures are involved, we expect .expected/.out to
+        # be empty, as this formalism assumes that a single output comparison.
+        # We expect .diff to contain both diff's though.
         result = suite.report_index.entries["test1"].load()
         assert result.expected is None
         assert result.out is None
