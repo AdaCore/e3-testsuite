@@ -14,7 +14,7 @@ from .utils import (
     MultiSchedulingSuite,
     extract_results,
     run_testsuite,
-    testsuite_logs,
+    suite_logs,
 )
 
 
@@ -110,7 +110,7 @@ def test_optfile(caplog):
         'extra-control: "control" entry found in test.yaml whereas only'
         " test.opt files are considered"
     )
-    assert message in testsuite_logs(caplog)
+    assert message in suite_logs(caplog)
 
 
 def test_rewriting(caplog):

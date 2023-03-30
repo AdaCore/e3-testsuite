@@ -114,7 +114,7 @@ def run_testsuite(cls, args=None, multiprocessing=False, expect_failure=False):
     return suite
 
 
-def testsuite_logs(caplog):
+def suite_logs(caplog):
     """Helper to extract messages of testsuite log records."""
     return {r.getMessage() for r in caplog.records if r.name == "testsuite"}
 
