@@ -10,6 +10,7 @@ repos:
         - flake8-docstrings
         - flake8-rst-docstrings
         - pygments
+      args: [--config=.flake8]
   - repo: https://github.com/ambv/black
     rev: 22.3.0
     hooks:
