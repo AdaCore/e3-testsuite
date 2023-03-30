@@ -4,9 +4,10 @@ import logging
 import os
 import sys
 
-import yaml
+from e3.env import Env
 from e3.main import Main
 from e3.os.process import Run
+import e3.yaml
 
 
 def main() -> int:
@@ -28,8 +29,7 @@ def main() -> int:
         root_dir = new_root_dir
     config_file = os.path.join(root_dir, "e3-test.yaml")
 
-    with open(config_file, "rb") as fd:
-        config = yaml.load(fd)
+    config = e3.yaml.load_with_config(config_file, Env().to_dict())
 
     if "main" not in config:
         logging.error("cannot find testsuite main")

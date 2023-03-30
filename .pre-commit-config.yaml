@@ -22,3 +22,6 @@ repos:
     - id: mypy
       files: '\.py$'
       exclude: '^(tests|doc)/.+$'
+      additional_dependencies:
+        - types-PyYAML
+        - types-setuptools
