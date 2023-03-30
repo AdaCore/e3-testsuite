@@ -17,7 +17,7 @@ from .utils import (
     create_testsuite,
     extract_results,
     run_testsuite,
-    testsuite_logs,
+    suite_logs,
 )
 
 
@@ -212,7 +212,7 @@ class TestClassic:
             'suspicious-test-opt: "test.opt" file found whereas only "control"'
             " entries are considered"
         )
-        assert log in testsuite_logs(caplog)
+        assert log in suite_logs(caplog)
 
         # Check that XPASS result prints the XFAIL message
         assert suite.report_index.entries["xpassed"].msg == "XFAIL message"

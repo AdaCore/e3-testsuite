@@ -35,7 +35,7 @@ from .utils import (
     extract_results,
     run_testsuite,
     run_testsuite_status,
-    testsuite_logs,
+    suite_logs,
 )
 
 
@@ -126,7 +126,7 @@ class TestInvalidFilterPattern:
             message.startswith(
                 "Test pattern is not a valid regexp, try to match it as-is: "
             )
-            for message in testsuite_logs(caplog)
+            for message in suite_logs(caplog)
         )
 
 
@@ -179,7 +179,7 @@ class TestNoTestcase:
 
     def test(self, caplog):
         suite = run_testsuite(self.Mysuite)
-        logs = testsuite_logs(caplog)
+        logs = suite_logs(caplog)
         assert extract_results(suite) == {}
         assert any("<no test result>" in message for message in logs)
 
@@ -311,7 +311,7 @@ class TestNotExistingTempDir:
         # Check that the testsuite aborted and that we have the expected error
         # message.
         run_testsuite(self.Mysuite, ["--temp-dir=tmp"], expect_failure=True)
-        logs = testsuite_logs(caplog)
+        logs = suite_logs(caplog)
         assert any(
             re.search("temp dir '.*tmp' does not exist", entry)
             for entry in logs
@@ -564,7 +564,7 @@ class TestShowErrorOutput:
         run_testsuite(
             self.Mysuite, ["--show-error-output"], expect_failure=True
         )
-        logs = testsuite_logs(caplog)
+        logs = suite_logs(caplog)
         assert any("Work is being done" in message for message in logs)
 
 
