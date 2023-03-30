@@ -243,7 +243,7 @@ class ClassicTestDriver(TestDriver):
                     "cannot decode process output ({}: {})".format(
                         type(exc).__name__, exc
                     )
-                )
+                ) from exc
 
         # We run subprocesses in foreground mode, so by the time Run's
         # constructor has returned, the subprocess is supposed to have

@@ -197,7 +197,7 @@ class DiffTestDriver(ClassicTestDriver):
                 "cannot read baseline file ({}: {})".format(
                     type(exc).__name__, exc
                 )
-            )
+            ) from exc
         return (filename, baseline, is_regexp)
 
     @property

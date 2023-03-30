@@ -112,8 +112,8 @@ class YAMLTestFinder(TestFinder):
         # Load the YAML file to build the test environment
         try:
             test_env = e3.yaml.load_with_config(yaml_file, Env().to_dict())
-        except e3.yaml.YamlError:
-            raise ProbingError("invalid syntax for test.yaml")
+        except e3.yaml.YamlError as exc:
+            raise ProbingError("invalid syntax for test.yaml") from exc
 
         # Ensure that the test_env act like a dictionary. We still accept None
         # as it's a shortcut for "just use default driver" configuration files.
@@ -128,8 +128,8 @@ class YAMLTestFinder(TestFinder):
         else:
             try:
                 driver_cls = testsuite.test_driver_map[driver_name]
-            except KeyError:
-                raise ProbingError("cannot find driver")
+            except KeyError as exc:
+                raise ProbingError("cannot find driver") from exc
 
         return ParsedTest(test_name, driver_cls, test_env, dirpath)
 
