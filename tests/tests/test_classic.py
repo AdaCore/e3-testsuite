@@ -132,10 +132,10 @@ class ScriptDriver(classic.ClassicTestDriver):
 
         try:
             self.process_config = self.test_env["process"]
-        except KeyError:
+        except KeyError as exc:
             raise classic.TestAbortWithError(
                 "Missing 'process' test.yaml entry"
-            )
+            ) from exc
 
     def run(self):
         if self.test_env.get("force-skip", False):
