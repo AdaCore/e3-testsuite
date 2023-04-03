@@ -34,7 +34,9 @@ jobs:
               run: |
                 pip install --upgrade pip
                 pip install tox
-                pip install mypy==0.800
+                pip install pyyaml
+                cd e3-testsuite
+                python3 .github/workflows/install-mypy-deps.py
 
             - name: Type check with Mypy
               run: |
