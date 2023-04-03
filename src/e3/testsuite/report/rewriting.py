@@ -212,7 +212,7 @@ class BaseBaselineRewriter(abc.ABC):
                 self.print_info(
                     f"no baseline file for {test_name}, creating it"
                 )
-            summary.new_baselines.add(test_name)
+                summary.new_baselines.add(test_name)
             with open(filename, "wb") as f:
                 f.write(baseline_bytes)
 

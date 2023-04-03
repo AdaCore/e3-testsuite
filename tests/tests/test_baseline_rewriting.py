@@ -3,7 +3,11 @@
 import os
 
 from e3.testsuite.report.gaia import dump_gaia_report
-from e3.testsuite.report.rewriting import BaseBaselineRewriter, RewritingError
+from e3.testsuite.report.rewriting import (
+    BaseBaselineRewriter,
+    RewritingError,
+    RewritingSummary,
+)
 from e3.testsuite.result import FailureReason, TestStatus as Status
 from e3.testsuite.utils import ColorConfig
 
@@ -105,14 +109,38 @@ updated_baselines = {
     "t-no-baseline": b"New baseline",
 }
 
+expected_summary = RewritingSummary(
+    errors={
+        "t-error",
+        "t-fail-no-reason",
+        "t-fail-diff-crash",
+        "t-out-none",
+    },
+    new_baselines={"t-latin-1", "t-no-baseline"},
+    deleted_baselines={"t-out-empty"},
+)
+
+# The GAIA format is less precise than the default one: its processing yields
+# slightly different results.
+gaia_updated_baselines = dict(updated_baselines)
+gaia_expected_summary = RewritingSummary(
+    set(expected_summary.errors),
+    set(expected_summary.new_baselines),
+    set(expected_summary.deleted_baselines),
+)
+
 # The GAIA format cannot distinguish the "no output" case from the "empty
 # output" one.
-gaia_updated_baselines = dict(updated_baselines)
 gaia_updated_baselines["t-out-none"] = b""
 
 # The encoding information is also lost in GAIA reports, so we have to assume
 # that everything is UTF-8.
 gaia_updated_baselines["t-latin-1"] = b"\xc3\xa9"
+
+# Some errors cannot be distinguished properly from actual diffs
+for t in ("t-fail-no-reason", "t-fail-diff-crash", "t-out-none"):
+    gaia_expected_summary.errors.remove(t)
+gaia_expected_summary.deleted_baselines.add("t-out-none")
 
 
 def baseline_filename(tmp_path, test_name):
@@ -162,7 +190,7 @@ def do_setup(tmp_path, initial_baselines, test_results, br_cls=BR):
 def test_report(tmp_path):
     """Test baseline updates from a "native" e3-testsuite report index."""
     br, report = do_setup(tmp_path, initial_baselines, test_results)
-    br.rewrite(report.results_dir)
+    assert br.rewrite(report.results_dir) == expected_summary
     check_baselines(tmp_path, updated_baselines)
 
 
@@ -172,7 +200,7 @@ def test_gaia(tmp_path):
     gaia_dir = tmp_path / "gaia"
     gaia_dir.mkdir()
     dump_gaia_report(report, gaia_dir)
-    br.rewrite(str(gaia_dir))
+    assert br.rewrite(str(gaia_dir)) == gaia_expected_summary
     check_baselines(tmp_path, gaia_updated_baselines)
 
 
@@ -225,7 +253,11 @@ def test_gaia_short_status(tmp_path):
         with (tmp_path / "gaia" / f"{test_name}.result").open("w") as f:
             f.write(letter)
 
-    br.rewrite(str(gaia_dir))
+    assert br.rewrite(str(gaia_dir)) == RewritingSummary(
+        errors={"t-problem"},
+        new_baselines=set(),
+        deleted_baselines=set(),
+    )
     check_baselines(tmp_path, updated_baselines)
 
 
@@ -248,6 +280,10 @@ def test_baseline_postprocessing(tmp_path):
     updated_baselines = {"t": b"new baseline"}
 
     br, report = do_setup(tmp_path, initial_baselines, test_results, PPBR)
-    br.rewrite(report.results_dir)
+    assert br.rewrite(report.results_dir) == RewritingSummary(
+        errors=set(),
+        new_baselines=set(),
+        deleted_baselines=set(),
+    )
 
     check_baselines(tmp_path, updated_baselines)
