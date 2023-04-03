@@ -116,6 +116,7 @@ expected_summary = RewritingSummary(
         "t-fail-diff-crash",
         "t-out-none",
     },
+    updated_baselines={"t-fail-diff", "t-bytes", "t-utf-8"},
     new_baselines={"t-latin-1", "t-no-baseline"},
     deleted_baselines={"t-out-empty"},
 )
@@ -125,6 +126,7 @@ expected_summary = RewritingSummary(
 gaia_updated_baselines = dict(updated_baselines)
 gaia_expected_summary = RewritingSummary(
     set(expected_summary.errors),
+    set(expected_summary.updated_baselines),
     set(expected_summary.new_baselines),
     set(expected_summary.deleted_baselines),
 )
@@ -255,6 +257,7 @@ def test_gaia_short_status(tmp_path):
 
     assert br.rewrite(str(gaia_dir)) == RewritingSummary(
         errors={"t-problem"},
+        updated_baselines={"t-diff"},
         new_baselines=set(),
         deleted_baselines=set(),
     )
@@ -282,6 +285,7 @@ def test_baseline_postprocessing(tmp_path):
     br, report = do_setup(tmp_path, initial_baselines, test_results, PPBR)
     assert br.rewrite(report.results_dir) == RewritingSummary(
         errors=set(),
+        updated_baselines={"t"},
         new_baselines=set(),
         deleted_baselines=set(),
     )

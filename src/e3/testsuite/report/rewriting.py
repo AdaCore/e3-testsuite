@@ -28,6 +28,14 @@ class RewritingSummary:
     Set of test names whose result was an error (baseline not updated).
     """
 
+    updated_baselines: set[str]
+    """Set of baselines that were updated.
+
+    These are the baselines that changed, but that were not created nor
+    deleted: they existed before the rewriting, they exist after and their
+    contents are different.
+    """
+
     new_baselines: set[str]
     """Set of test names whose baseline was updated (not empty)."""
 
@@ -74,7 +82,7 @@ class BaseBaselineRewriter(abc.ABC):
             a native e3-testsuite report index, or a GAIA report.
         :return: A summary of tests that were processed.
         """
-        summary = RewritingSummary(set(), set(), set())
+        summary = RewritingSummary(set(), set(), set(), set())
 
         # Try to detect the report format present in the results dir...
 
@@ -208,7 +216,9 @@ class BaseBaselineRewriter(abc.ABC):
             else new_baseline.encode(encoding)
         )
         if baseline_bytes:
-            if not baseline_exists:
+            if baseline_exists:
+                summary.updated_baselines.add(test_name)
+            else:
                 self.print_info(
                     f"no baseline file for {test_name}, creating it"
                 )
