@@ -37,10 +37,10 @@ class RewritingSummary:
     """
 
     new_baselines: set[str]
-    """Set of test names whose baseline was updated (not empty)."""
+    """Set of test names whose baseline was created."""
 
     deleted_baselines: set[str]
-    """Set of test names whose baseline file was removed (empty baseline)."""
+    """Set of test names whose baseline file was removed."""
 
 
 class BaseBaselineRewriter(abc.ABC):
