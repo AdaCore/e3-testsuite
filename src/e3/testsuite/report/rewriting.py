@@ -231,8 +231,8 @@ class BaseBaselineRewriter(abc.ABC):
                 self.print_info(
                     f"baseline file found for {test_name}, deleting it"
                 )
-            summary.deleted_baselines.add(test_name)
-            os.unlink(filename)
+                summary.deleted_baselines.add(test_name)
+                os.unlink(filename)
 
     def print_stderr(self, message: str, prefix: str, style: str = "") -> None:
         print(

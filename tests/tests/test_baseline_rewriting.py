@@ -196,6 +196,21 @@ def test_report(tmp_path):
     check_baselines(tmp_path, updated_baselines)
 
 
+def test_deleted_baseline(tmp_path):
+    """Test baseline deletion when the baseline is already missing."""
+    br, report = do_setup(tmp_path, initial_baselines, test_results)
+    # Remove the baseline
+    os.remove(os.path.join(tmp_path, "baselines", "t-out-empty.out"))
+    deleted_expected_summary = RewritingSummary(
+        set(expected_summary.errors),
+        set(expected_summary.updated_baselines),
+        set(expected_summary.new_baselines),
+        set(),
+    )
+    assert br.rewrite(report.results_dir) == deleted_expected_summary
+    check_baselines(tmp_path, updated_baselines)
+
+
 def test_gaia(tmp_path):
     """Test baseline updates from a GAIA report."""
     br, report = do_setup(tmp_path, initial_baselines, test_results)
