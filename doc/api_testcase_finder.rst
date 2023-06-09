@@ -53,8 +53,10 @@ be a testcase. The semantics for ``probe`` arguments are:
 
 When called, ``TestFinder.probe`` overriding methods are supposed to look at
 ``dirpath``, ``dirnames`` and ``filenames`` to determine whether this directory
-contains testcases. It must return a list of ``ParsedTest`` instances: each one
-will later be used to instantiate a ``TestDriver`` subclass for this testcase.
+contains testcases. If needed, it can also query the directory that contains
+all testcases with the ``testsuite.test_dir`` attribute. ``TestFinder.probe``
+must return a list of ``ParsedTest`` instances: each one will later be used to
+instantiate a ``TestDriver`` subclass for this testcase.
 
 .. note::
 
