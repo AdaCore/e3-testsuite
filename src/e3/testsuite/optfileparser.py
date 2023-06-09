@@ -316,5 +316,5 @@ def main(argv: Optional[List[str]] = None) -> None:
     print(str(opt_result))
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # no coverage
     main()
