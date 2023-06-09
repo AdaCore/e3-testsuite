@@ -95,8 +95,18 @@ class TestsuiteCore:
         """
         if root_dir is None:
             root_dir = os.path.dirname(inspect.getfile(type(self)))
+
         self.root_dir = os.path.abspath(root_dir)
+        """
+        Root directory for the testsuite, i.e. directory from which the test
+        directory (see ``self.test_dir``) is looked up.
+        """
+
         self.test_dir = os.path.join(self.root_dir, self.tests_subdir)
+        """
+        Root directory for the tree in which testcases are searched.
+        """
+
         logger.debug("Test directory: %s", self.test_dir)
         self.consecutive_failures = 0
         self.return_values: Dict[str, Any] = {}
