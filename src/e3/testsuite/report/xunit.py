@@ -19,6 +19,20 @@ def add_time_attribute(elt: etree.Element, duration: Optional[float]) -> None:
         elt.set("time", "{:0.3f}".format(duration))
 
 
+def escape_text(text: str) -> str:
+    """Escape non-printable characters from a string.
+
+    XML documents cannot contain null or control characters (except newlines).
+    """
+    result = list(text)
+    for i, c in enumerate(result):
+        # Replace non-printable characters with their Python escape sequence,
+        # but strip quotes.
+        if c < ' ' and c != '\n':
+            result[i] = ascii(c)[1:-1]
+    return "".join(result)
+
+
 def dump_xunit_report(name: str, index: ReportIndex, filename: str) -> None:
     """
     Dump a testsuite report to `filename` in the standard XUnit XML format.
@@ -88,17 +102,17 @@ def dump_xunit_report(name: str, index: ReportIndex, filename: str) -> None:
             status_elt = etree.Element(markup)
             testcase.append(status_elt)
             if counter_key in ("skipped", "errors", "failures") and result.msg:
-                status_elt.set("message", result.msg)
+                status_elt.set("message", escape_text(result.msg))
 
             if counter_key in ("errors", "failures"):
                 status_elt.set("type", "error")
 
             assert isinstance(result.log, str)
-            status_elt.text = result.log
+            status_elt.text = escape_text(result.log)
 
         elif result.log:
             system_out = etree.Element("system-out")
-            system_out.text = str(result.log)
+            system_out.text = escape_text(str(result.log))
             testcase.append(system_out)
 
         add_time_attribute(testcase, result.time)

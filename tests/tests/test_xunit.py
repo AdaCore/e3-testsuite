@@ -103,3 +103,40 @@ class TestTime:
 
         # We do control the value for the testcase
         assert testcase.get("time") == "1.234"
+
+
+class TestControlChars:
+    """
+    Check XUnit reports are valid when control chars are present in test outputs.
+    """
+
+    class MyDriver(Driver):
+        def add_test(self, dag):
+            self.add_fragment(dag, "run")
+
+        def run(self, prev, slot):
+            self.result.log += "Control character: \x01\nDone.\n"
+            self.result.set_status(Status.FAIL, "Another control char: \x02")
+            self.push_result()
+
+    def test(self, tmp_path):
+        xunit_file = str(tmp_path / "xunit.xml")
+        run_testsuite(
+            create_testsuite(["mytest"], self.MyDriver),
+            ["--xunit-output", xunit_file],
+            expect_failure=True,
+        )
+        testsuites = ET.parse(xunit_file).getroot()
+        testsuite = testsuites[0]
+        testcase = testsuite[0]
+        failure = testcase[0]
+
+        # Sanity checks
+        assert testsuites.tag == "testsuites"
+        assert testsuite.tag == "testsuite"
+        assert testcase.tag == "testcase"
+        assert testcase.get("name") == "mytest"
+        assert failure.tag == "failure"
+
+        assert failure.get("message") == "Another control char: \\x02"
+        assert failure.text == "Control character: \\x01\nDone.\n"
