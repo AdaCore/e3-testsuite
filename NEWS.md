@@ -1,6 +1,7 @@
 26.0 (Not released yet)
 =======================
 
+* Fix XUnit reports when logs include control characters.
 * Introduce `e3.testsuite.report.rewriting`.
 * GAIA reports: add missing ``.result`` file for each test.
 * Make it easier to generate a GAIA-compatible report without a testsuite run.
