@@ -402,6 +402,13 @@ class TestsuiteCore:
             " forces the use of multiprocessing even if any of these two"
             " conditions is false.",
         )
+        exec_group.add_argument(
+            "--skip-passed",
+            action="store_true",
+            help="Run only tests that did not pass in the previous testsuite"
+            " run. This attempts to find successful tests in the report stored"
+            " at the location where this run will create the testsuite report."
+        )
         parser.add_argument(
             "sublist", metavar="tests", nargs="*", default=[], help="test"
         )
@@ -442,6 +449,7 @@ class TestsuiteCore:
         # going to produce.
         self.output_dir: str
         self.old_output_dir: Optional[str]
+        self.old_report_index: ReportIndex
         self.setup_result_dirs()
         self.report_index = ReportIndex(self.output_dir)
 
@@ -523,6 +531,24 @@ class TestsuiteCore:
 
         # Retrieve the list of test
         self.test_list = self.get_test_list(self.main.args.sublist)
+
+        # If requested, filter out tests that passed the previous time
+        if self.main.args.skip_passed:
+
+            def should_skip(pt: ParsedTest) -> bool:
+                """Return whether the test ``pt`` should be skipped.
+
+                It should be skipped if 1) it was run last time and 2) it
+                passed or expectedly failed.
+                """
+                entry = self.old_report_index.entries.get(pt.test_name)
+                return entry is not None and entry.status in (
+                    TestStatus.PASS, TestStatus.XFAIL, TestStatus.XPASS
+                )
+
+            self.test_list = [
+                pt for pt in self.test_list if not should_skip(pt)
+            ]
 
         # Create a DAG to constraint the test execution order
         dag = DAG()
@@ -949,6 +975,20 @@ class TestsuiteCore:
         else:
             self.output_dir = os.path.join(d, "new")
             old_output_dir = os.path.join(d, "old")
+
+        # If this testsuite run should skip tests that passed in a previous
+        # testsuite run, try to load the previous testsuite report.
+        if args.skip_passed:
+            try:
+                self.old_report_index = ReportIndex.read(self.output_dir)
+            except OSError as exc:
+                logger.warning(
+                    f"Could not load the previous testsuite report: {exc}"
+                )
+
+                # Create a dummy report. We must run all tests that did not
+                # pass last time: with no result, all tests should run.
+                self.old_report_index = ReportIndex(self.output_dir)
 
         # Rotate results directories if requested. In both cases, make sure the
         # new results dir is clean.

@@ -1207,3 +1207,63 @@ class TestMemleak:
 
     def test_multiprocess(self):
         self.run_check(multiprocessing=True)
+
+
+class TestSkipPassed:
+    """Check that --skip-passed works as expected."""
+
+    class MyDriver(BasicDriver):
+        def run(self, prev, slot):
+            pass
+
+        def analyze(self, prev, slot):
+            _, status_name = self.test_name.split("-")
+            status = Status[status_name.upper()]
+            self.result.set_status(status)
+            self.push_result()
+
+    def test(self):
+        # Run the testsuite a first time. All tests should be scheduled and
+        # thus be present in the report.
+        tests_1 = [
+            "t1-pass",
+            "t1-fail",
+            "t1-xfail",
+            "t1-xpass",
+            "t1-verify",
+            "t1-skip",
+            "t1-not_applicable",
+            "t1-error",
+        ]
+        suite = run_testsuite(
+            create_testsuite(tests_1, self.MyDriver),
+            ["--skip-passed"],
+            expect_failure=True,
+        )
+        assert extract_results(suite) == {
+            "t1-pass": Status.PASS,
+            "t1-fail": Status.FAIL,
+            "t1-xfail": Status.XFAIL,
+            "t1-xpass": Status.XPASS,
+            "t1-verify": Status.VERIFY,
+            "t1-skip": Status.SKIP,
+            "t1-not_applicable": Status.NOT_APPLICABLE,
+            "t1-error": Status.ERROR,
+        }
+
+        # Run the testsuite a second time. All tests but PASS, XFAIL and XPASS
+        # ones should run, and the new one should run, too.
+        tests_2 = tests_1 + ["t2-pass"]
+        suite = run_testsuite(
+            create_testsuite(tests_2, self.MyDriver),
+            ["--skip-passed"],
+            expect_failure=True,
+        )
+        assert extract_results(suite) == {
+            "t1-fail": Status.FAIL,
+            "t1-verify": Status.VERIFY,
+            "t1-skip": Status.SKIP,
+            "t1-not_applicable": Status.NOT_APPLICABLE,
+            "t1-error": Status.ERROR,
+            "t2-pass": Status.PASS,
+        }

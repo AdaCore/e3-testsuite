@@ -1,6 +1,7 @@
 26.0 (Not released yet)
 =======================
 
+* Introduce a new testsuite option: `--skip-result`.
 * Fix XUnit reports when logs include control characters.
 * Introduce `e3.testsuite.report.rewriting`.
 * GAIA reports: add missing ``.result`` file for each test.
