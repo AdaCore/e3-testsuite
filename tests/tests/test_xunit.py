@@ -106,8 +106,10 @@ class TestTime:
 
 
 class TestControlChars:
-    """
-    Check XUnit reports are valid when control chars are present in test outputs.
+    """Check XUnit reports with control characters.
+
+    Check that XUnit reports are valid when control chars are present in test
+    outputs.
     """
 
     class MyDriver(Driver):
