@@ -6,8 +6,10 @@ import xml.etree.ElementTree as ET
 
 from e3.testsuite import Testsuite as Suite
 from e3.testsuite.driver import BasicTestDriver as BasicDriver
-from e3.testsuite.report.display import main
+from e3.testsuite.report.index import ReportIndex
+from e3.testsuite.report.display import generate_report, main
 from e3.testsuite.result import FailureReason, TestStatus as Status
+from e3.testsuite.utils import ColorConfig
 
 from .utils import create_report, create_result, run_testsuite
 
@@ -428,6 +430,8 @@ def test_generate_text_report(tmp_path):
         "  2 executed (not skipped)\n"
         "  PASS         2\n"
         "\n"
+        "Result logs:\n"
+        "\n"
         "No relevant logs to display\n"
     )
 
@@ -461,6 +465,8 @@ def test_generate_text_report(tmp_path):
         "\n"
         "  1 fixed failure(s):\n"
         "    test2\n"
+        "\n"
+        "Result logs:\n"
         "\n"
         "No relevant logs to display\n"
     )
@@ -522,3 +528,56 @@ def test_xunit_output(tmp_path, capsys):
 
     # Just check that this produces a valid XML file
     ET.parse(xunit_file)
+
+
+def test_output_file(tmp_path, capsys):
+    """Check that nothing is printed on stdout when output is a file."""
+    create_report(
+        [
+            create_result(
+                "foo", Status.FAIL, msg="Problem", log="This test failed"
+            )
+        ],
+        tmp_path,
+    )
+    index = ReportIndex.read(str(tmp_path))
+    filename = str(tmp_path / "report.txt")
+    with open(filename, "w") as f:
+        generate_report(
+            output_file=f,
+            new_index=index,
+            old_index=None,
+            colors=ColorConfig(colors_enabled=False),
+            show_all_logs=True,
+            show_xfail_logs=True,
+            show_error_output=True,
+            show_time_info=True,
+        )
+
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert captured.err == ""
+
+    with open(filename) as f:
+        assert f.read() == (
+            "Summary:\n"
+            "\n"
+            "  Out of 1 results\n"
+            "  1 executed (not skipped)\n"
+            "  FAIL         1\n"
+            "\n"
+            "  The following results may need further investigation:\n"
+            "  1 new failure(s):\n"
+            "    foo: Problem\n"
+            "\n"
+            "Result logs:\n"
+            "\n"
+            "-----------------------------------------------------------------"
+            "--------------\n"
+            "FAIL            foo: Problem\n"
+            "-----------------------------------------------------------------"
+            "--------------\n"
+            "\n"
+            "This test failed\n"
+            "\n"
+        )
