@@ -1,6 +1,8 @@
 26.0 (Not released yet)
 =======================
 
+* `e3.testsuite.report.display.generate_report`: fix spurious write to
+  sys.stdout.
 * Introduce a new testsuite option: `--skip-result`.
 * Fix XUnit reports when logs include control characters.
 * Introduce `e3.testsuite.report.rewriting`.

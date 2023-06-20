@@ -442,7 +442,7 @@ def generate_report(
     # Finally, display results logs when relevant
     print(
         f"{colors.Style.BRIGHT}Result logs:{colors.Style.NORMAL}\n",
-        file=sys.stdout,
+        file=output_file,
     )
     for test_name in ordered_entries:
         lines = results_display.get(test_name)
