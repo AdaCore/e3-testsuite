@@ -17,7 +17,14 @@ from e3.testsuite.control import (
     YAMLTestControlCreator,
 )
 from e3.testsuite.driver import TestDriver
-from e3.testsuite.result import Log, TestResult, TestStatus, truncated
+from e3.testsuite.result import (
+    Log,
+    TestResult,
+    TestStatus,
+    binary_repr,
+    truncated,
+)
+from e3.testsuite.utils import indent
 
 from colorama import Fore, Style
 
@@ -239,6 +246,8 @@ class ClassicTestDriver(TestDriver):
             try:
                 stdout = stdout.decode(encoding)
             except UnicodeDecodeError as exc:
+                self.result.log += "Cannot decode subprocess output:\n\n"
+                self.result.log += indent(binary_repr(stdout))
                 raise TestAbortWithError(
                     "cannot decode process output ({}: {})".format(
                         type(exc).__name__, exc
