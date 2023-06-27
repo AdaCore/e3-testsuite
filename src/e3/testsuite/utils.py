@@ -123,3 +123,15 @@ def dump_environ(filename: str, env: Env) -> None:
                 )
 
             f.write(f"export {var_name}={quote_arg(var_value)}\n")
+
+
+def indent(text: str, prefix: str = "  ") -> str:
+    """Prepend ``prefix`` to every line in ``text``.
+
+    :param text: Text to transform.
+    :param prefix: String to prepend.
+    """
+    # Use .split() rather than .splitlines() because we need to preserve the
+    # last line if is empty. "a\n".splitlines() returns ["a"], so we must avoid
+    # it.
+    return "\n".join((prefix + line) for line in text.split("\n"))

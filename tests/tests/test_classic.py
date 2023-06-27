@@ -453,3 +453,27 @@ class TestMayHaveTimedOut:
 
         suite = run_testsuite(Mysuite, args=["-E", "test1"])
         assert extract_results(suite) == {"test1": Status.PASS}
+
+
+def test_decoding_error(caplog):
+    """Check that process output decoding errors are properly reported."""
+
+    class MyDriver(ScriptDriver):
+        def set_up(self):
+            self.test_env["process"] = {"args": ["-b"]}
+            super().set_up()
+
+    suite = run_testsuite(
+        create_testsuite(["t"], MyDriver),
+        args=["-E"],
+        expect_failure=True,
+    )
+    assert extract_results(suite) == {"t": Status.ERROR}
+    log = suite.report_index.entries["t"].load().log
+    assert re.match(
+        "Running: .*script.py -b \\(cwd=.*\\)"
+        "\nCannot decode subprocess output:"
+        "\n"
+        "\n  h\\\\xe9llo",
+        log,
+    )

@@ -1,6 +1,7 @@
 26.0 (Not released yet)
 =======================
 
+* Detailed logs in case of subprocess output decoding error.
 * `e3.testsuite.report.display.generate_report`: fix spurious write to
   sys.stdout.
 * Introduce a new testsuite option: `--skip-result`.

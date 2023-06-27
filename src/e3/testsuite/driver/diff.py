@@ -6,18 +6,7 @@ from e3.diff import diff
 from e3.os.fs import unixpath
 from e3.testsuite.result import FailureReason, Log, binary_repr, truncated
 from e3.testsuite.driver.classic import ClassicTestDriver, TestAbortWithError
-
-
-def indent(text: str, prefix: str = "  ") -> str:
-    """Prepend ``prefix`` to every line in ``text``.
-
-    :param text: Text to transform.
-    :param prefix: String to prepend.
-    """
-    # Use .split() rather than .splitlines() because we need to preserve the
-    # last line if is empty. "a\n".splitlines() returns ["a"], so we must avoid
-    # it.
-    return "\n".join((prefix + line) for line in text.split("\n"))
+from e3.testsuite.utils import indent
 
 
 class OutputRefiner(Generic[AnyStr]):
