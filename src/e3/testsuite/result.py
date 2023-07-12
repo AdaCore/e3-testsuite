@@ -298,11 +298,13 @@ class TestResult(yaml.YAMLObject):
     def __str__(self) -> str:
         return "%-24s %-12s %s" % (self.test_name, self.status, self.msg)
 
-    def save(self, output_dir: str) -> str:
+    def save(self, results_dir: str) -> str:
         """Write this test results as a YAML file.
 
-        :param output_dir: Name of the directory in which to write the test
-            result.
+        :param results_dir: Name of the directory in which to write the test
+            result. When writing a testsuite report, this corresponds to the
+            report's ``results_dir`` (see
+            ``e3.testsuite.report.index.ReportIndex``).
         :return: The base filename of the file written. It is generated from
             the testname.
         """
@@ -310,7 +312,7 @@ class TestResult(yaml.YAMLObject):
             mode="w",
             prefix=self.test_name + "-",
             suffix=".yaml",
-            dir=output_dir,
+            dir=results_dir,
             delete=False,
         ) as f:
             yaml.dump(self, f)
