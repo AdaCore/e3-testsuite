@@ -221,10 +221,12 @@ class TestResult(yaml.YAMLObject):
         self.status = TestStatus.ERROR if status is None else status
         self.msg: Optional[str] = msg
 
-        # Free-form text, for debugging purposes. Test drivers are invited to
-        # write content that will be useful if things go wrong during the test
-        # execution. This is what gets printed on the standard output when the
-        # test fails and the "--show-error-output" testsuite switch is present.
+        # Free-form text, for test execution post-mortem debugging purposes.
+        # Test drivers are invited to write content that will be useful if
+        # things go wrong during the test execution: test failure, test driver
+        # bug, and so on. This is what gets printed on the standard output when
+        # the test fails and the "--show-error-output" testsuite switch is
+        # present.
         self.log = Log("")
 
         # List of free-form information (but still serializable to YAML)
