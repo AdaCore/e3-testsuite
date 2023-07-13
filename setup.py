@@ -35,6 +35,7 @@ setup(
     entry_points={
         "console_scripts": [
             "e3-find-skipped-tests = e3.testsuite.find_skipped_tests:main",
+            "e3-convert-xunit = e3.testsuite.report.xunit:convert_main",
             "e3-opt-parser = e3.testsuite.optfileparser:main",
             "e3-run-test-fragment = e3.testsuite.fragment:run_fragment",
             "e3-test = e3.testsuite.main:main",
