@@ -86,11 +86,19 @@ class ReportIndex:
         Optional number of seconds for the total duration of the testsuite run.
         """
 
+    def save_and_add_result(self, result: TestResult) -> None:
+        """Save a test result in the results directory and add it to the index.
+
+        :param result: Test result to save/add.
+        """
+        self.add_result(result.summary, result.save(self.results_dir))
+
     def add_result(self, result: TestResultSummary, filename: str) -> None:
         """Add an entry to this index for the given test result.
 
-        Note that this does not write the result data in the results dir: it is
-        up to the caller to make sure of that.
+        Note that unlike ``save_and_add_result``, this does not write the
+        result data in the results dir: it is up to the caller to make sure of
+        that.
 
         :param result: Result to add.
         :param filename: Name of the file that contains test result data.

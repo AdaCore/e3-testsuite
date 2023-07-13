@@ -240,19 +240,21 @@ class ClassicTestDriver(TestDriver):
         # encodings, which is equivalent), so always use subp.raw_out.
         stdout: Union[str, bytes]
         assert isinstance(subp.raw_out, bytes)
-        stdout = subp.raw_out
+        stdout_bytes = subp.raw_out
         encoding = encoding or self.default_encoding
         if encoding != "binary":
             try:
-                stdout = stdout.decode(encoding)
+                stdout = stdout_bytes.decode(encoding)
             except UnicodeDecodeError as exc:
                 self.result.log += "Cannot decode subprocess output:\n\n"
-                self.result.log += indent(binary_repr(stdout))
+                self.result.log += indent(binary_repr(stdout_bytes))
                 raise TestAbortWithError(
                     "cannot decode process output ({}: {})".format(
                         type(exc).__name__, exc
                     )
                 ) from exc
+        else:
+            stdout = stdout_bytes
 
         # We run subprocesses in foreground mode, so by the time Run's
         # constructor has returned, the subprocess is supposed to have

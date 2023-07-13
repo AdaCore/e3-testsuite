@@ -92,9 +92,12 @@ Here is the exhaustive list of ``TestResult`` attributes:
 .. _api_test_result_log:
 
 ``log``
-   :ref:`Log <result_log>` instance to contain free-form text, for debugging
-   purposes. Test drivers can append content to it that will be useful for
-   post-mortem investigations if things go wrong during the test execution.
+   :ref:`Log <result_log>` instance to contain free-form text, for test
+   execution post-mortem debugging purposes. Test drivers are invited to write
+   content that will be useful if things go wrong during the test execution:
+   test failure, test driver bug, and so on. This is what gets printed on the
+   standard output when the test fails and the ``--show-error-output``
+   testsuite switch is present.
 
 ``processes``
    List of free-form information to describe the subprocesses that the test
