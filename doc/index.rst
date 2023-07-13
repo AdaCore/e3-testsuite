@@ -49,6 +49,7 @@ Topics
    api_control
    api_testsuite
    api_testcase_finder
+   api_report
    adacore
    multiprocessing
 
