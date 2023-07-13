@@ -1124,6 +1124,20 @@ def test_results_relocation(tmp_path):
     assert new_index.entries["bar"].load().status == Status.FAIL
 
 
+def test_index_save_and_add(tmp_path):
+    """Check that ReportIndex.save_and_add_result works as expected."""
+    # Write a report with two results
+    index = ReportIndex(str(tmp_path))
+    index.save_and_add_result(Result("foo", status=Status.PASS))
+    index.save_and_add_result(Result("bar", status=Status.FAIL))
+    index.write()
+
+    # Read it and make sure the results can be read
+    index = ReportIndex.read(str(tmp_path))
+    assert index.entries["foo"].load().status == Status.PASS
+    assert index.entries["bar"].load().status == Status.FAIL
+
+
 class TestMemleak:
     """Check the absence of memory leaks in a testsuite run."""
 
