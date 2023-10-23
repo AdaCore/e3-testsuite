@@ -1062,9 +1062,14 @@ class TestsuiteCore:
             return False
 
         # Create a scheduler to run all fragments for the testsuite main loop
+
+        jobs = self.main.args.jobs
+        if self.main.args.jobs <= 0:
+            jobs = os.cpu_count() or 1
+
         scheduler = Scheduler(
             job_provider=job_factory,
-            tokens=self.main.args.jobs,
+            tokens=jobs,
             collect=collect_result,
         )
 
