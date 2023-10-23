@@ -73,7 +73,7 @@ class TestAbort(Exception):
 class TestsuiteCore:
     """Testsuite Core driver.
 
-    This class is the base of Testsuite class and should not be instanciated.
+    This class is the base of Testsuite class and should not be instantiated.
     It's not recommended to override any of the functions declared in it.
 
     See documentation of Testsuite class for overridable methods and
