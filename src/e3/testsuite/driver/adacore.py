@@ -175,7 +175,8 @@ class AdaCoreLegacyTestDriver(DiffTestDriver):
                 new_script.append(". $TEST_SUPPORT_DIR/support.sh")
 
             # Read all lines in the original test script
-            with open(self.script_file, encoding=self.script_encoding) as f:
+            script_encoding = self.script_encoding
+            with open(self.script_file, encoding=script_encoding) as f:
                 # Get rid of potential whitespaces and CR at the end of
                 # each line.
                 for line in f:
@@ -186,14 +187,15 @@ class AdaCoreLegacyTestDriver(DiffTestDriver):
                             line = pattern.sub(replacement, line)
                     new_script.append(line)
 
-            # Write the shell script and schedule its execution with "bash"
+            # Write the shell script and schedule its execution with "bash". On
+            # Windows, Python interpreters may automatically add CR bytes
+            # before LR ones: open the file in binary mode to avoid this
+            # behavior, as "bash" would complain about CR bytes.
             new_script_filename = self.working_dir("__test.sh")
-            with open(
-                new_script_filename, "w", encoding=self.script_encoding
-            ) as f:
+            with open(new_script_filename, "wb") as f:
                 for line in new_script:
-                    f.write(line)
-                    f.write("\n")
+                    f.write(line.encode(script_encoding))
+                    f.write(b"\n")
             return ["bash", new_script_filename]
 
         else:  # os-specific
