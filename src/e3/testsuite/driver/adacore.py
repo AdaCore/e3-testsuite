@@ -117,6 +117,17 @@ class AdaCoreLegacyTestDriver(DiffTestDriver):
         """
         return list(self.default_substitutions)
 
+    @property
+    def script_encoding(self) -> str:
+        """Return the encoding to decode shell scripts.
+
+        By default, this is the same as the ``default_encoding`` property,
+        except in one case: when it returns ``binary``: assume UTF-8 in that
+        case.
+        """
+        result = self.default_encoding
+        return "utf-8" if result == "binary" else result
+
     def get_script_command_line(self) -> List[str]:
         """Return the command line to run the test script."""
         # Command line computation depends on the kind of script (Python or
@@ -164,7 +175,7 @@ class AdaCoreLegacyTestDriver(DiffTestDriver):
                 new_script.append(". $TEST_SUPPORT_DIR/support.sh")
 
             # Read all lines in the original test script
-            with open(self.script_file) as f:
+            with open(self.script_file, encoding=self.script_encoding) as f:
                 # Get rid of potential whitespaces and CR at the end of
                 # each line.
                 for line in f:
@@ -177,7 +188,9 @@ class AdaCoreLegacyTestDriver(DiffTestDriver):
 
             # Write the shell script and schedule its execution with "bash"
             new_script_filename = self.working_dir("__test.sh")
-            with open(new_script_filename, "w") as f:
+            with open(
+                new_script_filename, "w", encoding=self.script_encoding
+            ) as f:
                 for line in new_script:
                     f.write(line)
                     f.write("\n")
