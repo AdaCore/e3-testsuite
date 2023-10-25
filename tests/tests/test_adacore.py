@@ -256,3 +256,36 @@ def test_timeout():
             "pass:OK:",
             "timedout:TIMEOUT:unexpected output | test timed out",
         ]
+
+
+def test_script_encoding():
+    """Check that ACDriver correctly manages script encodings."""
+
+    class MyDriver(ACDriver):
+        @property
+        def default_encoding(self):
+            return self.test_env.get("encoding", "binary")
+
+        @property
+        def output_refiners(self):
+            return []
+
+    class Mysuite(Suite):
+        tests_subdir = "adacore-script-encoding-tests"
+        test_driver_map = {"mydriver": MyDriver}
+        default_driver = "mydriver"
+
+        def set_up(self):
+            super(Mysuite, self).set_up()
+            self.env.discs = []
+            self.env.test_environ = dict(os.environ)
+
+    suite = run_testsuite(Mysuite, ["-E"], expect_failure=True)
+    results = extract_results(suite)
+    assert results.pop("default") == Status.PASS
+    assert results.pop("latin-1") == Status.PASS
+    assert results.pop("utf-8") == Status.PASS
+    assert len(results) == 1
+    test_name, status = list(results.items())[0]
+    assert test_name.startswith("bad.run_wrapper__except")
+    assert status == Status.ERROR

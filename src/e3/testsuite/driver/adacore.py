@@ -117,6 +117,17 @@ class AdaCoreLegacyTestDriver(DiffTestDriver):
         """
         return list(self.default_substitutions)
 
+    @property
+    def script_encoding(self) -> str:
+        """Return the encoding to decode shell scripts.
+
+        By default, this is the same as the ``default_encoding`` property,
+        except in one case: when it returns ``binary``: assume UTF-8 in that
+        case.
+        """
+        result = self.default_encoding
+        return "utf-8" if result == "binary" else result
+
     def get_script_command_line(self) -> List[str]:
         """Return the command line to run the test script."""
         # Command line computation depends on the kind of script (Python or
@@ -164,7 +175,8 @@ class AdaCoreLegacyTestDriver(DiffTestDriver):
                 new_script.append(". $TEST_SUPPORT_DIR/support.sh")
 
             # Read all lines in the original test script
-            with open(self.script_file) as f:
+            script_encoding = self.script_encoding
+            with open(self.script_file, encoding=script_encoding) as f:
                 # Get rid of potential whitespaces and CR at the end of
                 # each line.
                 for line in f:
@@ -175,12 +187,15 @@ class AdaCoreLegacyTestDriver(DiffTestDriver):
                             line = pattern.sub(replacement, line)
                     new_script.append(line)
 
-            # Write the shell script and schedule its execution with "bash"
+            # Write the shell script and schedule its execution with "bash". On
+            # Windows, Python interpreters may automatically add CR bytes
+            # before LR ones: open the file in binary mode to avoid this
+            # behavior, as "bash" would complain about CR bytes.
             new_script_filename = self.working_dir("__test.sh")
-            with open(new_script_filename, "w") as f:
+            with open(new_script_filename, "wb") as f:
                 for line in new_script:
-                    f.write(line)
-                    f.write("\n")
+                    f.write(line.encode(script_encoding))
+                    f.write(b"\n")
             return ["bash", new_script_filename]
 
         else:  # os-specific

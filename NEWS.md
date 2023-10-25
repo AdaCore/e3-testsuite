@@ -1,6 +1,8 @@
 26.0 (Not released yet)
 =======================
 
+* `AdaCoreLegacyDriver`: avoid CRLF line endings in test scripts.
+* `AdaCoreLegacyDriver`: fix handling of non-ASCII test scripts.
 * Detailed logs in case of subprocess output decoding error.
 * `e3.testsuite.report.display.generate_report`: fix spurious write to
   sys.stdout.
