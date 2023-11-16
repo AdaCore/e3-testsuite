@@ -704,6 +704,13 @@ class TestsuiteCore:
             for dirpath, dirnames, filenames in os.walk(
                 root, followlinks=True
             ):
+                # Don't descend into internal VCS directories, because it will
+                # likely generate a lot of unnecessary I/O operations and we
+                # don't expect to find any tests there anyway.
+                for vcsdir in ['.git', '.svn', 'CVS']:
+                    if vcsdir in dirnames:
+                        dirnames.remove(vcsdir)
+
                 # If all tests are guaranteed to have a dedicated directory,
                 # do not process directories that don't match the requested
                 # pattern.
