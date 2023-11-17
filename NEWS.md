@@ -17,6 +17,7 @@
 * Include total testsuite and testcase durations in XUnit reports.
 * Add support for `--xunit-output` in `e3-testsuite-report`.
 * Add support for `--failure-exit-code` in `e3-testsuite-report`.
+* Ignore VCS directories like .git when looking for tests.
 
 25.0 (2022-08-31)
 =================
