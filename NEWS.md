@@ -1,6 +1,7 @@
 26.0 (Not released yet)
 =======================
 
+* Add a XUnit results importer for report indexes.
 * `AdaCoreLegacyDriver`: avoid CRLF line endings in test scripts.
 * `AdaCoreLegacyDriver`: fix handling of non-ASCII test scripts.
 * Detailed logs in case of subprocess output decoding error.
