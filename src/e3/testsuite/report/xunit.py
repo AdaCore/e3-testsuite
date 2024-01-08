@@ -11,6 +11,7 @@ import unicodedata
 import xml.etree.ElementTree as etree
 
 from e3.fs import mkdir
+from e3.testsuite.report.gaia import dump_gaia_report
 from e3.testsuite.report.index import ReportIndex
 from e3.testsuite.result import TestResult, TestStatus
 import e3.yaml
@@ -306,6 +307,12 @@ def convert_main(argv: list[str] | None = None) -> None:
         " current working directory.",
     )
     parser.add_argument(
+        "--gaia-output",
+        action="store_true",
+        help="Output a GAIA-compatible testsuite report next to the YAML"
+        " report.",
+    )
+    parser.add_argument(
         "--xfails",
         help="YAML file that describes expected failures. If provided, it must"
         " contain a mapping from test name to expected failure messages.",
@@ -330,3 +337,6 @@ def convert_main(argv: list[str] | None = None) -> None:
         else:
             importer.run(path)
     index.write()
+
+    if args.gaia_output:
+        dump_gaia_report(index, index.results_dir)
