@@ -1,6 +1,7 @@
 26.0 (Not released yet)
 =======================
 
+* `DiffTestDriver`: handle diff context size customization.
 * Add a XUnit results importer for report indexes.
 * `AdaCoreLegacyDriver`: avoid CRLF line endings in test scripts.
 * `AdaCoreLegacyDriver`: fix handling of non-ASCII test scripts.
