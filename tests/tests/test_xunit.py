@@ -352,3 +352,24 @@ def test_import_dirs(tmp_path):
     index = ReportIndex.read(results_dir)
 
     assert sorted(index.entries) == ["f1.t1", "f1.t2", "f2.t1", "f3.t1"]
+
+
+def test_gaia(tmp_path):
+    """Test GAIA-compatible report creation."""
+    xml_report = str(tmp_path / "test.xml")
+    with open(xml_report, "w") as f:
+        f.write(
+            """<?xml version="1.0" encoding="utf-8"?>
+            <testsuites name="MyTestsuites">
+              <testsuite name="MyTestsuite">
+                <testcase name="MyTestcase"></testcase>
+              </testsuite>
+            </testsuites>
+            """
+        )
+
+    results_dir = tmp_path / "results"
+    convert_main(["--gaia-output", "-o", str(results_dir), xml_report])
+
+    with open(str(results_dir / "results"), "r") as f:
+        assert f.read() == "MyTestsuite.MyTestcase:OK:\n"
