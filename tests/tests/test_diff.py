@@ -9,6 +9,7 @@ from e3.testsuite import Testsuite as Suite
 import e3.testsuite.driver.adacore as adacore
 import e3.testsuite.driver.diff as diff
 from e3.testsuite.result import TestStatus as Status
+from e3.testsuite.testcase_finder import ParsedTest
 
 from .utils import create_testsuite, extract_results, run_testsuite
 
@@ -73,6 +74,124 @@ def test_diff():
         "line-endings-strict": Status.FAIL,
         "refine-baseline": Status.PASS,
     }
+
+
+def test_diff_context_size():
+    """Check handling for the diff_context_size setting."""
+    baseline = "".join(f"{i}\n" for i in range(100))
+    actual = "".join(f"{i}\n" for i in range(100) if i != 20)
+
+    def create_test(name, driver, test_env):
+        return ParsedTest(name, driver, test_env, ".", None)
+
+    tests = []
+
+    # Test default behavior and overriding it with the test environment
+
+    class MyDriver(diff.DiffTestDriver):
+        def run(self):
+            pass
+
+        def compute_failures(self):
+            return self.compute_diff("output", baseline, actual)
+
+    tests += [
+        create_test("default", MyDriver, {}),
+        create_test("test_env", MyDriver, {"diff_context_size": 2}),
+    ]
+
+    # Test overriding through the diff_context_size property: it should
+    # short-circuit the test environment.
+
+    class MyDriver2(MyDriver):
+        @property
+        def diff_context_size(self):
+            return 2
+
+    tests += [
+        create_test("property", MyDriver2, {}),
+        create_test("property_test_env", MyDriver2, {"diff_context_size": 5}),
+    ]
+
+    # Test direct calls to DiffTestDriver.compute_diff: non-None context_size
+    # argument should override the rest.
+
+    class MyDriver3(MyDriver):
+        @property
+        def diff_context_size(self):
+            return 2
+
+        def compute_failures(self):
+            return self.compute_diff(
+                "output", baseline, actual, context_size=5
+            )
+
+    tests += [
+        create_test("method", MyDriver3, {}),
+        create_test("method_test_env", MyDriver3, {"diff_context_size": 10}),
+    ]
+
+    class MySuite(Suite):
+        def get_test_list(self, sublist):
+            return tests
+
+    suite = run_testsuite(MySuite, args=["-j1"], expect_failure=True)
+    assert extract_results(suite) == {
+        "default": Status.FAIL,
+        "test_env": Status.FAIL,
+        "property": Status.FAIL,
+        "property_test_env": Status.FAIL,
+        "method": Status.FAIL,
+        "method_test_env": Status.FAIL,
+    }
+
+    def check_diff(test_name, expected):
+        assert suite.report_index.entries[test_name].load().diff == expected
+
+    diff_context_1 = (
+        "Diff failure: unexpected output\n"
+        "--- expected\n"
+        "+++ output\n"
+        "@@ -20,3 +20,2 @@\n"
+        " 19\n"
+        "-20\n"
+        " 21\n"
+    )
+    diff_context_2 = (
+        "Diff failure: unexpected output\n"
+        "--- expected\n"
+        "+++ output\n"
+        "@@ -19,5 +19,4 @@\n"
+        " 18\n"
+        " 19\n"
+        "-20\n"
+        " 21\n"
+        " 22\n"
+    )
+    diff_context_5 = (
+        "Diff failure: unexpected output\n"
+        "--- expected\n"
+        "+++ output\n"
+        "@@ -16,11 +16,10 @@\n"
+        " 15\n"
+        " 16\n"
+        " 17\n"
+        " 18\n"
+        " 19\n"
+        "-20\n"
+        " 21\n"
+        " 22\n"
+        " 23\n"
+        " 24\n"
+        " 25\n"
+    )
+
+    check_diff("default", diff_context_1)
+    check_diff("test_env", diff_context_2)
+    check_diff("property", diff_context_2)
+    check_diff("property_test_env", diff_context_2)
+    check_diff("method", diff_context_5)
+    check_diff("method_test_env", diff_context_5)
 
 
 def test_regexp_fullmatch():

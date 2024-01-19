@@ -226,6 +226,11 @@ class DiffTestDriver(ClassicTestDriver):
         """
         return False
 
+    @property
+    def diff_context_size(self) -> int:
+        """Positive number of context lines to include in diff computations."""
+        return self.test_env.get("diff_context_size", 1)
+
     def set_up(self) -> None:
         super().set_up()
 
@@ -239,6 +244,7 @@ class DiffTestDriver(ClassicTestDriver):
         actual: AnyStr,
         failure_message: str = "unexpected output",
         ignore_white_chars: Optional[bool] = None,
+        context_size: Optional[int] = None,
         truncate_logs_threshold: Optional[int] = None,
     ) -> List[str]:
         """Compute the diff between expected and actual outputs.
@@ -254,6 +260,8 @@ class DiffTestDriver(ClassicTestDriver):
         :param ignore_white_chars: Whether to ignore whitespaces during the
             diff computation. If left to None, use
             ``self.diff_ignore_white_chars``.
+        :param context_size: Positive number of context lines to include in
+            diff computations. If left to None, use ``self.diff_context_size``.
         :param truncate_logs_threshold: Threshold to truncate the diff message
             in ``self.result.log``. See ``e3.testsuite.result.truncated``'s
             ``line_count`` argument. If left to None, use the testsuite's
@@ -261,6 +269,9 @@ class DiffTestDriver(ClassicTestDriver):
         """
         if ignore_white_chars is None:
             ignore_white_chars = self.diff_ignore_white_chars
+
+        if context_size is None:
+            context_size = self.diff_context_size
 
         if truncate_logs_threshold is None:
             truncate_logs_threshold = self.testsuite_options.truncate_logs
@@ -297,7 +308,10 @@ class DiffTestDriver(ClassicTestDriver):
         # include the diff in the test log and return the given failure
         # message.
         d = diff(
-            expected_lines, actual_lines, ignore_white_chars=ignore_white_chars
+            expected_lines,
+            actual_lines,
+            ignore_white_chars=ignore_white_chars,
+            context=context_size,
         )
         if not d:
             return []
