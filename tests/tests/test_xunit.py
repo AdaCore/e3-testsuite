@@ -199,6 +199,10 @@ def test_import(tmp_path):
 Some failure logging</failure>
                     </testcase>
 
+                    <!-- Test handling of classname. -->
+                    <testcase name="test_name" classname="MyClass">
+                    </testcase>
+
                 </testsuite>
 
                 <!-- Test usage of XFAILs. -->
@@ -247,6 +251,7 @@ Some failure logging</failure>
     index = ReportIndex.read(results_dir)
 
     assert sorted(index.entries) == [
+        "Normal.MyClass.test_name",
         "Normal.Test2",
         "Normal.Test2-e",
         "Normal.Test2-e.1",
@@ -294,6 +299,8 @@ Some failure logging</failure>
 
     check("Normal.test-failure-message", Status.FAIL, "Some failure message")
     check_log("Normal.test-failure-message", "Some failure logging")
+
+    check("Normal.MyClass.test_name", Status.PASS)
 
     check("XFails.test-ok", Status.XPASS)
 

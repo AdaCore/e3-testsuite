@@ -177,10 +177,13 @@ class XUnitImporter:
                 assert testcase.tag == "testcase"
 
                 testcase_name = testcase.attrib["name"]
+                classname = testcase.attrib.get("classname")
                 time_str = testcase.attrib.get("time")
 
                 result = TestResult(
-                    self.get_test_name(testsuite_name, testcase_name)
+                    self.get_test_name(
+                        testsuite_name, testcase_name, classname
+                    )
                 )
                 result.time = float(time_str) if time_str else None
                 status = TestStatus.PASS
@@ -273,15 +276,26 @@ class XUnitImporter:
             result = f"{test_name}.{next(counter)}"
         return result
 
-    def get_test_name(self, testsuite_name: str, testcase_name: str) -> str:
+    def get_test_name(
+        self,
+        testsuite_name: str,
+        testcase_name: str,
+        classname: Optional[str] = None,
+    ) -> str:
         """Combine xUnit testsuite/testcase names into a unique test name.
 
         :param testsuite_name: Name associated with a xUnit <testsuite>
             element.
         :param testcase_name: Name associated with a xUnit <testcase> element.
+        :param classname: If applicable, name of the class that owns this
+            testcase.
         """
         return self.get_unique_test_name(
-            self.slugify(testsuite_name) + "." + self.slugify(testcase_name)
+            ".".join(
+                self.slugify(name)
+                for name in [testsuite_name, classname, testcase_name]
+                if name
+            )
         )
 
 
