@@ -1,5 +1,8 @@
-26.0 (Not released yet)
+27.0 (Not released yet)
 =======================
+
+26.0 (2023-01-19)
+=================
 
 * `DiffTestDriver`: handle diff context size customization.
 * Add a XUnit results importer for report indexes.
