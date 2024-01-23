@@ -1,6 +1,7 @@
 27.0 (Not released yet)
 =======================
 
+* `e3-convert-xunit`: warn about dangling XFAILs annotations.
 * `DiffTestDriver`: tolerate missing baseline files when rewriting baselines.
 
 26.0 (2023-01-19)

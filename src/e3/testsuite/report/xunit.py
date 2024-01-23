@@ -153,6 +153,33 @@ class XUnitImporter:
         self.index = index
         self.xfails = xfails or {}
 
+        self.dangling_xfails: set[str] = set()
+        """
+        Set of tests for which a failure is expected, but that are not present
+        in the testsuite report. Computed in the "run" method.
+        """
+
+    def warn_dangling_xfails(self) -> None:
+        """
+        Print warnings for dangling entries in the "xfails" dict.
+
+        This prints warnings on the standard output to mention all tests for
+        which a failure is expected, but that are not present in the testsuite
+        report.
+        """
+        if not self.dangling_xfails:
+            return
+        print(
+            "warning: the following tests are expected to fail but are not"
+            " present in the testsuite results:"
+        )
+        for test_name in sorted(self.dangling_xfails):
+            reason = self.xfails.get(test_name)
+            if reason:
+                print(f"  {test_name} ({reason})")
+            else:
+                print(f"  {test_name}")
+
     def run(self, filename: str) -> None:
         """Read a xUnit report and import its results in the report index.
 
@@ -246,6 +273,9 @@ class XUnitImporter:
 
                 result.set_status(status, message)
                 self.index.save_and_add_result(result)
+
+        # Now that all tests are known, compute the set of dangling XFAILs
+        self.dangling_xfails = set(self.xfails) - set(self.index.entries)
 
     SLUG_RE = re.compile("[a-zA-Z0-9_.]+")
 
@@ -350,6 +380,7 @@ def convert_main(argv: list[str] | None = None) -> None:
                     importer.run(os.path.join(root, f))
         else:
             importer.run(path)
+    importer.warn_dangling_xfails()
     index.write()
 
     if args.gaia_output:
