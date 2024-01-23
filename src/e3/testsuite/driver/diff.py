@@ -143,6 +143,17 @@ class DiffTestDriver(ClassicTestDriver):
     """Test driver to compute test output against a baseline."""
 
     @property
+    def rewrite_baseline(self) -> bool:
+        """Return whether this driver should rewrite its baseline."""
+        # If a failure is expected for this test, consider that the actual
+        # output is wrong, and so do not rewrite the baseline.
+        return (
+            self.baseline_file is not None
+            and not self.test_control.xfail
+            and getattr(self.env, "rewrite_baselines", False)
+        )
+
+    @property
     def baseline_file(self) -> Tuple[str, bool]:
         """Return the test output baseline file.
 
@@ -168,19 +179,25 @@ class DiffTestDriver(ClassicTestDriver):
             filename is used to rewrite test output: leave it to None if
             rewriting does not make sense.
         """
+        encoding = self.default_encoding
+        is_binary = encoding == "binary"
         filename, is_regexp = self.baseline_file
         filename = self.test_dir(filename)
         baseline: Union[str, bytes]
 
+        # If the baseline should be rewritten, tolerate a missing baseline file
+        # and start from an empty baseline: we will create the baseline once
+        # the test has run.
+        if self.rewrite_baseline and not os.path.isfile(filename):
+            return (filename, b"" if is_binary else "", is_regexp)
+
         try:
-            if self.default_encoding == "binary":
-                with open(filename, "rb") as text_f:
-                    baseline = text_f.read()
-            else:
-                with open(
-                    filename, "r", encoding=self.default_encoding
-                ) as bin_f:
+            if is_binary:
+                with open(filename, "rb") as bin_f:
                     baseline = bin_f.read()
+            else:
+                with open(filename, "r", encoding=encoding) as text_f:
+                    baseline = text_f.read()
         except Exception as exc:
             raise TestAbortWithError(
                 "cannot read baseline file ({}: {})".format(
@@ -332,13 +349,9 @@ class DiffTestDriver(ClassicTestDriver):
                 color = ""
             diff_lines.append(color + line + self.Style.RESET_ALL)
 
-        # If requested and the failure is not expected, rewrite the test
-        # baseline with the new one.
-        if (
-            baseline_file is not None
-            and not self.test_control.xfail
-            and getattr(self.env, "rewrite_baselines", False)
-        ):
+        # If requested, rewrite the test baseline with the actual output
+        if self.rewrite_baseline:
+            assert baseline_file is not None
             if isinstance(refined_actual, str):
                 with open(
                     baseline_file, "w", encoding=self.default_encoding
