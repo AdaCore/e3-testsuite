@@ -241,11 +241,13 @@ def test_diff_rewriting():
                 self.env.test_environ = dict(os.environ)
 
         def check_test_out(test, expected_lines, encoding="utf-8"):
-            with open(
-                os.path.join(tests_copy, test, "test.out"), encoding=encoding
-            ) as f:
-                lines = [line.rstrip() for line in f]
-            assert lines == expected_lines
+            filename = os.path.join(tests_copy, test, "test.out")
+            if expected_lines is None:
+                assert not os.path.isfile(filename)
+            else:
+                with open(filename, encoding=encoding) as f:
+                    lines = [line.rstrip() for line in f]
+                assert lines == expected_lines
 
         # Make sure we have the expected baselines before running the testsuite
         check_test_out("adacore", ["legacy"])
@@ -254,6 +256,7 @@ def test_diff_rewriting():
         check_test_out("xfail", ["hello", "world"])
         check_test_out("iso-8859-1", ["héllo"], encoding="utf-8")
         check_test_out("bad-utf-8", ["héllo"], encoding="utf-8")
+        check_test_out("missing-baseline", None)
 
         # Run the testsuite in rewrite mode
         suite = run_testsuite(Mysuite, args=["-rE"], expect_failure=True)
@@ -264,6 +267,7 @@ def test_diff_rewriting():
             "xfail": Status.XFAIL,
             "iso-8859-1": Status.FAIL,
             "bad-utf-8": Status.ERROR,
+            "missing-baseline": Status.FAIL,
         }
 
         # Check that non-regexp baselines were updated, except when a failure
@@ -274,6 +278,7 @@ def test_diff_rewriting():
         check_test_out("xfail", ["hello", "world"])
         check_test_out("iso-8859-1", ["héllo"], encoding="iso-8859-1")
         check_test_out("bad-utf-8", ["héllo"], encoding="utf-8")
+        check_test_out("missing-baseline", ["helloo", "world", "!"])
 
 
 class TestDoubleDiff:
