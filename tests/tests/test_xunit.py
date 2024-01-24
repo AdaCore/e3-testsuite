@@ -14,6 +14,12 @@ from e3.testsuite.result import TestStatus as Status
 from .utils import create_testsuite, run_testsuite
 
 
+def write_xfails_yaml(filename, xfails):
+    """Write a XFAILs YAML file."""
+    with open(filename, "w") as f:
+        yaml.dump(xfails, f)
+
+
 class TestBasic:
     """Check that requesting a XUnit testsuite report works."""
 
@@ -149,7 +155,7 @@ class TestControlChars:
         assert failure.text == "Control character: \\x01\nDone.\n"
 
 
-def test_import(tmp_path):
+def test_import(tmp_path, capsys):
     """Test that the xUnit importer works as expected."""
     xml_filename = str(tmp_path / "tmp.xml")
     with open(xml_filename, "w") as f:
@@ -234,15 +240,16 @@ Some failure logging</failure>
         )
 
     xfails_filename = str(tmp_path / "xfails.yaml")
-    xfails = {
-        "XFails.test-ok": "",
-        "XFails.test-failure": "",
-        "XFails.test-error": "",
-        "XFails.test-skipped": "",
-        "XFails.test-failure-message": "Expected failure message",
-    }
-    with open(xfails_filename, "w") as f:
-        yaml.dump(xfails, f)
+    write_xfails_yaml(
+        xfails_filename,
+        {
+            "XFails.test-ok": "",
+            "XFails.test-failure": "",
+            "XFails.test-error": "",
+            "XFails.test-skipped": "",
+            "XFails.test-failure-message": "Expected failure message",
+        },
+    )
 
     results_dir = str(tmp_path / "results")
     convert_main(
@@ -326,6 +333,10 @@ Some failure logging</failure>
     check("XFails.pytest-xfail", Status.XFAIL, "Known bug")
     check_log("XFails.pytest-xfail", "Some error logging")
 
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert captured.err == ""
+
 
 def test_import_dirs(tmp_path):
     """Test XML reports search in the xUnit conversion script."""
@@ -380,3 +391,40 @@ def test_gaia(tmp_path):
 
     with open(str(results_dir / "results"), "r") as f:
         assert f.read() == "MyTestsuite.MyTestcase:OK:\n"
+
+
+def test_dangling_xfails(tmp_path, capsys):
+    """Test emission of warnings for dangling XFAILs."""
+    xml_report = str(tmp_path / "test.xml")
+    with open(xml_report, "w") as f:
+        f.write(
+            """<?xml version="1.0" encoding="utf-8"?>
+            <testsuites name="MyTestsuites">
+              <testsuite name="MyTestsuite">
+                <testcase name="MyTestcase"></testcase>
+              </testsuite>
+            </testsuites>
+            """
+        )
+
+    xfails_filename = str(tmp_path / "xfails.yaml")
+    write_xfails_yaml(xfails_filename, {"foo": "reason", "bar": ""})
+
+    convert_main(
+        [
+            "-o",
+            str(tmp_path / "results"),
+            "--xfails",
+            xfails_filename,
+            xml_report,
+        ]
+    )
+
+    captured = capsys.readouterr()
+    assert captured.out == (
+        "warning: the following tests are expected to fail but are not present"
+        " in the testsuite results:\n"
+        "  bar\n"
+        "  foo (reason)\n"
+    )
+    assert captured.err == ""
