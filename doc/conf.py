@@ -180,6 +180,7 @@ epub_exclude_files = ["search.html"]
 
 import os.path
 import sys
+
 sys.path.insert(0, os.path.abspath("../src"))
 extensions += ["autoapi.extension"]
 autoapi_type = "python"

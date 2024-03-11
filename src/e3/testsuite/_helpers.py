@@ -1,6 +1,5 @@
 """Internal helpers for e3.testsuite."""
 
-
 import warnings
 from typing import Any, Callable, List, TypeVar, cast
 
