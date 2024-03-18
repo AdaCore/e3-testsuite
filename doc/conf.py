@@ -16,6 +16,8 @@
 # import sys
 # sys.path.insert(0, os.path.abspath('.'))
 
+import os.path
+import sys
 
 # -- Project information -----------------------------------------------------
 
@@ -178,8 +180,6 @@ epub_title = project
 # A list of files that should not be packed into the epub file.
 epub_exclude_files = ["search.html"]
 
-import os.path
-import sys
 
 sys.path.insert(0, os.path.abspath("../src"))
 extensions += ["autoapi.extension"]
