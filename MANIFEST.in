@@ -3,6 +3,7 @@ include VERSION
 include *.md
 include LICENSE
 include tox.ini
+include src/e3/py.typed
 recursive-include doc *.bat
 recursive-include doc *.py
 recursive-include doc *.rst
