@@ -105,8 +105,7 @@ args_parser.add_argument(
 
 
 class SupportsLessThan(Protocol):
-    def __lt__(self, other: SupportsLessThan) -> bool:
-        ...
+    def __lt__(self, other: SupportsLessThan) -> bool: ...
 
 
 KeyType = TypeVar("KeyType")

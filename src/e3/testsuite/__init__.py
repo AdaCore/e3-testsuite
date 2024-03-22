@@ -407,7 +407,7 @@ class TestsuiteCore:
             action="store_true",
             help="Run only tests that did not pass in the previous testsuite"
             " run. This attempts to find successful tests in the report stored"
-            " at the location where this run will create the testsuite report."
+            " at the location where this run will create the testsuite report.",
         )
         parser.add_argument(
             "sublist", metavar="tests", nargs="*", default=[], help="test"
@@ -543,7 +543,9 @@ class TestsuiteCore:
                 """
                 entry = self.old_report_index.entries.get(pt.test_name)
                 return entry is not None and entry.status in (
-                    TestStatus.PASS, TestStatus.XFAIL, TestStatus.XPASS
+                    TestStatus.PASS,
+                    TestStatus.XFAIL,
+                    TestStatus.XPASS,
                 )
 
             self.test_list = [
@@ -707,7 +709,7 @@ class TestsuiteCore:
                 # Don't descend into internal VCS directories, because it will
                 # likely generate a lot of unnecessary I/O operations and we
                 # don't expect to find any tests there anyway.
-                for vcsdir in ['.git', '.svn', 'CVS']:
+                for vcsdir in [".git", ".svn", "CVS"]:
                     if vcsdir in dirnames:
                         dirnames.remove(vcsdir)
 
@@ -1113,10 +1115,10 @@ class TestsuiteCore:
             job.collect_result()
             self.collect_result(job)
 
-        scheduler: MultiprocessScheduler[
-            FragmentData, ProcessTestFragment
-        ] = MultiprocessScheduler(
-            dag, job_factory, collect_result, jobs=self.main.args.jobs
+        scheduler: MultiprocessScheduler[FragmentData, ProcessTestFragment] = (
+            MultiprocessScheduler(
+                dag, job_factory, collect_result, jobs=self.main.args.jobs
+            )
         )
 
         # See corresponding code/comment in run_multithread_mainloop
