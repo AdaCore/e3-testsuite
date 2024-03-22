@@ -39,8 +39,7 @@ if TYPE_CHECKING:
 
 
 class FragmentCallback(Protocol):
-    def __call__(self, previous_values: Dict[str, Any], slot: int) -> None:
-        ...
+    def __call__(self, previous_values: Dict[str, Any], slot: int) -> None: ...
 
 
 @dataclass

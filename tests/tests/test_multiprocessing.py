@@ -21,9 +21,11 @@ class TestEnable:
         def analyze(self, prev, slot):
             self.result.set_status(
                 Status.PASS,
-                TestEnable.ENABLED_MSG
-                if self.env.use_multiprocessing
-                else TestEnable.DISABLED_MSG,
+                (
+                    TestEnable.ENABLED_MSG
+                    if self.env.use_multiprocessing
+                    else TestEnable.DISABLED_MSG
+                ),
             )
             self.push_result()
 
