@@ -36,7 +36,7 @@ def escape_text(text: str) -> str:
     for i, c in enumerate(result):
         # Replace non-printable characters with their Python escape sequence,
         # but strip quotes.
-        if c < ' ' and c != '\n':
+        if c < " " and c != "\n":
             result[i] = ascii(c)[1:-1]
     return "".join(result)
 
@@ -197,9 +197,7 @@ class XUnitImporter:
             for testcase in testsuite:
                 # Skip "properties", "system-out" and "system-err" elements so
                 # that we process only "testcase" ones.
-                if testcase.tag in {
-                    "properties", "system-out", "system-err"
-                }:
+                if testcase.tag in {"properties", "system-out", "system-err"}:
                     continue
                 assert testcase.tag == "testcase"
 
@@ -255,10 +253,14 @@ class XUnitImporter:
                     # test result message, create a single message for the
                     # result to store in the report.
                     new_message = (
-                        f"{message} ({xfail_message})"
-                        if message
-                        else xfail_message
-                    ) if xfail_message else message
+                        (
+                            f"{message} ({xfail_message})"
+                            if message
+                            else xfail_message
+                        )
+                        if xfail_message
+                        else message
+                    )
 
                     # xUnit tests often use the ERROR status for issues that
                     # are not testsuite bugs (i.e. for what we call "failures"
