@@ -335,7 +335,12 @@ Some failure logging</failure>
 
     captured = capsys.readouterr()
     assert captured.out == ""
-    assert captured.err == ""
+
+    # Ensure that stderr is empty apart from the logs that are
+    # activated by the e3 pytest plugin
+    assert not [
+        line for line in captured.err.splitlines() if "DEBUG" not in line
+    ]
 
 
 def test_import_dirs(tmp_path):
@@ -427,4 +432,8 @@ def test_dangling_xfails(tmp_path, capsys):
         "  bar\n"
         "  foo (reason)\n"
     )
-    assert captured.err == ""
+    # Ensure that stderr is empty apart from the logs that are
+    # activated by the e3 pytest plugin
+    assert not [
+        line for line in captured.err.splitlines() if "DEBUG" not in line
+    ]
