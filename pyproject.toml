@@ -29,6 +29,9 @@ e3-testsuite-report = "e3.testsuite.report.display:main"
 [tool.setuptools.dynamic]
 version = {file = "VERSION"}
 
+[tool.pytest.ini_options]
+addopts = "--failed-first --e3"
+
 [tool.mypy]
 # Ensure mypy works with namespace in which there is no toplevel
 # __init__.py. Explicit_package_bases means that that mypy_path
