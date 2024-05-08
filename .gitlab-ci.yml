@@ -1,0 +1,54 @@
+variables:
+  GITLAB_REMOTE: "https://gitlab-ci-token:${CI_JOB_TOKEN}@${CI_SERVER_HOST}:${CI_SERVER_PORT}/"
+
+stages:
+  - check
+  - test
+
+default:
+  interruptible: true
+  services:
+    - image:all-pythons
+  before_script:
+    - git config --global --add
+        url."${GITLAB_REMOTE}/it/black.git".insteadOf
+        https://github.com/ambv/black
+    - git config --global --add
+        url."${GITLAB_REMOTE}/it/flake8.git".insteadOf
+        https://github.com/pycqa/flake8
+    - git config --global --add
+        url."${GITLAB_REMOTE}/it/pre-commit-mypy.git".insteadOf
+        https://github.com/pre-commit/mirrors-mypy
+    - source /it/activate-${PYTHON_VERSION}
+    - python -m pip install --force tox
+
+check:
+  stage: check
+  script:
+    - python -m pip install pre-commit
+    - pre-commit install --install-hooks
+    - pre-commit run -a --show-diff-on-failure
+    - python -m tox --colored yes -e checkstyle
+  variables:
+    PYTHON_VERSION: py311
+
+.test-py-common:
+  needs: []
+  stage: test
+  script:
+    - python -m tox --colored yes -e ${PYTHON_VERSION}-cov
+  coverage: '/(?i)total.*? (100(?:\.0+)?\%|[1-9]?\d(?:\.\d+)?\%)$/'
+  artifacts:
+    when: always
+    paths:
+      - pytest-report.xml
+    reports:
+      coverage_report:
+        coverage_format: cobertura
+        path: coverage.xml
+      junit: pytest-report.xml
+
+test-py311:
+  extends: .test-py-common
+  variables:
+    PYTHON_VERSION: py311
