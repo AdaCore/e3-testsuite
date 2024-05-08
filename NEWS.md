@@ -3,6 +3,8 @@
 
 * `e3-convert-xunit`: warn about dangling XFAILs annotations.
 * `DiffTestDriver`: tolerate missing baseline files when rewriting baselines.
+* The `--xunit-name` argument of `e3-testsuite-report` is now used to
+  fill the `classname` information of each XUnit individual test report.
 
 26.0 (2023-01-19)
 =================

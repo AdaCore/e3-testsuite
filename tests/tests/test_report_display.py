@@ -530,6 +530,41 @@ def test_xunit_output(tmp_path, capsys):
     ET.parse(xunit_file)
 
 
+def test_xunit_name(tmp_path, capsys):
+    """Check that --xunit-name has the desired effect."""
+    xunit_file = str(tmp_path / "xunit.xml")
+    testsuite_name = "mytestsuite"
+    run(
+        [create_result("foo", Status.PASS)],
+        [
+            "--xunit-output",
+            xunit_file,
+            "--xunit-name",
+            testsuite_name,
+            str(tmp_path),
+        ],
+        tmp_path,
+        capsys,
+    )
+
+    xml = ET.parse(xunit_file)
+    root = xml.getroot()
+
+    # Check the root node
+    assert root.tag == "testsuites"
+    assert root.get("name") == testsuite_name
+
+    # Check the invididual testsuites
+    testsuites = xml.findall(".//testsuite")
+    assert len(testsuites) != 0
+    assert all(e.get("name") == testsuite_name for e in testsuites)
+
+    # Check the invidiual tests
+    tests = xml.findall(".//testcase")
+    assert len(tests) != 0
+    assert all(e.get("classname") == testsuite_name for e in tests)
+
+
 def test_output_file(tmp_path, capsys):
     """Check that nothing is printed on stdout when output is a file."""
     create_report(
