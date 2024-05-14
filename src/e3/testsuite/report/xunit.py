@@ -84,13 +84,9 @@ def dump_xunit_report(name: str, index: ReportIndex, filename: str) -> None:
     for test_name, entry in sorted(index.entries.items()):
         result = entry.load()
 
-        # The only class involved in testcases (that we know of in this
-        # testsuite framework) is the TestDriver subclass, but this is not
-        # useful for the report, so leave this dummy "e3-testsuite-driver"
-        # instead.
-        testcase = etree.Element(
-            "testcase", name=test_name, classname="e3-testsuite-driver"
-        )
+        # We use the testsuite name for 'classname', as we don't really have
+        # something more useful to display anyway.
+        testcase = etree.Element("testcase", name=test_name, classname=name)
         testsuite.append(testcase)
 
         # Get the XUnit-equivalent status for this test and update the
