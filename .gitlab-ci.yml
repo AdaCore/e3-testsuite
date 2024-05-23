@@ -9,7 +9,9 @@ workflow:
   rules:
     - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
 
-default:
+.tox:
+  variables:
+    PYTHON_VERSION: py311
   interruptible: true
   services:
     - image:all-pythons
@@ -27,16 +29,16 @@ default:
     - python -m pip install --force tox
 
 check:
+  extends: .tox
   stage: check
   script:
     - python -m pip install pre-commit
     - pre-commit install --install-hooks
     - pre-commit run -a --show-diff-on-failure
     - python -m tox --colored yes -e checkstyle
-  variables:
-    PYTHON_VERSION: py311
 
-.test-py-common:
+test-py-common:
+  extends: .tox
   needs: []
   stage: test
   script:
@@ -51,8 +53,3 @@ check:
         coverage_format: cobertura
         path: coverage.xml
       junit: pytest-report.xml
-
-test-py311:
-  extends: .test-py-common
-  variables:
-    PYTHON_VERSION: py311
