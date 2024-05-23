@@ -28,6 +28,16 @@ workflow:
     - source /it/activate-${PYTHON_VERSION}
     - python -m pip install --force tox
 
+issue-check:
+  stage: check
+  interruptible: true
+  services:
+    - image:e3
+  variables:
+    GIT_STRATEGY: none
+  script:
+    - require_issue
+
 check:
   extends: .tox
   stage: check
