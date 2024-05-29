@@ -5,34 +5,6 @@ include:
       tox-section: py311-cov
       stage: test
 
-
-variables:
-  GITLAB_REMOTE: "https://gitlab-ci-token:${CI_JOB_TOKEN}@${CI_SERVER_HOST}:${CI_SERVER_PORT}/"
-
 stages:
   - check
   - test
-
-default:
-  before_script:
-    - git config --global --add
-        url."${GITLAB_REMOTE}/it/black.git".insteadOf
-        https://github.com/ambv/black
-    - git config --global --add
-        url."${GITLAB_REMOTE}/it/flake8.git".insteadOf
-        https://github.com/pycqa/flake8
-    - git config --global --add
-        url."${GITLAB_REMOTE}/it/pre-commit-mypy.git".insteadOf
-        https://github.com/pre-commit/mirrors-mypy
-    
-
-## Deactivated, as eng-bot has not rights under it/
-# issue-check:
-#   stage: check
-#   interruptible: true
-#   services:
-#     - image:e3
-#   variables:
-#     GIT_STRATEGY: none
-#   script:
-#     - require_issue
