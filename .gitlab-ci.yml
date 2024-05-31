@@ -1,6 +1,6 @@
 include:
-  - component: $CI_SERVER_FQDN/eng/gitlab-templates/pre-commit@mr/boris/first-attempts
-  - component: $CI_SERVER_FQDN/eng/gitlab-templates/tox@mr/boris/first-attempts
+  - component: $CI_SERVER_FQDN/eng/gitlab-templates/pre-commit@~latest
+  - component: $CI_SERVER_FQDN/eng/gitlab-templates/tox@~latest
     inputs:
       tox-section: py311-cov
       stage: test
