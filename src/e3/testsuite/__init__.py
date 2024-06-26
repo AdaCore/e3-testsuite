@@ -73,7 +73,7 @@ class TestAbort(Exception):
 class TestsuiteCore:
     """Testsuite Core driver.
 
-    This class is the base of Testsuite class and should not be instanciated.
+    This class is the base of Testsuite class and should not be instantiated.
     It's not recommended to override any of the functions declared in it.
 
     See documentation of Testsuite class for overridable methods and
@@ -1071,9 +1071,14 @@ class TestsuiteCore:
             return False
 
         # Create a scheduler to run all fragments for the testsuite main loop
+
+        jobs = self.main.args.jobs
+        if self.main.args.jobs <= 0:
+            jobs = os.cpu_count() or 1
+
         scheduler = Scheduler(
             job_provider=job_factory,
-            tokens=self.main.args.jobs,
+            tokens=jobs,
             collect=collect_result,
         )
 
