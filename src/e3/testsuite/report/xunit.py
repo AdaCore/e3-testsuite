@@ -238,6 +238,22 @@ class XUnitImporter:
                         result.log += status_elt.text
 
                     message = status_elt.attrib.get("message")
+
+                    # Some XUnit producers are know to put full logs in the
+                    # "message" attribute, which produces unexpected results in
+                    # e3-testsuite report viewers. Keep the first line only,
+                    # and cap its length if needed.
+                    capped = False
+                    if message is not None:
+                        if "\n" in message:
+                            message = message.split("\n", 1)[0]
+                            capped = True
+                        if len(message) > 200:
+                            message = message[:200]
+                            capped = True
+                        if capped:
+                            message = message.strip() + " [...]"
+
                 else:
                     message = None
 
