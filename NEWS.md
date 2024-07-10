@@ -1,6 +1,7 @@
 27.0 (Not released yet)
 =======================
 
+* `e3-convert-xunit`: truncate too long test result messages.
 * `e3-convert-xunit`: warn about dangling XFAILs annotations.
 * `DiffTestDriver`: tolerate missing baseline files when rewriting baselines.
 * The `--xunit-name` argument of `e3-testsuite-report` is now used to

@@ -209,6 +209,25 @@ Some failure logging</failure>
                     <testcase name="test_name" classname="MyClass">
                     </testcase>
 
+                    <!-- Test handling of multiline messages. -->
+                    <testcase name="test-failure-multiline-message">
+                        <failure message="Some multi&#10;
+line&#10;
+message...">\
+Some failure logging</failure>
+                    </testcase>
+
+                    <!-- Test handling of too long messages. -->
+                    <testcase name="test-failure-too-long-message">
+                        <failure message="Some extremely very ultra long
+message. Viewers may not like it, so we are going to strip it to ~200 colons.
+The imported report will include only a small prefix of this too long message.
+They will not see the complete message. This is okay, as in known cases where
+messages are too long, their content is actually also present in the log, which
+is not capped, so no content is lost in practice.
+">Some failure logging</failure>
+                    </testcase>
+
                 </testsuite>
 
                 <!-- Test usage of XFAILs. -->
@@ -266,6 +285,8 @@ Some failure logging</failure>
         "Normal.test-error",
         "Normal.test-failure",
         "Normal.test-failure-message",
+        "Normal.test-failure-multiline-message",
+        "Normal.test-failure-too-long-message",
         "Normal.test-skipped",
         "Normal.test1",
         "XFails.pytest-skip",
@@ -297,6 +318,24 @@ Some failure logging</failure>
 
     check("Normal.test-failure", Status.FAIL)
     check_log("Normal.test-failure", "Some failure logging")
+
+    check(
+        "Normal.test-failure-multiline-message",
+        Status.FAIL,
+        message="Some multi [...]",
+    )
+    check_log("Normal.test-failure-multiline-message", "Some failure logging")
+    check(
+        "Normal.test-failure-too-long-message",
+        Status.FAIL,
+        message=(
+            "Some extremely very ultra long message. Viewers may not like it,"
+            " so we are going to strip it to ~200 colons. The imported report"
+            " will include only a small prefix of this too long message. They"
+            " will no [...]"
+        ),
+    )
+    check_log("Normal.test-failure-too-long-message", "Some failure logging")
 
     check("Normal.test-error", Status.ERROR)
     check_log("Normal.test-error", "Some error logging")
