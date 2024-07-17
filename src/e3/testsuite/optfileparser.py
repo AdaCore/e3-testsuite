@@ -11,6 +11,7 @@ import argparse
 import logging
 import os.path
 import re
+import sys
 from typing import Dict, List, Optional, TYPE_CHECKING, Tuple, Union
 
 
@@ -148,7 +149,7 @@ class OptFileParse:
                 return ""
 
     # INTERNAL FUNCTIONS
-    def __process_opt_line(self, line: str) -> None:
+    def __process_opt_line(self, line: str, lineno: int) -> None:
         """process one line of a test.opt type file.
 
         :raise BadFormattingError: in case the line cannot be parsed
@@ -168,7 +169,9 @@ class OptFileParse:
 
         m = OPTLINE_REGEXPS.match(processed_line)
         if m is None:
-            raise BadFormattingError("Can not parse line: " + line)
+            raise BadFormattingError(
+                f"Can not parse line {lineno}: {line.rstrip()}"
+            )
 
         # find command, tags and argument
         tags = m.group(1).split(",")
@@ -240,13 +243,13 @@ class OptFileParse:
     def __parse_file(self, filename: Union[str, List[str]]) -> None:
         have_opt_data = False
         if isinstance(filename, list):
-            for line in filename:
-                self.__process_opt_line(line)
+            for lineno, line in enumerate(filename, 1):
+                self.__process_opt_line(line, lineno)
             have_opt_data = True
         elif os.path.isfile(filename):
             with open(filename, "r") as optfile:
-                for line in optfile:
-                    self.__process_opt_line(line)
+                for lineno, line in enumerate(optfile, 1):
+                    self.__process_opt_line(line, lineno)
             have_opt_data = True
 
         if have_opt_data:
@@ -288,7 +291,7 @@ class OptFileParse:
         return result
 
 
-def main(argv: Optional[List[str]] = None) -> None:
+def eval_main(argv: Optional[List[str]] = None) -> None:
     parser = argparse.ArgumentParser(
         description="Evaluate test.opt against set of tags"
     )
@@ -312,9 +315,37 @@ def main(argv: Optional[List[str]] = None) -> None:
     for tag in args.tags_list:
         system_tags.extend(tag.split(","))
 
-    opt_result = OptFileParse(system_tags, args.opt_filename)
+    try:
+        opt_result = OptFileParse(system_tags, args.opt_filename)
+    except BadFormattingError as exc:
+        print(str(exc))
+        sys.exit(1)
     print(str(opt_result))
 
 
+def check_syntax_main(argv: list[str] | None = None) -> None:
+    parser = argparse.ArgumentParser(
+        description="""
+        Look for syntax errors in "opt" files.
+
+        Print nothing and exit with status code 0 if no syntax error was found.
+        Print error messages and exit with status code 1 otherwise.
+        """
+    )
+    parser.add_argument(
+        "filenames", nargs="+", help='The name of the "opt" file to parse.'
+    )
+    args = parser.parse_args(argv)
+
+    has_errors = False
+    for filename in args.filenames:
+        try:
+            OptFileParse([], filename)
+        except BadFormattingError as exc:
+            print(f"{filename}: {exc}")
+            has_errors = True
+    sys.exit(1 if has_errors else 0)
+
+
 if __name__ == "__main__":  # no coverage
-    main()
+    eval_main()
