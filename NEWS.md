@@ -1,6 +1,8 @@
 27.0 (Not released yet)
 =======================
 
+* `e3-opt-parse`: exit gracefully and give line number information in case of
+  syntax error.
 * `e3-convert-xunit`: truncate too long test result messages.
 * `e3-convert-xunit`: warn about dangling XFAILs annotations.
 * `DiffTestDriver`: tolerate missing baseline files when rewriting baselines.

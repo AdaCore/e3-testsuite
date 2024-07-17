@@ -149,7 +149,7 @@ class OptFileParse:
                 return ""
 
     # INTERNAL FUNCTIONS
-    def __process_opt_line(self, line: str) -> None:
+    def __process_opt_line(self, line: str, lineno: int) -> None:
         """process one line of a test.opt type file.
 
         :raise BadFormattingError: in case the line cannot be parsed
@@ -169,7 +169,9 @@ class OptFileParse:
 
         m = OPTLINE_REGEXPS.match(processed_line)
         if m is None:
-            raise BadFormattingError("Can not parse line: " + line)
+            raise BadFormattingError(
+                f"Can not parse line {lineno}: {line.rstrip()}"
+            )
 
         # find command, tags and argument
         tags = m.group(1).split(",")
@@ -241,13 +243,13 @@ class OptFileParse:
     def __parse_file(self, filename: Union[str, List[str]]) -> None:
         have_opt_data = False
         if isinstance(filename, list):
-            for line in filename:
-                self.__process_opt_line(line)
+            for lineno, line in enumerate(filename, 1):
+                self.__process_opt_line(line, lineno)
             have_opt_data = True
         elif os.path.isfile(filename):
             with open(filename, "r") as optfile:
-                for line in optfile:
-                    self.__process_opt_line(line)
+                for lineno, line in enumerate(optfile, 1):
+                    self.__process_opt_line(line, lineno)
             have_opt_data = True
 
         if have_opt_data:

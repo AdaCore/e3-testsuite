@@ -133,7 +133,7 @@ def test_syntax_error():
     try:
         parse_file("syntax_error.opt")
     except BadFormattingError as exc:
-        assert str(exc) == "Can not parse line: ? ?\n"
+        assert str(exc) == "Can not parse line 2: ? ?"
     else:
         raise AssertionError()
 
@@ -190,3 +190,10 @@ cmd="linux.cmd"
 cmd="linux.cmd"
 """
     )
+
+
+def test_main_syntax_error():
+    """Check that e3-opt-parser exits cleanly in case of parsing error."""
+    p = run_opt_parser_script("syntax_error.opt", None)
+    assert p.status == 1
+    assert p.out == "Can not parse line 2: ? ?\n"
