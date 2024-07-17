@@ -6,6 +6,9 @@ from e3.os.process import Run
 from e3.testsuite.optfileparser import BadFormattingError, OptFileParse
 
 
+optfiles_dir = os.path.join(os.path.dirname(__file__), "optfiles")
+
+
 def parse_file(filename, tags=None):
     """Parse an optfile in the "optfiles" subdirectory."""
     tags = tags if tags is not None else []
@@ -152,16 +155,13 @@ def test_required():
 
 def run_opt_parser_script(filename, tags=None):
     """Call e3-opt-parser and return the corresponding Run object."""
-    parser_cmd = [
-        "e3-opt-parser",
-        os.path.join(os.path.dirname(__file__), "optfiles", filename),
-    ]
+    parser_cmd = ["e3-opt-parser", os.path.join(optfiles_dir, filename)]
     if tags is not None:
         parser_cmd.extend(tags)
     return Run(parser_cmd)
 
 
-def test_main():
+def test_eval_main():
     """Test the function called by the command-line wrapper to OptFileParse."""
     p = run_opt_parser_script("tags.opt", None)
     assert p.status == 0
@@ -192,8 +192,31 @@ cmd="linux.cmd"
     )
 
 
-def test_main_syntax_error():
+def test_eval_main_syntax_error():
     """Check that e3-opt-parser exits cleanly in case of parsing error."""
     p = run_opt_parser_script("syntax_error.opt", None)
     assert p.status == 1
     assert p.out == "Can not parse line 2: ? ?\n"
+
+
+def test_check_syntax_main():
+    """Check that e3-opt-check behaves as expected."""
+    p = Run(
+        [
+            "e3-opt-check",
+            "dead.opt",
+            "syntax_error.opt",
+            "tags.opt",
+            "syntax_error_2.opt",
+        ],
+        cwd=optfiles_dir,
+    )
+    assert p.status == 1
+    assert p.out == (
+        "syntax_error.opt: Can not parse line 2: ? ?\n"
+        "syntax_error_2.opt: Can not parse line 2:  ALL DEAD\n"
+    )
+
+    p = Run(["e3-opt-check", "dead.opt", "tags.opt"], cwd=optfiles_dir)
+    assert p.status == 0
+    assert p.out == ""

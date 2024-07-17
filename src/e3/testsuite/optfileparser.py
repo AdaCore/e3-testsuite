@@ -291,7 +291,7 @@ class OptFileParse:
         return result
 
 
-def main(argv: Optional[List[str]] = None) -> None:
+def eval_main(argv: Optional[List[str]] = None) -> None:
     parser = argparse.ArgumentParser(
         description="Evaluate test.opt against set of tags"
     )
@@ -323,5 +323,29 @@ def main(argv: Optional[List[str]] = None) -> None:
     print(str(opt_result))
 
 
+def check_syntax_main(argv: list[str] | None = None) -> None:
+    parser = argparse.ArgumentParser(
+        description="""
+        Look for syntax errors in "opt" files.
+
+        Print nothing and exit with status code 0 if no syntax error was found.
+        Print error messages and exit with status code 1 otherwise.
+        """
+    )
+    parser.add_argument(
+        "filenames", nargs="+", help='The name of the "opt" file to parse.'
+    )
+    args = parser.parse_args(argv)
+
+    has_errors = False
+    for filename in args.filenames:
+        try:
+            OptFileParse([], filename)
+        except BadFormattingError as exc:
+            print(f"{filename}: {exc}")
+            has_errors = True
+    sys.exit(1 if has_errors else 0)
+
+
 if __name__ == "__main__":  # no coverage
-    main()
+    eval_main()
