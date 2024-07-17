@@ -11,6 +11,7 @@ import argparse
 import logging
 import os.path
 import re
+import sys
 from typing import Dict, List, Optional, TYPE_CHECKING, Tuple, Union
 
 
@@ -312,7 +313,11 @@ def main(argv: Optional[List[str]] = None) -> None:
     for tag in args.tags_list:
         system_tags.extend(tag.split(","))
 
-    opt_result = OptFileParse(system_tags, args.opt_filename)
+    try:
+        opt_result = OptFileParse(system_tags, args.opt_filename)
+    except BadFormattingError as exc:
+        print(str(exc))
+        sys.exit(1)
     print(str(opt_result))
 
 
