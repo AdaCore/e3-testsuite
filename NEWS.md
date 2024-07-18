@@ -1,6 +1,9 @@
 27.0 (Not released yet)
 =======================
 
+* `e3.testsuite.report.xunit`: add a `XUnitImportApp` class to make it possible
+  to create customized versions of the `e3-convert-xunit` script without code
+  duplication.
 * `e3-opt-check`: new script to look for syntax errors in opt files.
 * `e3-opt-parse`: exit gracefully and give line number information in case of
   syntax error.
