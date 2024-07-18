@@ -6,7 +6,7 @@ import argparse
 import itertools
 import os
 import re
-from typing import Optional
+from typing import Iterable, Optional
 import unicodedata
 import xml.etree.ElementTree as etree
 
@@ -343,6 +343,136 @@ class XUnitImporter:
         )
 
 
+class XUnitImporterApp:
+    """
+    Helper class to implement a xUnit report import script.
+
+    This class provide the basic behavior, which subclasses can override if
+    needed.
+    """
+
+    def __init__(self) -> None:
+        self.parser = argparse.ArgumentParser(
+            description="Convert a xUnit testsuite report to e3-testsuite's"
+            " format."
+        )
+        self.add_basic_options(self.parser)
+        self.add_options(self.parser)
+
+        self.args: argparse.Namespace
+        self.index: ReportIndex
+        self.xfails: dict[str, str]
+        self.importer: XUnitImporter
+
+    def add_basic_options(self, parser: argparse.ArgumentParser) -> None:
+        """
+        Add basic command line arguments.
+
+        Subclasses must override this to replace basic command line arguments.
+        Note that most methods/properties in this class assume that these
+        arguments are present: not adding them will likely require to override
+        all methods/properties.
+        """
+        parser.add_argument(
+            "--output",
+            "-o",
+            help="Output directory for the converted report. By default, use"
+            " the current working directory.",
+        )
+        parser.add_argument(
+            "--gaia-output",
+            action="store_true",
+            help="Output a GAIA-compatible testsuite report next to the YAML"
+            " report.",
+        )
+        parser.add_argument(
+            "--xfails",
+            help="YAML file that describes expected failures. If provided, it"
+            " must contain a mapping from test name to expected failure"
+            " messages.",
+        )
+        parser.add_argument(
+            "xml-report",
+            nargs="+",
+            help="xUnit XML reports to convert. If a directory is passed,"
+            " recursively look for all the files matching *.xml that it"
+            " contains.",
+        )
+
+    def add_options(self, parser: argparse.ArgumentParser) -> None:
+        """
+        Add extra command line arguments.
+
+        Subclasses must override this to add command line arguments in addition
+        to the basic ones.
+        """
+        pass
+
+    @property
+    def output_dir(self) -> str:
+        """Return the report output directory."""
+        return self.args.output or "."
+
+    def create_output_report_index(self) -> ReportIndex:
+        """Create the index for the report this app must write."""
+        result = ReportIndex(self.output_dir)
+        mkdir(result.results_dir)
+        return result
+
+    def get_xfails(self) -> dict[str, str]:
+        """Return the "xfails" XUnitImporter constructor argument."""
+        return (
+            read_xfails_from_yaml(self.args.xfails) if self.args.xfails else {}
+        )
+
+    def create_importer(self) -> XUnitImporter:
+        """Create the XUnitImporter instance for this app."""
+        return XUnitImporter(self.index, self.xfails)
+
+    def iter_xunit_files(self) -> Iterable[str]:
+        """Iterate through all the xUnit report files to import."""
+        for path in getattr(self.args, "xml-report"):
+            if os.path.isdir(path):
+                for root, _, filenames in os.walk(path):
+                    for f in filenames:
+                        yield os.path.join(root, f)
+            else:
+                yield path
+
+    @property
+    def gaia_report_requested(self) -> bool:
+        """Return whether a GAIA report was requested."""
+        return self.args.gaia_output
+
+    def tear_down(self) -> None:
+        """
+        Clean up the importer.
+
+        Subclasses must override this for custom behavior before the app ends.
+        """
+        pass
+
+    def run(self, argv: list[str] | None = None) -> None:
+        # Initialize the importer
+        self.args = self.parser.parse_args(argv)
+        self.index = self.create_output_report_index()
+        self.xfails = self.get_xfails()
+        self.importer = self.create_importer()
+
+        # Process xUnit report files
+        for filename in self.iter_xunit_files():
+            self.importer.run(filename)
+        self.importer.warn_dangling_xfails()
+
+        # Write reports
+        self.index.write()
+        if self.gaia_report_requested:
+            dump_gaia_report(self.index, self.index.results_dir)
+
+        # Clean up the importer
+        self.tear_down()
+
+
 def read_xfails_from_yaml(filename: str) -> dict[str, str]:
     """
     Read a XFAILs dict from a YAML file.
@@ -354,48 +484,4 @@ def read_xfails_from_yaml(filename: str) -> dict[str, str]:
 
 
 def convert_main(argv: list[str] | None = None) -> None:
-    parser = argparse.ArgumentParser(
-        description="Convert a xUnit testsuite report to e3-testsuite's"
-        " format."
-    )
-    parser.add_argument(
-        "--output",
-        "-o",
-        help="Output directory for the converted report. By default, use the"
-        " current working directory.",
-    )
-    parser.add_argument(
-        "--gaia-output",
-        action="store_true",
-        help="Output a GAIA-compatible testsuite report next to the YAML"
-        " report.",
-    )
-    parser.add_argument(
-        "--xfails",
-        help="YAML file that describes expected failures. If provided, it must"
-        " contain a mapping from test name to expected failure messages.",
-    )
-    parser.add_argument(
-        "xml-report",
-        nargs="+",
-        help="xUnit XML reports to convert. If a directory is passed,"
-        " recursively look for all the files matching *.xml that it contains.",
-    )
-
-    args = parser.parse_args(argv)
-    index = ReportIndex(args.output or ".")
-    mkdir(index.results_dir)
-    xfails = read_xfails_from_yaml(args.xfails) if args.xfails else None
-    importer = XUnitImporter(index, xfails)
-    for path in getattr(args, "xml-report"):
-        if os.path.isdir(path):
-            for root, _, filenames in os.walk(path):
-                for f in filenames:
-                    importer.run(os.path.join(root, f))
-        else:
-            importer.run(path)
-    importer.warn_dangling_xfails()
-    index.write()
-
-    if args.gaia_output:
-        dump_gaia_report(index, index.results_dir)
+    XUnitImporterApp().run(argv)

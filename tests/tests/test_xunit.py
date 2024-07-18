@@ -1,5 +1,6 @@
 """Tests for the XUnit report feature."""
 
+import os.path
 import xml.etree.ElementTree as ET
 
 import yaml
@@ -8,7 +9,11 @@ from e3.fs import mkdir
 from e3.testsuite import Testsuite as Suite
 from e3.testsuite.driver import TestDriver as Driver
 from e3.testsuite.report.index import ReportIndex
-from e3.testsuite.report.xunit import convert_main
+from e3.testsuite.report.xunit import (
+    XUnitImporter,
+    XUnitImporterApp,
+    convert_main,
+)
 from e3.testsuite.result import TestStatus as Status
 
 from .utils import create_testsuite, run_testsuite
@@ -476,3 +481,127 @@ def test_dangling_xfails(tmp_path, capsys):
     assert not [
         line for line in captured.err.splitlines() if "DEBUG" not in line
     ]
+
+
+def test_app_override(tmp_path):
+    """Test overriding in the XUnitImporterApp class."""
+    xml_report = str(tmp_path / "test.xml")
+    with open(xml_report, "w") as f:
+        f.write(
+            """<?xml version="1.0" encoding="utf-8"?>
+            <testsuites name="TSList">
+              <testsuite name="ts">
+                <testcase name="tc1"></testcase>
+                <testcase name="tc2">
+                  <failure>Some logging</failure>
+                </testcase>
+              </testsuite>
+            </testsuites>
+            """
+        )
+
+    basic_results = {"ts.tc1": Status.PASS, "ts.tc2": Status.FAIL}
+
+    def check_results(results_dir, expected):
+        actual = {
+            e.test_name: e.status
+            for e in ReportIndex.read(results_dir).entries.values()
+        }
+        assert actual == expected
+
+    # Check overriding the add_basic_options method/output_dir property.
+
+    class CustomBasic(XUnitImporterApp):
+        def add_basic_options(self, parser):
+            parser.add_argument("e3-report-dir")
+
+        @property
+        def output_dir(self):
+            return getattr(self.args, "e3-report-dir")
+
+        def get_xfails(self):
+            return {}
+
+        def iter_xunit_files(self):
+            yield xml_report
+
+        @property
+        def gaia_report_requested(self):
+            return False
+
+    CustomBasic().run(["custom-basic"])
+    check_results("custom-basic", basic_results)
+
+    # Check overriding the create_output_report_index method
+
+    class CustomIndex(XUnitImporterApp):
+        def create_output_report_index(self):
+            mkdir("custom-index")
+            return ReportIndex("custom-index")
+
+    CustomIndex().run([xml_report])
+    check_results("custom-index", basic_results)
+
+    # Check overriding the add_options/get_xfails method
+
+    class CustomXFails(XUnitImporterApp):
+        def add_options(self, parser):
+            parser.add_argument("--add-xfail", action="append")
+
+        def get_xfails(self):
+            result = {}
+            for xfail in self.args.add_xfail:
+                test_name, msg = xfail.split(":", 1)
+                result[test_name] = msg
+            return result
+
+    CustomXFails().run(
+        [xml_report, "-o", "custom-xfails", "--add-xfail=ts.tc2:foo"]
+    )
+    check_results(
+        "custom-xfails", {"ts.tc1": Status.PASS, "ts.tc2": Status.XFAIL}
+    )
+
+    # Check overriding the create_importer method
+
+    class MyXUnitImporter(XUnitImporter):
+        def get_test_name(self, ts_name, tc_name, classname):
+            return tc_name
+
+    class CustomImporter(XUnitImporterApp):
+        def create_importer(self):
+            return MyXUnitImporter(self.index, self.xfails)
+
+    CustomImporter().run([xml_report, "-o", "custom-importer"])
+    check_results("custom-importer", {"tc1": Status.PASS, "tc2": Status.FAIL})
+
+    # Check overriding the iter_xunit_files method
+
+    class CustomIterXUnitFiles(XUnitImporterApp):
+        def iter_xunit_files(self):
+            yield xml_report
+
+    CustomIterXUnitFiles().run(["-o", "custom-iter-xunit-files", "foo.xml"])
+    check_results("custom-iter-xunit-files", basic_results)
+
+    # Check overriding the gaia_report_requested property
+
+    class CustomGAIA(XUnitImporterApp):
+        @property
+        def gaia_report_requested(self):
+            return True
+
+    CustomGAIA().run(["-o", "custom-gaia", xml_report])
+    check_results("custom-gaia", basic_results)
+    assert os.path.exists(os.path.join("custom-gaia", "results"))
+
+    # Check overriding the tear_down method
+
+    class CustomTearDown(XUnitImporterApp):
+        def tear_down(self):
+            with open(os.path.join(self.index.results_dir, "foo.txt"), "w"):
+                pass
+
+    CustomTearDown().run(["-o", "custom-tear-down", xml_report])
+    check_results("custom-tear-down", basic_results)
+    assert os.path.exists(os.path.join("custom-tear-down", "foo.txt"))
