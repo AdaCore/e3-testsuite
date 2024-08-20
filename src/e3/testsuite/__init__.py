@@ -41,6 +41,7 @@ from e3.testsuite.report.display import generate_report, summary_line
 from e3.testsuite.report.index import ReportIndex
 from e3.testsuite.report.xunit import dump_xunit_report
 from e3.testsuite.result import Log, TestResult, TestStatus
+from e3.testsuite.running_status import RunningStatus
 from e3.testsuite.testcase_finder import (
     ParsedTest,
     ProbingError,
@@ -108,15 +109,14 @@ class TestsuiteCore:
         """
 
         logger.debug("Test directory: %s", self.test_dir)
-        self.consecutive_failures = 0
         self.return_values: Dict[str, Any] = {}
         self.result_tracebacks: Dict[str, List[str]] = {}
         self.testsuite_name = testsuite_name
 
-        self.aborted_too_many_failures = False
+        self.running_status: RunningStatus
         """
-        Whether the testsuite aborted because of too many consecutive test
-        failures (see the --max-consecutive-failures command-line option).
+        Object to report testsuite execution status to users and to manage
+        abortion in case there are too many failures.
         """
 
         self.use_multiprocessing = False
@@ -518,12 +518,10 @@ class TestsuiteCore:
         self.env.working_dir = self.working_dir
         self.env.options = self.main.args
 
-        # Create an object to report testsuite execution status to users
-        from e3.testsuite.running_status import RunningStatus
-
         self.running_status = RunningStatus(
             os.path.join(self.output_dir, "status"),
             self.main.args.status_update_interval,
+            self.main.args.max_consecutive_failures,
         )
 
         # User specific startup
@@ -848,30 +846,9 @@ class TestsuiteCore:
         """
         assert self.main.args
 
-        # Keep track of the number of consecutive failures seen so far if it
-        # reaches the maximum number allowed, we must abort the testsuite.
-        max_consecutive_failures = self.main.args.max_consecutive_failures
-
+        # Process all results from this fragment
         while fragment.result_queue:
-            item = fragment.result_queue.pop()
-
-            self.add_result(item)
-
-            # Update the number of consecutive failures, aborting the testsuite
-            # if appropriate
-            if item.result.status in (TestStatus.ERROR, TestStatus.FAIL):
-                self.consecutive_failures += 1
-                if (
-                    max_consecutive_failures > 0
-                    and self.consecutive_failures >= max_consecutive_failures
-                ):
-                    self.aborted_too_many_failures = True
-                    logger.error(
-                        "Too many consecutive failures, aborting the testsuite"
-                    )
-                    raise KeyboardInterrupt
-            else:
-                self.consecutive_failures = 0
+            self.add_result(fragment.result_queue.pop())
 
         # Now that this fragment is completed, make sure to remove all
         # references to its test drivers so that it can be garbage collected.
@@ -912,9 +889,7 @@ class TestsuiteCore:
         # Now that the result is validated, add it to our internals
         self.report_index.add_result(item.result, item.filename)
         self.result_tracebacks[test_name] = item.traceback
-        self.running_status.set_status_counters(
-            self.report_index.status_counters
-        )
+        self.running_status.process_result(item.result)
         if item.gaia_results:
             self.gaia_result_files[test_name] = item.gaia_results
 
@@ -1082,17 +1057,8 @@ class TestsuiteCore:
             collect=collect_result,
         )
 
-        # Run the tests. Note that when the testsuite aborts because of too
-        # many consecutive test failures, we still want to produce a report and
-        # exit through regular ways, to catch KeyboardInterrupt exceptions,
-        # which e3's scheduler uses to abort the execution loop, but only in
-        # such cases. In other words, let the exception propagates if it's the
-        # user that interrupted the testsuite.
-        try:
-            scheduler.run(dag)
-        except KeyboardInterrupt:
-            if not self.aborted_too_many_failures:  # interactive-only
-                raise
+        # Finally run the tests
+        scheduler.run(dag)
 
     def run_multiprocess_mainloop(self, dag: DAG) -> None:
         """Run the main loop to execute test fragments in subprocesses."""
@@ -1126,12 +1092,8 @@ class TestsuiteCore:
             )
         )
 
-        # See corresponding code/comment in run_multithread_mainloop
-        try:
-            scheduler.run()
-        except KeyboardInterrupt:
-            if not self.aborted_too_many_failures:  # interactive-only
-                raise
+        # Finally run the tests
+        scheduler.run()
 
     # Unlike the previous methods, the following ones are supposed to be
     # overriden.

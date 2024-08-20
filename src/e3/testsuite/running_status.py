@@ -1,27 +1,38 @@
 from __future__ import annotations
 
 """
-RunningStatus keep users informed about the progress of testsuite execution.
+RunningStatus keeps users informed about the progress of testsuite execution
+and aborts when there are too many consecutive failures/errors (see the
+--max-consecutive-failures command-line option).
 """
 
 from typing import Dict, Optional, TYPE_CHECKING
 import threading
 import time
 
+from e3.testsuite.result import TestResultSummary, TestStatus
+
 
 if TYPE_CHECKING:
     from e3.collection.dag import DAG
     from e3.testsuite.fragment import TestFragment
-    from e3.testsuite.result import TestStatus
 
 
 class RunningStatus:
-    def __init__(self, filename: str, update_interval: float = 1.0):
+    def __init__(
+        self,
+        filename: str,
+        update_interval: float = 1.0,
+        max_consecutive_failures: int = 0,
+    ):
         """RunningStatus constructor.
 
         :param filename: Name of the status file to write.
         :param update_interval: Minimum number of seconds between status file
             updates.
+        :param max_consecutive_failures:
+            Number of test failures (FAIL or ERROR) that trigger the abortion
+            of the testuite. If zero, this behavior is disabled.
         """
         self.dag: Optional[DAG] = None
         self.filename = filename
@@ -44,6 +55,20 @@ class RunningStatus:
 
         self.update_interval = update_interval
         self.no_update_before = 0.0
+
+        self.max_consecutive_failures = max_consecutive_failures
+
+        self.consecutive_failures = 0
+        """
+        Number of consecutive failure/error results we just processed. Used to
+        abort the testsuite when there are too many issues.
+        """
+
+        self.aborted_too_many_failures = False
+        """
+        Whether the testsuite aborted because of too many consecutive test
+        failures (see the --max-consecutive-failures command-line option).
+        """
 
     def set_dag(self, dag: DAG) -> None:
         """Set the DAG that contains TestFragment instances."""
@@ -69,12 +94,43 @@ class RunningStatus:
             f = self.running.pop(fragment.uid)
             assert f is fragment
             self.completed[f.uid] = f
+
         self.dump()
 
-    def set_status_counters(self, counters: Dict[TestStatus, int]) -> None:
-        copy = dict(counters)
+    def process_result(self, result: TestResultSummary) -> None:
+        """Integrate a test result in the testsuite status.
+
+        This increments status counters and triggers testsuite abortion if
+        there were too many consecutive failures.
+        """
         with self.lock:
-            self.status_counters = copy
+            try:
+                self.status_counters[result.status] += 1
+            except KeyError:
+                self.status_counters[result.status] = 1
+
+            # Keep track of the number of consecutive failures seen so far: if
+            # it reaches the maximum number allowed, we must abort the
+            # testsuite.
+            if result.status in (TestStatus.ERROR, TestStatus.FAIL):
+                self.consecutive_failures += 1
+                if (
+                    not self.aborted_too_many_failures
+                    and self.max_consecutive_failures > 0
+                    and (
+                        self.consecutive_failures
+                        >= self.max_consecutive_failures
+                    )
+                ):
+                    from e3.testsuite import logger
+
+                    self.aborted_too_many_failures = True
+                    logger.error(
+                        "Too many consecutive failures, aborting the testsuite"
+                    )
+            else:
+                self.consecutive_failures = 0
+
         self.dump()
 
     def dump(self) -> None:

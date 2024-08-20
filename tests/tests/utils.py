@@ -18,7 +18,12 @@ class MultiSchedulingSuite(Testsuite):
         return self.main.args.multiprocessing
 
 
-def create_testsuite(test_names, driver_cls, ts_cls=Testsuite):
+def create_testsuite(
+    test_names,
+    driver_cls,
+    ts_cls=Testsuite,
+    adjust_dag_deps=None,
+):
     """Create a helper testsuite class.
 
     The point of this function is to provide a simple mean to create a
@@ -27,6 +32,7 @@ def create_testsuite(test_names, driver_cls, ts_cls=Testsuite):
     :param test_names: List of names for tests to run.
     :param driver_cls: Test driver to use for these tests.
     :param ts_cls: Testsuite base class.
+    :param adjust_dag_deps: Optional callback to adjust DAG dependencies.
     """
     tests = [
         ParsedTest(
@@ -42,6 +48,10 @@ def create_testsuite(test_names, driver_cls, ts_cls=Testsuite):
     class MySuite(ts_cls):
         def get_test_list(self, sublist):
             return tests
+
+        def adjust_dag_dependencies(self, dag):
+            if adjust_dag_deps:
+                adjust_dag_deps(self, dag)
 
     return MySuite
 
