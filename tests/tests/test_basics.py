@@ -8,7 +8,6 @@ classes.
 import gc
 import os
 import re
-import time
 import warnings
 import weakref
 
@@ -31,6 +30,7 @@ from .utils import (
     MultiSchedulingSuite,
     check_result_dirs,
     check_result_from_prefix,
+    create_result,
     create_testsuite,
     extract_results,
     run_testsuite,
@@ -783,26 +783,48 @@ class TestMaxConsecutiveFailures:
             self.add_fragment(dag, "run")
 
         def run(self, prev, slot):
-            # For the multiprocessing/multi-jobs check, adding delay to one
-            # test allows the others to fail before, thus trigger the testsuite
-            # aborting while that test is still running, and thus exercize
-            # code that waits for workers after abortion.
-            if self.env.args.jobs > 1 and self.test_name == "a":
-                time.sleep(1)
             self.result.set_status(Status.FAIL)
             self.push_result()
 
     def run_check(self, caplog, n_failures, multiprocessing, jobs=1):
+
+        def adjust_dag_deps(suite, dag):
+            # Make sure that n_failure tests run first, and that the other
+            # tests start only after the n_failure tests completed.
+            fragments = list(dag.vertex_data.values())
+            first_batch = [f.uid for f in fragments[:n_failures]]
+            second_batch = fragments[n_failures:]
+            for f in second_batch:
+                dag.update_vertex(vertex_id=f.uid, predecessors=first_batch)
+
         suite = run_testsuite(
             create_testsuite(
-                ["a", "b", "c", "d"], self.MyDriver, MultiSchedulingSuite
+                ["a", "b", "c", "d"],
+                self.MyDriver,
+                MultiSchedulingSuite,
+                adjust_dag_deps,
             ),
-            args=[f"--max-consecutive-failures={n_failures}", f"-j{jobs}"],
+            args=[
+                f"--max-consecutive-failures={n_failures}",
+                f"-j{jobs}",
+                "-E",
+            ],
             multiprocessing=multiprocessing,
             expect_failure=True,
         )
         logs = {r.getMessage() for r in caplog.records}
-        assert len(suite.report_index.entries) == n_failures
+
+        results = len(suite.report_index.entries)
+        skip = 0
+        failures = 0
+        for e in suite.report_index.entries.values():
+            if e.status == Status.FAIL:
+                failures += 1
+            else:
+                assert e.status == Status.SKIP
+                skip += 1
+        assert n_failures == failures
+        assert results - failures == skip
         assert "Too many consecutive failures, aborting the testsuite" in logs
 
     def test_multithread(self, caplog):
@@ -812,6 +834,44 @@ class TestMaxConsecutiveFailures:
     def test_multiprocess(self, caplog):
         self.run_check(caplog, n_failures=2, multiprocessing=True)
         self.run_check(caplog, n_failures=2, multiprocessing=True, jobs=4)
+
+
+class TestMaxConsecutiveFailuresBatch:
+    """Check that --max-consecutive-failures works as expected for batches.
+
+    Make a single test fragment push a batch of failures that triggers
+    testsuite abortion.
+    """
+
+    class MyDriver(Driver):
+        def add_test(self, dag):
+            self.add_fragment(dag, "run")
+
+        def run(self, prev, slot):
+            for i in range(4):
+                self.push_result(create_result(f"t{i}", Status.FAIL))
+
+    def run_check(self, caplog, multiprocessing):
+        suite = run_testsuite(
+            create_testsuite(["t"], self.MyDriver, MultiSchedulingSuite),
+            args=["--max-consecutive-failures=2"],
+            multiprocessing=multiprocessing,
+            expect_failure=True,
+        )
+        assert extract_results(suite) == {
+            "t0": Status.FAIL,
+            "t1": Status.FAIL,
+            "t2": Status.FAIL,
+            "t3": Status.FAIL,
+        }
+        logs = {r.getMessage() for r in caplog.records}
+        assert "Too many consecutive failures, aborting the testsuite" in logs
+
+    def test_multithread(self, caplog):
+        self.run_check(caplog, multiprocessing=False)
+
+    def test_multiprocess(self, caplog):
+        self.run_check(caplog, multiprocessing=True)
 
 
 class TestShowTimeInfo:
@@ -1142,7 +1202,7 @@ class TestMemleak:
     """Check the absence of memory leaks in a testsuite run."""
 
     class MySuite(MultiSchedulingSuite):
-        def adjust_dag_dependencies(self, dag):
+        def custom_adjust_dag_deps(self, dag):
             # Create our mapping to test fragments for convenience below
             self.test_fragments = {}
             for fg in dag.vertex_data.values():
@@ -1208,7 +1268,12 @@ class TestMemleak:
 
     def run_check(self, multiprocessing):
         suite = run_testsuite(
-            create_testsuite(["t1", "t2"], self.MyDriver, self.MySuite),
+            create_testsuite(
+                ["t1", "t2"],
+                self.MyDriver,
+                self.MySuite,
+                self.MySuite.custom_adjust_dag_deps,
+            ),
             ["--failure-exit-code=0"],
             multiprocessing=multiprocessing,
         )

@@ -134,6 +134,25 @@ class TestFragment:
         """Shortcut for static_push_error_result on the current fragment."""
         self.static_push_error_result(self.uid, self.index, self.driver)
 
+    def must_run(self) -> bool:
+        """Return if the fragment must be run.
+
+        It must be skipped when the testsuite has aborted because of too many
+        consecutive failures: we push a SKIP result in that case.
+        """
+        if self.running_status.aborted_too_many_failures:
+            self.driver.push_result(
+                TestResult(
+                    self.uid,
+                    env=self.driver.test_env,
+                    status=TestStatus.SKIP,
+                    msg="Testsuite aborted",
+                )
+            )
+            return False
+        else:
+            return True
+
     @abc.abstractmethod
     def clear_driver_data(self) -> None:
         """Remove references to ``TestDriver`` instances and related data.
@@ -180,16 +199,17 @@ class ThreadTestFragment(e3.job.Job, TestFragment):
         """Run the test fragment."""
         from e3.testsuite import TestAbort
 
-        self.running_status.start(self)
         self.return_value = None
-        try:
-            self.return_value = self.data(self.previous_values, self.slot)
-        except TestAbort:
-            pass
-        except Exception as e:
-            self.push_error_result(e)
-            self.return_value = e
-        self.running_status.complete(self)
+        if self.must_run():
+            self.running_status.start(self)
+            try:
+                self.return_value = self.data(self.previous_values, self.slot)
+            except TestAbort:
+                pass
+            except Exception as e:
+                self.push_error_result(e)
+                self.return_value = e
+            self.running_status.complete(self)
 
 
 class ProcessTestFragment(
@@ -239,13 +259,24 @@ class ProcessTestFragment(
         """
         self.running_status = running_status
         self.result_queue = []
+        self.skipped_for_abortion = False
         super().__init__(uid, driver, callback_name, slot, env)
 
     def clear_driver_data(self) -> None:
         joker: Any = None
         self.driver = joker
 
-    def start(self) -> Run:
+    def start(self) -> Run | None:
+        # The decision to start this fragment or not (i.e. the call to
+        # must_run) is taken here: it would be wrong to call it later, since
+        # testsuite may not be aborted right now but may be aborted while this
+        # fragment runs. Once a fragment has started, we always wait for its
+        # completion.
+        if not self.must_run():
+            self.skipped_for_abortion = True
+            self.return_value = None
+            return None
+
         self.running_status.start(self)
 
         # Create the exchange file: write the test environment to it
@@ -279,7 +310,22 @@ class ProcessTestFragment(
             bg=True,
         )
 
+    def poll(
+        self,
+        scheduler: e3.testsuite.multiprocess_scheduler.MultiprocessScheduler,
+    ) -> bool:
+        # If this fragment was not run, there is no subprocess to wait: the
+        # caller can act as if the fragment had completed.
+        if self.skipped_for_abortion:
+            return False
+        else:
+            return super().poll(scheduler)
+
     def collect_result(self) -> None:
+        # If this fragment was not run, there is no result to collect
+        if self.skipped_for_abortion:
+            return
+
         # Let extract_result_queue put results in the driver's result queue,
         # then forward them to this fragment's.
         self.driver.result_queue = []
@@ -297,6 +343,9 @@ class ProcessTestFragment(
         in the driver's result queue. If anything goes sour, create an error
         result in the same result queue.
         """
+        # If this fragment was not run, collect_result should not call this
+        assert not self.skipped_for_abortion
+
         # Make sure the process exitted with no error
         if self.process.status != 0:
             result = TestResult(

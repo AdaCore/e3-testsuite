@@ -190,7 +190,7 @@ class MultiprocessScheduler(Generic[WorkData, SomeWorker]):
             while self.active_workers > 0 or not self.no_work_left:
                 self.poll()
 
-        except KeyboardInterrupt:
+        except KeyboardInterrupt:  # interactive-only
             logger.error(
                 "Scheduling abortion requested, waiting for all active"
                 " workers..."
