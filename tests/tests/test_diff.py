@@ -361,3 +361,14 @@ def test_line_by_line():
 
     assert subst.refine(output) == b"first some-content line\n"
     assert lbl_subst.refine(output) == b"first line\nsome-content line\n"
+
+
+def test_pattern_substitute_callback():
+    """Check that PatternSubstute accept replacement callbacks."""
+
+    def repl(m):
+        return m.group(1)
+
+    refiner = diff.PatternSubstitute(r"[a-z]*\((.*)\)", repl)
+
+    assert refiner.refine("foo(1, 2)") == "1, 2"

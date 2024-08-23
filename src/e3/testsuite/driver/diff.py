@@ -1,6 +1,17 @@
+from __future__ import annotations
+
 import os
 import re
-from typing import AnyStr, Generic, List, Optional, Pattern, Tuple, Union
+from typing import (
+    AnyStr,
+    Callable,
+    Generic,
+    List,
+    Optional,
+    Pattern,
+    Tuple,
+    Union,
+)
 
 from e3.diff import diff
 from e3.os.fs import unixpath
@@ -98,7 +109,9 @@ class PatternSubstitute(OutputRefiner, Generic[AnyStr]):
     """Replace patterns in outputs."""
 
     def __init__(
-        self, pattern: AnyStr, replacement: Optional[AnyStr] = None
+        self,
+        pattern: AnyStr,
+        replacement: AnyStr | Callable[[re.Match], AnyStr] | None = None,
     ) -> None:
         """
         Initialize a PatternSubstitute instance.
@@ -109,7 +122,9 @@ class PatternSubstitute(OutputRefiner, Generic[AnyStr]):
             string).
         """
         self.regexp: Pattern[AnyStr] = re.compile(pattern)
-        self.replacement: AnyStr = replacement or type(pattern)()
+        self.replacement: AnyStr | Callable[[re.Match], AnyStr] = (
+            replacement or type(pattern)()
+        )
 
     def refine(self, output: AnyStr) -> AnyStr:
         return self.regexp.sub(self.replacement, output)
