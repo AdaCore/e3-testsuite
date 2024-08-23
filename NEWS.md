@@ -1,6 +1,7 @@
 27.0 (Not released yet)
 =======================
 
+* `PatternSubstitute`: update annotations to accept replacement callbacks.
 * `e3.testsuite.report.xunit`: add a `XUnitImportApp` class to make it possible
   to create customized versions of the `e3-convert-xunit` script without code
   duplication.
