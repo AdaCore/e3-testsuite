@@ -24,7 +24,11 @@ from e3.testsuite.result import (
     TestResultSummary as ResultSummary,
     TestStatus as Status,
 )
-from e3.testsuite.testcase_finder import TestFinder as Finder, ParsedTest
+from e3.testsuite.testcase_finder import (
+    TestFinder as Finder,
+    ParsedTest,
+    YAMLTestFinder,
+)
 
 from .utils import (
     MultiSchedulingSuite,
@@ -1346,3 +1350,84 @@ class TestSkipPassed:
             "t1-error": Status.ERROR,
             "t2-pass": Status.PASS,
         }
+
+
+def test_filtering(tmp_path):
+    """Check support for filtering tests on the command line."""
+    # Create the hierarchy of test directories in the "tests" directory
+    tests_dir = tmp_path / "tests"
+    for tc, filename in [
+        ("foo/a", "test.yaml"),
+        ("foo/bar", "test.yaml"),
+        ("bar", "test.yaml"),
+        ("custom", "custom.yaml"),
+    ]:
+        tc_dir = tests_dir / tc
+        mkdir(str(tc_dir))
+        with (tc_dir / filename).open("w"):
+            pass
+
+    # This test finder, unlike YAMLTestFinder, does not guarantee that each
+    # tests has its own directory.
+    class CustomTestFinder(Finder):
+        test_dedicated_directory = False
+
+        def probe(self, testsuite, dirpath, dirnames, filenames):
+            if "custom.yaml" in filenames:
+                return [
+                    ParsedTest(
+                        f"custom.{t}",
+                        MyDriver,
+                        {},
+                        dirpath,
+                        test_matcher=f"custom.{t}",
+                    )
+                    for t in ["a", "b", "foo"]
+                ]
+
+    # Dummy test driver that always passes
+    class MyDriver(BasicDriver):
+        def run(self, prev, slot):
+            pass
+
+        def analyze(self, prev, slot):
+            self.result.set_status(Status.PASS)
+            self.push_result()
+
+    class Mysuite(Suite):
+        test_driver_map = {"mydriver": MyDriver}
+        default_driver = "mydriver"
+        tests_subdir = str(tests_dir)
+        test_finders = [YAMLTestFinder(), CustomTestFinder()]
+
+    def check(patterns, expected_results):
+        """Run the testsuite with the given patterns.
+
+        Check that we get exactly the expected set of test results.
+        """
+        suite = run_testsuite(Mysuite, patterns)
+        assert extract_results(suite) == {
+            name: Status.PASS for name in expected_results
+        }
+
+    # No pattern: all tests should run
+    check(
+        [], {"foo__a", "foo__bar", "bar", "custom.a", "custom.b", "custom.foo"}
+    )
+
+    # Pattern that is actually a directory: run only tests from that directory
+    check([str(tests_dir / "bar")], {"bar"})
+
+    # Pattern that matches a directory: run all tests that matches that pattern
+    # anyway.
+    check(["foo"], {"foo__a", "foo__bar", "custom.foo"})
+
+    check(["custom"], {"custom.a", "custom.b", "custom.foo"})
+    check([str(tests_dir / "custom")], {"custom.a", "custom.b", "custom.foo"})
+
+    # Pattern that matches a "test matcher" string: run only the corresponding
+    # test.
+    check(["custom.b"], {"custom.b"})
+
+    # Pattern that matches the middle of multiple tests: run only these tests
+    check(["a"], {"foo__a", "foo__bar", "bar", "custom.a"})

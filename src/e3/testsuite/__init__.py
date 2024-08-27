@@ -653,9 +653,6 @@ class TestsuiteCore:
         # several patterns in "sublist" may yield the same testcase.
         testcases: Dict[str, ParsedTest] = {}
         test_finders = self.test_finders
-        dedicated_dirs_only = all(
-            tf.test_dedicated_directory for tf in test_finders
-        )
 
         def matches_pattern(
             pattern: Optional[Pattern[str]], name: str
@@ -711,19 +708,22 @@ class TestsuiteCore:
                     if vcsdir in dirnames:
                         dirnames.remove(vcsdir)
 
-                # If all tests are guaranteed to have a dedicated directory,
-                # do not process directories that don't match the requested
-                # pattern.
-                if dedicated_dirs_only and not matches_pattern(
-                    pattern, dirpath
-                ):
-                    continue
+                # Compute whether the pattern matches the directory only once
+                # (now) instead of once per test finder (in the for loop
+                # below).
+                pattern_matches = matches_pattern(pattern, dirpath)
 
                 # The first test finder that has a match "wins". When handling
                 # test data, we want to deal only with absolute paths, so get
                 # the absolute name now.
                 dirpath = os.path.abspath(dirpath)
                 for tf in test_finders:
+                    # If this test finder guarantees that each testcase has a
+                    # dedicated directory, do not process this directory if it
+                    # does not match the requested pattern.
+                    if tf.test_dedicated_directory and not pattern_matches:
+                        continue
+
                     try:
                         test_or_list = tf.probe(
                             self, dirpath, dirnames, filenames
