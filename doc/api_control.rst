@@ -114,7 +114,7 @@ evaluating a boolean expression, ``YAMLTestCreator`` passes it variables
 corresponding to the ``condition_env`` argument constructor argument, plus the
 testsuite environment (``self.env`` in test drivers) as ``env``. Please refer
 to the `e3.env documentation
-<https://e3-core.readthedocs.io/en/latest/autoapi/e3/env/index.html#module-e3.env>`_
+<https://e3-core.readthedocs.io/en/latest/autoapi/env/index.html>`_
 to know more about environments, which are instances of the ``AbstractBaseEnv``
 subclasses.
 
