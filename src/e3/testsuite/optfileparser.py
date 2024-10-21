@@ -22,7 +22,17 @@ if TYPE_CHECKING:  # no cover
 
 
 # Regexp that matches valid lines in test.opt files
-OPTLINE_REGEXPS = re.compile(r"^([^\s]+)(\s+([a-zA-Z0-9_-]+)(\s+(.*))?)?$")
+OPTLINE_REGEXPS = re.compile(
+    # Comma-separated list of discriminants
+    r"^([a-zA-Z0-9!+,._-]+)"
+    # The rest is optional...
+    "("
+    # Command
+    r"\s+([a-zA-Z0-9_-]+)"
+    # Optional command argument
+    r"(\s+(.*))?"
+    ")?$"
+)
 
 
 class BadFormattingError(Exception):

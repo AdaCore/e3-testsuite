@@ -220,3 +220,19 @@ def test_check_syntax_main():
     p = Run(["e3-opt-check", "dead.opt", "tags.opt"], cwd=optfiles_dir)
     assert p.status == 0
     assert p.out == ""
+
+
+def test_sharp():
+    """Check the handling for lines that contain '#'."""
+    of = parse_file("sharp_in_comment.opt")
+    assert of.get_value("dead") == "# This # can # contain # sharps"
+
+    try:
+        parse_file("syntax_error_3.opt")
+    except BadFormattingError as exc:
+        assert str(exc) == (
+            "Can not parse line 1:"
+            " # This is not a comment and should be rejected"
+        )
+    else:
+        raise AssertionError()
