@@ -1,6 +1,7 @@
 27.0 (Not released yet)
 =======================
 
+* `e3.testsuite.optfileparser`: restrict syntax for discriminants.
 * Fix test filtering when not all test finders have dedicated directories.
 * `PatternSubstitute`: update annotations to accept replacement callbacks.
 * `e3.testsuite.report.xunit`: add a `XUnitImportApp` class to make it possible
