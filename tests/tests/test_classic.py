@@ -477,3 +477,25 @@ def test_decoding_error(caplog):
         "\n  h\\\\xe9llo",
         log,
     )
+
+
+def test_shell_stdin():
+    """Check passing non-default stdin paramater to ClassicTestDriver.shell."""
+
+    class MyDriver(classic.ClassicTestDriver):
+        def run(self):
+            self.shell(
+                [sys.executable, ScriptDriver.helper_script, "-stdin"],
+                stdin=os.path.join(
+                    os.path.dirname(__file__),
+                    "classic-tests",
+                    "abs-test-dir",
+                    "input.txt",
+                ),
+            )
+            self.result.out = self.output
+
+    suite = run_testsuite(create_testsuite(["t"], MyDriver), args=["-E"])
+    assert extract_results(suite) == {"t": Status.PASS}
+    r = suite.report_index.entries["t"].load()
+    assert r.out == "From stdin: 'This is the content of input.txt\\n'\n"
