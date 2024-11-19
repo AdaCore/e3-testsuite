@@ -26,6 +26,8 @@ for arg in sys.argv[1:]:
         sys.stdout.buffer.write(b"h\xe9llo")
     elif arg.startswith("-i"):
         sys.stdout.buffer.write("héllo".encode("iso-8859-1"))
+    elif arg == "-stdin":
+        print("From stdin:", repr(sys.stdin.read()))
     else:
         print("Unknown switch")
         sys.exit(2)

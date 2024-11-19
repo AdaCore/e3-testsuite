@@ -3,8 +3,9 @@ from __future__ import annotations
 import os
 import re
 
+from pathlib import Path
 import traceback
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, IO, List, Optional, TYPE_CHECKING, Union
 
 import e3.collection.dag
 from e3.fs import rm, sync_tree
@@ -27,6 +28,10 @@ from e3.testsuite.result import (
 from e3.testsuite.utils import indent
 
 from colorama import Fore, Style
+
+
+if TYPE_CHECKING:
+    from e3.os.process import DEVNULL_VALUE, PIPE_VALUE
 
 
 class TestSkip(Exception):
@@ -165,6 +170,9 @@ class ClassicTestDriver(TestDriver):
         encoding: Optional[str] = None,
         truncate_logs_threshold: Optional[int] = None,
         ignore_environ: bool = True,
+        stdin: (
+            DEVNULL_VALUE | PIPE_VALUE | str | bytes | Path | IO | None
+        ) = DEVNULL,
     ) -> ProcessResult:
         """Run a subprocess.
 
@@ -191,6 +199,7 @@ class ClassicTestDriver(TestDriver):
             When True (the default), pass exactly environment variables
             in ``env``. When False, pass a copy of ``os.environ`` that is
             augmented with variables in ``env``.
+        :param stdin: Forwarded to ``e3.os.process.Run``'s ``input`` argument.
         """
         # By default, run the subprocess in the test working directory
         if cwd is None:
@@ -230,7 +239,7 @@ class ClassicTestDriver(TestDriver):
             cwd=cwd,
             output=PIPE,
             error=STDOUT,
-            input=DEVNULL,
+            input=stdin,
             timeout=timeout,
             env=env,
             ignore_environ=ignore_environ,
