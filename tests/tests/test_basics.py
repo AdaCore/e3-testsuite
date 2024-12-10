@@ -1431,3 +1431,39 @@ def test_filtering(tmp_path):
 
     # Pattern that matches the middle of multiple tests: run only these tests
     check(["a"], {"foo__a", "foo__bar", "bar", "custom.a"})
+
+
+def test_symlink_loop(tmp_path):
+    """Check that testcase discovery completes even with symlink loops."""
+    # Create the hierarchy of test directories in the "tests" directory, with
+    # one subdirectory containing a symbolic link to the "tests" directory
+    # itself.
+    tests_dir = tmp_path / "tests"
+    tests_dir.mkdir()
+    for t in ["a", "b"]:
+        tc_dir = tests_dir / t
+        tc_dir.mkdir()
+        with (tc_dir / "test.yaml").open("w"):
+            pass
+
+    (tests_dir / "a" / "link_loop").symlink_to(tests_dir)
+
+    # Dummy test driver that always passes
+    class MyDriver(BasicDriver):
+        def run(self, prev, slot):
+            pass
+
+        def analyze(self, prev, slot):
+            self.result.set_status(Status.PASS)
+            self.push_result()
+
+    class Mysuite(Suite):
+        test_driver_map = {"mydriver": MyDriver}
+        default_driver = "mydriver"
+        tests_subdir = str(tests_dir)
+
+    # Trying to run the testsuite used to create an infinite recursion in
+    # testcase discovery code as the symbolic link was traversed again and
+    # again.
+    suite = run_testsuite(Mysuite, ["-E"])
+    assert extract_results(suite) == {"a": Status.PASS, "b": Status.PASS}

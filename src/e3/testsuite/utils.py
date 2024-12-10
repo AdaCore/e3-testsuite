@@ -5,7 +5,16 @@ from __future__ import annotations
 from enum import Enum, auto
 import os
 import sys
-from typing import AnyStr, Dict, IO, Optional, Type, TypeVar, TYPE_CHECKING
+from typing import (
+    AnyStr,
+    Dict,
+    IO,
+    Iterator,
+    Optional,
+    Type,
+    TypeVar,
+    TYPE_CHECKING,
+)
 
 from e3.os.fs import unixpath
 from e3.os.process import quote_arg
@@ -135,3 +144,43 @@ def indent(text: str, prefix: str = "  ") -> str:
     # last line if is empty. "a\n".splitlines() returns ["a"], so we must avoid
     # it.
     return "\n".join((prefix + line) for line in text.split("\n"))
+
+
+def safe_dir_walk(top: str) -> Iterator[tuple[str, list[str], list[str]]]:
+    """Traverse a directory hierarchy following symlinks in a safe way.
+
+    This is essentially a wrapper around os.walk() to safely follow symbolic
+    links that keeps track of the directories traversed to avoid infinite
+    recursion in case of symbolic link loops.
+    """
+    # Set of realpaths (os.path.realpath) for already visited directories
+    visited: set[str] = set()
+
+    def already_visited(f: str) -> bool:
+        """Return whether we already visited a directory.
+
+        If ``f`` designates an already visited directory, return False.
+        Otherwise, keep track of it as a visited directory and return True.
+        """
+        f = os.path.realpath(f)
+        if f in visited:
+            return True
+        else:
+            visited.add(f)
+            return False
+
+    def recurse(top: str) -> Iterator[tuple[str, list[str], list[str]]]:
+        """Recursive wrapper around os.walk()."""
+        if already_visited(top):
+            return
+        for dirpath, dirnames, filenames in os.walk(top):
+            yield dirpath, dirnames, filenames
+
+            # For directorise that are actually symlinks, recurse to traverse
+            # them too.
+            for d in dirnames:
+                d = os.path.join(dirpath, d)
+                if os.path.islink(d):
+                    yield from recurse(d)
+
+    yield from recurse(top)

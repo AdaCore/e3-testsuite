@@ -54,6 +54,7 @@ from e3.testsuite.utils import (
     dump_environ,
     enum_to_cmdline_args_map,
     isatty,
+    safe_dir_walk,
 )
 
 
@@ -698,9 +699,7 @@ class TestsuiteCore:
 
             # For each directory in the requested subdir, ask our test finders
             # to probe for a testcase. Register matches.
-            for dirpath, dirnames, filenames in os.walk(
-                root, followlinks=True
-            ):
+            for dirpath, dirnames, filenames in safe_dir_walk(root):
                 # Don't descend into internal VCS directories, because it will
                 # likely generate a lot of unnecessary I/O operations and we
                 # don't expect to find any tests there anyway.

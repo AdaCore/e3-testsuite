@@ -1,6 +1,7 @@
 27.0 (Not released yet)
 =======================
 
+* Make testcase discovery resilient to symlink loops.
 * `ClassicTestDriver.shell`: bind e3.os.process.Run's input argument.
 * `e3.testsuite.optfileparser`: restrict syntax for discriminants.
 * Fix test filtering when not all test finders have dedicated directories.
