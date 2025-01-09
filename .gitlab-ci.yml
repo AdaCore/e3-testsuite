@@ -8,3 +8,21 @@ include:
 stages:
   - check
   - test
+  - upload
+
+upload-python-registry:
+  stage: upload
+  services:
+    - image:e3
+  before_script:
+    - python -m pip install twine
+  script:
+    - python build_wheel.py
+    - python -m twine upload --skip-existing
+      --repository-url https://${CI_SERVER_HOST}:${CI_SERVER_PORT}/api/v4/projects/202/packages/pypi
+      build/*.whl
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+  variables:
+    TWINE_PASSWORD: $CI_JOB_TOKEN
+    TWINE_USERNAME: gitlab-ci-token
