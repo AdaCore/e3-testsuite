@@ -456,7 +456,7 @@ def generate_report(
         )
 
 
-def main(argv: Optional[List[str]] = None) -> None:
+def main(argv: Optional[List[str]] = None) -> int:
     args = args_parser.parse_args(argv)
     new_index = ReportIndex.read(args.report)
     old_index = (
