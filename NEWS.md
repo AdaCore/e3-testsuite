@@ -1,4 +1,4 @@
-27.1 (Not released yet)
+27.2 (Not released yet)
 =======================
 
 * Make testcase discovery resilient to symlink loops.
