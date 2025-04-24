@@ -287,5 +287,5 @@ def test_script_encoding():
     assert results.pop("utf-8") == Status.PASS
     assert len(results) == 1
     test_name, status = list(results.items())[0]
-    assert test_name.startswith("bad.run_wrapper__except")
+    assert test_name == "bad.run_wrapper"
     assert status == Status.ERROR

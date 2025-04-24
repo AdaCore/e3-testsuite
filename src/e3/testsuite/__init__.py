@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import inspect
+import itertools
 import logging
 import os
 import re
@@ -872,18 +873,40 @@ class TestsuiteCore:
         # serialized/deserialized through YAML, so the Log layer disappeared.
         assert status is not None
 
-        # Ensure that we don't have two results with the same test name
+        # Ensure that we don't have two results with the same test name: if
+        # that is the case, we cannot publish the result we were given: still,
+        # push a "synthetic" ERROR result to keep track of the error (this is a
+        # testsuite framework error).
+        #
+        # There is one exception to this: ERROR results are already the symptom
+        # of something that went wrong in the testing framework. Because of
+        # e3-testsuite's architecture (in particular multiprocessing), it is
+        # not possible to have both human-friendly result names (that cleanly
+        # map to test names) and reliably creating non-conflicting result names
+        # at the time the test result is produced. So if the name of an ERROR
+        # result conflicts with an existing result, just look for an
+        # alternative name.
 
         def indented_tb(tb: List[str]) -> str:
             return "".join("  {}".format(line) for line in tb)
 
-        assert test_name not in self.report_index.entries, (
-            f"cannot push twice results for {test_name}"
-            f"\nFirst push happened at:"
-            f"\n{indented_tb(self.result_tracebacks[test_name])}"
-            f"\nThis one happened at:"
-            f"\n{indented_tb(item.traceback)}"
-        )
+        if test_name in self.report_index.entries:
+            test_name_radix = test_name
+            for i in itertools.count(1):
+                test_name = f"{test_name_radix}__except{i}"
+                if test_name not in self.report_index.entries:
+                    break
+
+            if item.result.status != TestStatus.ERROR:
+                self.add_test_error(
+                    test_name,
+                    f"cannot push twice results for {test_name_radix}",
+                    f"\nFirst push happened at:"
+                    f"\n{indented_tb(self.result_tracebacks[test_name_radix])}"
+                    f"\nThis one happened at:"
+                    f"\n{indented_tb(item.traceback)}",
+                )
+                return
 
         # Now that the result is validated, add it to our internals
         self.report_index.add_result(item.result, item.filename)
@@ -927,10 +950,7 @@ class TestsuiteCore:
         from e3.testsuite.driver import ResultQueueItem
 
         result = TestResult(
-            f"{test_name}__except{len(self.report_index.entries)}",
-            env={},
-            status=TestStatus.ERROR,
-            msg=message,
+            test_name, env={}, status=TestStatus.ERROR, msg=message
         )
         if tb:
             result.log += tb

@@ -1,6 +1,8 @@
 27.2 (Not released yet)
 =======================
 
+* Rework handling of `ERROR` test results: only append `__except` suffixes in
+  case of duplicate result names.
 * Make testcase discovery resilient to symlink loops.
 * `ClassicTestDriver.shell`: bind e3.os.process.Run's input argument.
 * `e3.testsuite.optfileparser`: restrict syntax for discriminants.

@@ -32,6 +32,7 @@ from e3.testsuite.testcase_finder import (
 
 from .utils import (
     MultiSchedulingSuite,
+    check_result,
     check_result_dirs,
     check_result_from_prefix,
     create_result,
@@ -281,8 +282,8 @@ class TestExceptionInDriver:
         assert len(results) == 2
 
         keys = sorted(results)
-        assert keys[0].startswith("test1.run__except")
-        assert keys[1].startswith("test2.run__except")
+        assert keys[0] == "test1.run"
+        assert keys[1] == "test2.run"
         assert set(results.values()) == {Status.ERROR}
 
     def test_multithread(self):
@@ -427,23 +428,20 @@ class TestInvalidYAML:
         assert len(results) == 4
         assert results["valid"].status == Status.PASS
 
-        check_result_from_prefix(
+        check_result(
             suite,
-            "invalid_syntax__except",
+            "invalid_syntax",
             Status.ERROR,
             "invalid syntax for test.yaml",
         )
-        check_result_from_prefix(
+        check_result(
             suite,
-            "invalid_structure__except",
+            "invalid_structure",
             Status.ERROR,
             "invalid format for test.yaml",
         )
-        check_result_from_prefix(
-            suite,
-            "invalid_driver__except",
-            Status.ERROR,
-            "cannot find driver",
+        check_result(
+            suite, "invalid_driver", Status.ERROR, "cannot find driver"
         )
 
 
@@ -467,12 +465,7 @@ class TestMissingDriver:
 
     def test(self):
         suite = run_testsuite(self.Mysuite, expect_failure=True)
-        check_result_from_prefix(
-            suite,
-            "valid__except",
-            Status.ERROR,
-            "missing test driver",
-        )
+        check_result(suite, "valid", Status.ERROR, "missing test driver")
 
 
 class TestInvalidDriver:
@@ -498,12 +491,7 @@ class TestInvalidDriver:
 
     def test(self):
         suite = run_testsuite(self.Mysuite, expect_failure=True)
-        check_result_from_prefix(
-            suite,
-            "test1__except",
-            Status.ERROR,
-            "__init__ not implemented",
-        )
+        check_result(suite, "test1", Status.ERROR, "__init__ not implemented")
 
 
 class TestDuplicateName:
@@ -531,12 +519,12 @@ class TestDuplicateName:
     def test(self):
         suite = run_testsuite(self.Mysuite, expect_failure=True)
         assert len(suite.report_index.entries) == 2
-        assert suite.report_index.entries["foo"].status == Status.PASS
+        check_result(suite, "foo", Status.ERROR, "duplicate test name: foo")
         check_result_from_prefix(
             suite,
             "foo__except",
             Status.ERROR,
-            "duplicate test name: foo",
+            "cannot push twice results for foo",
         )
 
 
@@ -597,10 +585,16 @@ class TestPushTwice:
             return "default"
 
     def test(self):
-        try:
-            run_testsuite(self.Mysuite, args=["simple-tests/test1"])
-        except AssertionError as exc:
-            assert "cannot push twice" in str(exc)
+        suite = run_testsuite(
+            self.Mysuite, args=["simple-tests/test1"], expect_failure=True
+        )
+        assert len(suite.report_index.entries) == 2
+        check_result(
+            suite,
+            "test1__except1",
+            Status.ERROR,
+            "cannot push twice results for test1",
+        )
 
 
 def test_result_set_status_twice(caplog):
