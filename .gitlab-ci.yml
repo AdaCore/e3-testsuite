@@ -2,7 +2,7 @@ include:
   - component: $CI_SERVER_FQDN/eng/gitlab-templates/pre-commit@~latest
   - component: $CI_SERVER_FQDN/eng/gitlab-templates/tox@~latest
     inputs:
-      tox-section: py311-cov
+      tox-section: py312-cov
       stage: test
 
 stages:
