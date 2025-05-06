@@ -90,9 +90,6 @@ class TestFragment:
     uid: str
     """Unique string identifier for this test fragment."""
 
-    index: int
-    """Unique integer identifier for this test fragment."""
-
     driver: TestDriver
     """Test driver that is responsible for this test fragment."""
 
@@ -106,9 +103,7 @@ class TestFragment:
     """
 
     @staticmethod
-    def static_push_error_result(
-        uid: str, index: int, driver: TestDriver
-    ) -> None:
+    def static_push_error_result(uid: str, driver: TestDriver) -> None:
         """Generate a test result to log the exception and traceback.
 
         This helper method is meant to be used when the execution of the test
@@ -117,22 +112,18 @@ class TestFragment:
         investigation.
 
         :param uid: UID for the test fragment.
-        :param index: Index for the test fragment.
         :param driver: TestDriver for the test fragment.
         """
-        # The name is based on the test fragment name with an additional random
-        # part to avoid conflicts at the testsuite report level.
-        result = TestResult(
-            "{}__except{}".format(uid, index),
-            env=driver.test_env,
-            status=TestStatus.ERROR,
-        )
+        # Create a result whose name matches the fragment's uid. If the main
+        # testsuite loop's result collection logic detects a name conflict, it
+        # will automatically add a suffix to that name.
+        result = TestResult(uid, env=driver.test_env, status=TestStatus.ERROR)
         result.log += traceback.format_exc()
         driver.push_result(result)
 
     def push_error_result(self, exc: Exception) -> None:
         """Shortcut for static_push_error_result on the current fragment."""
-        self.static_push_error_result(self.uid, self.index, self.driver)
+        self.static_push_error_result(self.uid, self.driver)
 
     def must_run(self) -> bool:
         """Return if the fragment must be run.
@@ -222,8 +213,6 @@ class ProcessTestFragment(
         """Subprocess input data."""
 
         fragment_uid: str
-        fragment_index: int
-
         driver_cls: Type[TestDriver]
         test_env: Dict[str, Any]
         callback_name: str
@@ -282,7 +271,6 @@ class ProcessTestFragment(
         # Create the exchange file: write the test environment to it
         worker_input = self.Input(
             self.uid,
-            self.index,
             type(self.driver),
             self.driver.test_env,
             self.callback_name,
@@ -422,9 +410,7 @@ def run_fragment(argv: Optional[List[str]] = None) -> None:  # no cover
         pass
     except Exception:
         TestFragment.static_push_error_result(
-            worker_input.fragment_uid,
-            worker_input.fragment_index,
-            driver,
+            worker_input.fragment_uid, driver
         )
 
     # Forward test results to the testsuite

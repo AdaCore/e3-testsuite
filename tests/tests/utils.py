@@ -97,6 +97,13 @@ def check_result_from_prefix(suite, prefix, status, msg):
     assert result.msg == msg
 
 
+def check_result(suite, test_name, status, msg):
+    """Check the status and message for a test result."""
+    result = suite.report_index.entries[test_name]
+    assert result.status == status
+    assert result.msg == msg
+
+
 def extract_results(testsuite):
     """Extract synthetic test results from a testsuite run."""
     return {

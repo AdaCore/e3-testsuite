@@ -110,5 +110,5 @@ class TestCollectError:
 
     def test_unpicklable(self):
         key, result = self.run_testsuite("unpicklable")
-        assert key.startswith("unpicklable.analyze__except")
+        assert key == "unpicklable.analyze"
         assert result == Status.ERROR
