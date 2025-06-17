@@ -1,5 +1,8 @@
-27.2 (Not released yet)
-=======================
+27.3 (Not released yet)
+=================
+
+27.2 (2025-06-17)
+=================
 
 * Rework handling of `ERROR` test results: only append `__except` suffixes in
   case of duplicate result names.
