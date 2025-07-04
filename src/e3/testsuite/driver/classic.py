@@ -33,6 +33,8 @@ from colorama import Fore, Style
 if TYPE_CHECKING:
     from e3.os.process import DEVNULL_VALUE, PIPE_VALUE
 
+    import colorama
+
 
 class TestSkip(Exception):
     """
@@ -100,10 +102,8 @@ class ClassicTestDriver(TestDriver):
     * have support for automatic XFAIL/SKIP test results.
     """
 
-    # These can also be colorama.Style and colorama.Fore, but we don't have
-    # type hints for them.
-    Style: DummyColors
-    Fore: DummyColors
+    Fore: colorama.ansi.AnsiFore | DummyColors
+    Style: colorama.ansi.AnsiStyle | DummyColors
 
     # Depending on the default encoding, this can be either a log of strings or
     # a log of bytes.

@@ -22,6 +22,8 @@ from e3.os.process import quote_arg
 if TYPE_CHECKING:
     from e3.env import Env
 
+    import colorama
+
 
 def isatty(stream: IO[AnyStr]) -> bool:
     """Return whether stream is a TTY.
@@ -56,8 +58,8 @@ class ColorConfig:
         """
         from colorama import Fore, Style
 
-        self.Fore = Fore
-        self.Style = Style
+        self.Fore: colorama.ansi.AnsiFore | DummyColors = Fore
+        self.Style: colorama.ansi.AnsiStyle | DummyColors = Style
 
         if colors_enabled is None:
             colors_enabled = isatty(sys.stdout)
