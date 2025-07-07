@@ -100,8 +100,5 @@ ENV/
 # mypy
 .mypy_cache/
 
-# Automatically generated
-.coveragerc
-
 # Sphinx build directory
 doc/_build
