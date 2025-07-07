@@ -232,7 +232,7 @@ class XUnitImporter:
                             if kind == "pytest.xfail"
                             else TestStatus.SKIP
                         )
-                    else:  # no cover
+                    else:  # all: no cover
                         raise AssertionError(f"invalid status tag: {tag}")
                     if isinstance(status_elt.text, str):
                         result.log += status_elt.text

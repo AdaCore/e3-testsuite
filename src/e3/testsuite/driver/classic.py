@@ -358,7 +358,7 @@ class ClassicTestDriver(TestDriver):
         """Remove the working directory tree."""
         try:
             rm(self.working_dir(), True)
-        except Exception:  # no cover
+        except Exception:  # all: no cover
             # TODO (U222-013) For mysterious reasons, on Windows hosts,
             # sometimes executable files are still visible in the filesystem
             # even after the call to "os.unlink" returned with success. As a

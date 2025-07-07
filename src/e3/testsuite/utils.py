@@ -117,7 +117,7 @@ def dump_environ(filename: str, env: Env) -> None:
                 # Also ignore variables known to be readonly on Cygwin
                 # systems. Other users are unlikely to be affected.
                 or var_name in ("PROFILEREAD", "SHELLOPTS")
-            ):
+            ):  # all: no cover
                 continue
 
             var_value = os.environ[var_name]
@@ -128,7 +128,7 @@ def dump_environ(filename: str, env: Env) -> None:
                 var_name == "PATH"
                 and env.build.os.name == "windows"
                 and os.path.pathsep in var_value
-            ):
+            ):  # windows-only
                 var_value = ":".join(
                     unixpath(p) for p in var_value.split(os.path.pathsep)
                 )

@@ -444,8 +444,11 @@ class TestsuiteCore:
             enable_colors = True
             self.main.args.show_error_output = True
 
-        # If explicitly requested, disable colors
-        if self.main.args.nocolor:
+        # If explicitly requested, disable colors.
+        #
+        # Do not bother having tests for this, as tests are by essence
+        # non-interactive, and colors are never enabled for them.
+        if self.main.args.nocolor:  # interactive-only
             enable_colors = False
 
         self.colors = ColorConfig(enable_colors)
@@ -1093,7 +1096,7 @@ class TestsuiteCore:
         # Create a scheduler to run all fragments for the testsuite main loop
 
         jobs = self.main.args.jobs
-        if self.main.args.jobs <= 0:
+        if self.main.args.jobs <= 0:  # all: no cover
             jobs = os.cpu_count() or 1
 
         scheduler = Scheduler(

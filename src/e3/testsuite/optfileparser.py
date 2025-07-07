@@ -357,5 +357,5 @@ def check_syntax_main(argv: list[str] | None = None) -> None:
     sys.exit(1 if has_errors else 0)
 
 
-if __name__ == "__main__":  # no coverage
+if __name__ == "__main__":  # all: no cover
     eval_main()

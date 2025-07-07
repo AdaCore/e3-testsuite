@@ -1,0 +1,8 @@
+[report]
+exclude_lines =
+	raise NotImplementedError
+	interactive-only
+	\.\.\.
+
+[html]
+title = e3-testsuite coverage report
