@@ -1,6 +1,9 @@
 27.3 (Not released yet)
 =================
 
+* Add a `--list-json=FILE` CLI argument to dump the list of tests in a
+  testsuite to a file in JSON format.
+
 27.2 (2025-06-17)
 =================
 

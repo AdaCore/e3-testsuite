@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import inspect
 import itertools
+import json
 import logging
 import os
 import re
@@ -411,6 +412,15 @@ class TestsuiteCore:
             " run. This attempts to find successful tests in the report stored"
             " at the location where this run will create the testsuite report.",
         )
+        exec_group.add_argument(
+            "--list-json",
+            action="store",
+            type=str,
+            default=None,
+            help="Dump the tests of the testsuite into a JSON list"
+            " at the given file path."
+            " In this mode, the tests are not executed.",
+        )
         parser.add_argument(
             "sublist", metavar="tests", nargs="*", default=[], help="test"
         )
@@ -531,6 +541,22 @@ class TestsuiteCore:
 
         # Retrieve the list of test
         self.test_list = self.get_test_list(self.main.args.sublist)
+
+        if self.main.args.list_json:
+
+            to_dump = [
+                {
+                    "test_name": t.test_name,
+                    "test_dir": t.test_dir,
+                    "test_matcher": t.test_matcher,
+                }
+                for t in self.test_list
+            ]
+
+            with open(self.main.args.list_json, "w") as fp:
+                json.dump(to_dump, fp)
+
+            return 0
 
         # If requested, filter out tests that passed the previous time
         if self.main.args.skip_passed:
