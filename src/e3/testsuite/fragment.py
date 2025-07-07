@@ -30,6 +30,7 @@ from e3.fs import rm
 import e3.job
 from e3.os.process import DEVNULL, PIPE, Run, STDOUT
 from e3.testsuite.driver import ResultQueue, TestDriver
+from e3.testsuite.event_notifications import EventNotifier
 import e3.testsuite.multiprocess_scheduler
 from e3.testsuite.result import TestResult, TestStatus
 
@@ -102,6 +103,41 @@ class TestFragment:
     testsuite report.
     """
 
+    event_notifier: EventNotifier
+    """
+    Event notifier for test start/end events.
+    """
+
+    started_test: bool
+    """
+    Set when the fragment starts: whether this fragment was the first to start
+    for its owning test driver.
+    """
+
+    ended_test: bool
+    """
+    Set when the fragment completes: whether this fragment was the last to
+    complete for its owning test driver.
+    """
+
+    def maybe_notify_started(self) -> None:
+        """Send a test start notification when appropriate.
+
+        If this fragment was the first one to start for its test driver, send
+        the corresponding notification.
+        """
+        if self.started_test:
+            self.event_notifier.notify_test_start(self.driver.test_name)
+
+    def maybe_notify_ended(self) -> None:
+        """Send a test end notification when appropriate.
+
+        If this fragment was the last one to complete for its test driver, send
+        the corresponding notification.
+        """
+        if self.ended_test:
+            self.event_notifier.notify_test_end(self.driver.test_name)
+
     @staticmethod
     def static_push_error_result(uid: str, driver: TestDriver) -> None:
         """Generate a test result to log the exception and traceback.
@@ -166,6 +202,7 @@ class ThreadTestFragment(e3.job.Job, TestFragment):
         previous_values: Dict[str, Any],
         notify_end: Callable[[str], None],
         running_status: RunningStatus,
+        event_notifier: EventNotifier,
     ) -> None:
         """Initialize a TestFragment.
 
@@ -174,12 +211,14 @@ class ThreadTestFragment(e3.job.Job, TestFragment):
         :param callback: Callable to be executed by the job.
         :param notify_end: Internal parameter. See e3.job.
         :param running_status: See BaseTestFragment.running_status.
+        :param event_notifier: Instance used to send notifications.
         """
         super().__init__(uid, callback, notify_end)
         self.driver = driver
         self.previous_values = previous_values
         self.running_status = running_status
         self.result_queue: ResultQueue = driver.result_queue
+        self.event_notifier = event_notifier
 
     def clear_driver_data(self) -> None:
         joker: Any = None
@@ -193,6 +232,7 @@ class ThreadTestFragment(e3.job.Job, TestFragment):
         self.return_value = None
         if self.must_run():
             self.running_status.start(self)
+            self.maybe_notify_started()
             try:
                 self.return_value = self.data(self.previous_values, self.slot)
             except TestAbort:
@@ -201,6 +241,8 @@ class ThreadTestFragment(e3.job.Job, TestFragment):
                 self.push_error_result(e)
                 self.return_value = e
             self.running_status.complete(self)
+        else:
+            self.ended_test = False
 
 
 class ProcessTestFragment(
@@ -234,6 +276,7 @@ class ProcessTestFragment(
         callback_name: str,
         slot: int,
         running_status: RunningStatus,
+        event_notifier: EventNotifier,
         env: e3.env.Env,
     ):
         """Initialize a ProcessTestFragment.
@@ -244,9 +287,11 @@ class ProcessTestFragment(
             job.
         :param slot: Slot ID allocated for the execution of this test fragment.
         :param running_status: See BaseTestFragment.running_status.
+        :param event_notifier: Instance used to send notifications.
         :param env: Testsuite environment.
         """
         self.running_status = running_status
+        self.event_notifier = event_notifier
         self.result_queue = []
         super().__init__(uid, driver, callback_name, slot, env)
 
@@ -256,6 +301,7 @@ class ProcessTestFragment(
 
     def start(self) -> Run:
         self.running_status.start(self)
+        self.maybe_notify_started()
 
         # Create the exchange file: write the test environment to it
         worker_input = self.Input(

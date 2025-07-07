@@ -78,22 +78,32 @@ class RunningStatus:
     def start(self, fragment: TestFragment) -> None:
         """Put a fragment in the "running" set."""
         assert self.dag is not None
+        driver = fragment.driver
+
         with self.lock:
             assert fragment.uid in self.dag.vertex_data
             assert fragment.uid not in self.running
             assert fragment.uid not in self.completed
             self.running[fragment.uid] = fragment
+
+            fragment.started_test = not driver.execution_started
+            driver.execution_started = True
         self.dump()
 
     def complete(self, fragment: TestFragment) -> None:
         """Move a fragment from the "running" set to the "completed" set."""
         assert self.dag is not None
+        driver = fragment.driver
+
         with self.lock:
             assert fragment.uid in self.dag.vertex_data
             assert fragment.uid not in self.completed
             f = self.running.pop(fragment.uid)
             assert f is fragment
             self.completed[f.uid] = f
+
+            driver.pending_fragments.remove(fragment.uid)
+            fragment.ended_test = not driver.pending_fragments
 
         self.dump()
 

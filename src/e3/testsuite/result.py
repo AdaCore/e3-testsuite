@@ -318,6 +318,12 @@ class TestResult(yaml.YAMLObject):
             yaml.dump(self, f)
             return os.path.basename(f.name)
 
+    @staticmethod
+    def load(filename: str) -> TestResult:
+        """Load a test result from a YAML file."""
+        with open(filename, "rb") as f:
+            return yaml.safe_load(f)
+
     @property
     def summary(self) -> TestResultSummary:
         return TestResultSummary(

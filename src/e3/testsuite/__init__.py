@@ -34,6 +34,7 @@ from e3.job.scheduler import Scheduler
 from e3.main import Main
 from e3.os.process import quote_arg
 from e3.testsuite._helpers import deprecated
+import e3.testsuite.event_notifications as event_notifications
 from e3.testsuite.report.gaia import (
     GAIAResultFiles,
     dump_gaia_report,
@@ -357,6 +358,21 @@ class TestsuiteCore:
             " the environement that existed when this testsuite was run"
             " to produce a given testsuite report.",
         )
+        output_group.add_argument(
+            "--notify-events",
+            help="If provided, run the given command each time a event that is"
+            " tracked by the testsuite happens. See the documentation for the"
+            " ``e3.testsuite.event_notifications`` module for more information"
+            " about events and notification commands. Base arguments for"
+            " notification commands are specified using the POSIX shell"
+            " syntax. If the commands starts with `python:`, then the expected"
+            " format is `python:MODULE:CALLABLE`. The Python module MODULE is"
+            " imported, and its CALLABLE` attribute is fetched. It is called"
+            " with one positional argument: the testsuite instance, and must"
+            " return another callable that will be invoked for each"
+            " notification event, with one positional argument: the"
+            " corresponding TestNotification instance.",
+        )
 
         exec_group = parser.add_argument_group(
             title="execution control arguments"
@@ -533,6 +549,12 @@ class TestsuiteCore:
         self.env.working_dir = self.working_dir
         self.env.options = self.main.args
 
+        try:
+            self.event_notifier = event_notifications.EventNotifier(
+                self, self.main.args.notify_events
+            )
+        except event_notifications.InvalidNotifyCommand:
+            return 1
         self.running_status = RunningStatus(
             os.path.join(self.output_dir, "status"),
             self.main.args.status_update_interval,
@@ -826,6 +848,8 @@ class TestsuiteCore:
                 message=str(e),
                 tb=traceback.format_exc(),
             )
+        else:
+            self.event_notifier.notify_test_queue(instance.test_name)
 
     def dump_testsuite_result(self) -> None:
         """Log a summary of test results.
@@ -878,6 +902,12 @@ class TestsuiteCore:
         # Process all results from this fragment
         while fragment.result_queue:
             self.add_result(fragment.result_queue.pop())
+
+        # Send a notification if this was the last fragment to run for this
+        # test driver. This is done here rather than in test fragment's
+        # collect_result so that test result events are notified before test
+        # end events.
+        fragment.maybe_notify_ended()
 
         # Now that this fragment is completed, make sure to remove all
         # references to its test drivers so that it can be garbage collected.
@@ -966,6 +996,12 @@ class TestsuiteCore:
                 log_line += format_log(full_result.log)
         logger.info(log_line)
 
+        self.event_notifier.notify_test_result(
+            item.test_name,
+            item.result,
+            os.path.join(self.report_index.results_dir, item.filename),
+        )
+
     def add_test_error(
         self, test_name: str, message: str, tb: Optional[str] = None
     ) -> None:
@@ -986,6 +1022,7 @@ class TestsuiteCore:
 
         self.add_result(
             ResultQueueItem(
+                test_name,
                 result.summary,
                 result.save(self.output_dir),
                 traceback.format_stack(),
@@ -1081,6 +1118,7 @@ class TestsuiteCore:
                 {filter_key(k): self.return_values[k] for k in predecessors},
                 notify_end,
                 self.running_status,
+                self.event_notifier,
             )
 
         def collect_result(job: Job) -> bool:
@@ -1126,6 +1164,7 @@ class TestsuiteCore:
                 data.name,
                 slot,
                 self.running_status,
+                self.event_notifier,
                 self.env,
             )
 
