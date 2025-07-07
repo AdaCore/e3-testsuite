@@ -248,24 +248,13 @@ class ProcessTestFragment(
         """
         self.running_status = running_status
         self.result_queue = []
-        self.skipped_for_abortion = False
         super().__init__(uid, driver, callback_name, slot, env)
 
     def clear_driver_data(self) -> None:
         joker: Any = None
         self.driver = joker
 
-    def start(self) -> Run | None:
-        # The decision to start this fragment or not (i.e. the call to
-        # must_run) is taken here: it would be wrong to call it later, since
-        # testsuite may not be aborted right now but may be aborted while this
-        # fragment runs. Once a fragment has started, we always wait for its
-        # completion.
-        if not self.must_run():
-            self.skipped_for_abortion = True
-            self.return_value = None
-            return None
-
+    def start(self) -> Run:
         self.running_status.start(self)
 
         # Create the exchange file: write the test environment to it
@@ -298,22 +287,7 @@ class ProcessTestFragment(
             bg=True,
         )
 
-    def poll(
-        self,
-        scheduler: e3.testsuite.multiprocess_scheduler.MultiprocessScheduler,
-    ) -> bool:
-        # If this fragment was not run, there is no subprocess to wait: the
-        # caller can act as if the fragment had completed.
-        if self.skipped_for_abortion:
-            return False
-        else:
-            return super().poll(scheduler)
-
     def collect_result(self) -> None:
-        # If this fragment was not run, there is no result to collect
-        if self.skipped_for_abortion:
-            return
-
         # Let extract_result_queue put results in the driver's result queue,
         # then forward them to this fragment's.
         self.driver.result_queue = []
@@ -331,9 +305,6 @@ class ProcessTestFragment(
         in the driver's result queue. If anything goes sour, create an error
         result in the same result queue.
         """
-        # If this fragment was not run, collect_result should not call this
-        assert not self.skipped_for_abortion
-
         # Make sure the process exitted with no error
         if self.process.status != 0:
             result = TestResult(

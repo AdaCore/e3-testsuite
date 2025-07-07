@@ -20,6 +20,7 @@ from e3.os.process import Run
 if TYPE_CHECKING:
     from e3.collection.dag import DAG
     from e3.testsuite.driver import TestDriver
+    from e3.testsuite.running_status import RunningStatus
 
 
 logger = logging.getLogger("testsuite.process_scheduler")
@@ -108,6 +109,7 @@ class MultiprocessScheduler(Generic[WorkData, SomeWorker]):
         dag: DAG,
         job_factory: JobFactoryCallback,
         collect_result: CollectResultCallback,
+        running_status: RunningStatus,
         jobs: int = 0,
         dyn_poll_interval: bool = True,
     ):
@@ -118,6 +120,8 @@ class MultiprocessScheduler(Generic[WorkData, SomeWorker]):
         :param job_factory: Callback to turn DAG nodes into corresponding
             Worker instances.
         :param collect_result: Callback to extract work result from a worker.
+        :param running_status: Testsuite running status, used to detect when
+            the testsuite is aborted because of too many failures.
         :param jobs: Maximum of worker allowed to run in parallel. If left to
             0, use the number of available cores on the current machine.
         :param dyn_poll_interval: If True the interval between each polling
@@ -141,6 +145,7 @@ class MultiprocessScheduler(Generic[WorkData, SomeWorker]):
 
         self.job_factory = job_factory
         self.collect_result = collect_result
+        self.running_status = running_status
 
         self.active_workers = 0
         """Equivalent to the number of non-None slots in ``self.workers``."""
@@ -282,7 +287,14 @@ class MultiprocessScheduler(Generic[WorkData, SomeWorker]):
                     self.release_worker(slot)
                     self.iterator.leave(worker.uid)
                     self.no_free_item = False
+
+                    # Collect results from this worker. If we decide to abort
+                    # the testsuite because of too many failures at that point,
+                    # consider that there is no work left, so that no new
+                    # worker is spawned past this.
                     self.collect_result(worker)
+                    if self.running_status.aborted_too_many_failures:
+                        self.no_work_left = True
 
             time.sleep(self.poll_interval)
 

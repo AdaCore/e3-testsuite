@@ -1133,7 +1133,11 @@ class TestsuiteCore:
 
         scheduler: MultiprocessScheduler[FragmentData, ProcessTestFragment] = (
             MultiprocessScheduler(
-                dag, job_factory, collect_result, jobs=self.main.args.jobs
+                dag,
+                job_factory,
+                collect_result,
+                self.running_status,
+                jobs=self.main.args.jobs,
             )
         )
 
