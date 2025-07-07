@@ -1,12 +1,12 @@
 import json
 
-from e3.testsuite import ParsedTest, Testsuite
+from e3.testsuite import ParsedTest, Testsuite as Suite
 
 from .utils import run_testsuite
 
 
 def test_list_json(tmp_path):
-    class TS(Testsuite):
+    class TS(Suite):
         def get_test_list(self, sublist):
             return [
                 ParsedTest("test1", None, {}, ".", "test1"),
