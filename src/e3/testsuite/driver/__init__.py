@@ -30,6 +30,9 @@ class ResultQueueItem:
     needed for the various stages of this pipeline.
     """
 
+    test_name: str
+    """Name of the test that created this test result."""
+
     result: TestResultSummary
     """Summary for this test result."""
 
@@ -99,6 +102,18 @@ class TestDriver(object, metaclass=abc.ABCMeta):
         testsuite report.
         """
 
+        self.execution_started: bool = False
+        """
+        Whether the execution of at least one fragment for this test driver has
+        started.
+        """
+
+        self.pending_fragments: set[str] = set()
+        """
+        Set of UIDs for fragments whose execution has not yet completed for
+        this test driver.
+        """
+
     def push_result(self, result: Optional[TestResult] = None) -> None:
         """Push a result to the testsuite.
 
@@ -117,6 +132,7 @@ class TestDriver(object, metaclass=abc.ABCMeta):
 
         self.result_queue.append(
             ResultQueueItem(
+                self.test_name,
                 result.summary,
                 result.save(self.env.output_dir),
                 traceback.format_stack(),
@@ -165,6 +181,7 @@ class TestDriver(object, metaclass=abc.ABCMeta):
             callback_by_name=callback_by_name,
         )
 
+        self.pending_fragments.add(fragment.uid)
         dag.update_vertex(
             vertex_id=fragment.uid,
             data=fragment,

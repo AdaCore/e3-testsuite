@@ -13,7 +13,6 @@ from dataclasses import dataclass
 import json
 import os.path
 from typing import Dict, List, Optional, Set
-import yaml
 
 from e3.testsuite.result import (
     FailureReason,
@@ -56,10 +55,9 @@ class ReportIndexEntry:
         return self.summary.info
 
     def load(self) -> TestResult:
-        with open(
-            os.path.join(self.index.results_dir, self.filename), "rb"
-        ) as f:
-            result = yaml.safe_load(f)
+        result = TestResult.load(
+            os.path.join(self.index.results_dir, self.filename)
+        )
         assert self.summary == result.summary
         return result
 
