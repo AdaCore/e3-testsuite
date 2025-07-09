@@ -305,8 +305,21 @@ class MultiprocessScheduler(Generic[WorkData, SomeWorker]):
             )
 
 
-def compute_next_dyn_poll(poll_counter: int, poll_interval: float) -> float:
-    """Adjust the polling interval."""
+def compute_next_dyn_poll(
+    poll_counter: int,
+    poll_interval: float,
+) -> float:  # all: no-cover
+    """Adjust the polling interval.
+
+    :param poll_counter: Number of times we had to scan the whole pool of
+        workers before finding one which completed a job during the previous
+        poll session.
+    :param poll_interval: Delay (in seconds) between each scan of the pool of
+        workers during the previous poll session.
+
+    :return: The delay (still in seconds) between each scan for the next poll
+        session.
+    """
     # If we poll too often (towards busy waiting), the scheduler will waste
     # computing time. If we poll too little, we will wait for too long before
     # spawning new workers and thus we will not maximize the use of cores.

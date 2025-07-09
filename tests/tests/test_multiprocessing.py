@@ -3,6 +3,7 @@
 import sys
 
 from e3.testsuite.driver import BasicTestDriver as BasicDriver
+from e3.testsuite.multiprocess_scheduler import compute_next_dyn_poll
 from e3.testsuite.result import TestStatus as Status
 
 from .utils import create_testsuite, extract_results, run_testsuite
@@ -112,3 +113,31 @@ class TestCollectError:
         key, result = self.run_testsuite("unpicklable")
         assert key == "unpicklable.analyze"
         assert result == Status.ERROR
+
+
+def test_dyn_poll():
+    """Check the dynamic poll interval update routine."""
+
+    def check(counter: int, interval: float, expected_interval: float):
+        assert interval > 0
+        next_interval = compute_next_dyn_poll(counter, interval)
+
+        # Ensure that the new interval is within a reasonable range around the
+        # expected value.
+        assert expected_interval > 0
+        expected_low_bound = expected_interval * 0.99
+        expected_high_bound = expected_interval * 1.01
+        assert expected_low_bound < next_interval
+        assert next_interval < expected_high_bound
+
+    # No matter the number of polls, we are supposed to keep decreasing the
+    # interval until it's below 100 microseconds.
+    check(1, 0.1, 0.075)
+    check(1, 0.01, 0.007_5)
+    check(1, 0.001, 0.000_75)
+
+    # Below this threshold, we increase the poll interval only if we had to
+    # perform more than 8 scan on workers before finding one free.
+    check(1, 0.000_05, 0.000_05)
+    check(8, 0.000_05, 0.000_05)
+    check(9, 0.000_05, 0.000_062_5)
