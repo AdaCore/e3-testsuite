@@ -244,6 +244,15 @@ Some content for system-err.
 ]]></system-err>
                     </testcase>
 
+                    <!-- Test handling of invalid status tags. -->
+                    <testcase name="test-invalid-status-tags">
+                        <unknown/>
+                        <failure message="failure message">Failure log.
+</failure>
+                        <skipped message="skip message">Skip log.
+</skipped>
+                    </testcase>
+
                 </testsuite>
 
                 <!-- Test usage of XFAILs. -->
@@ -303,6 +312,7 @@ Some failure logging</failure>
         "Normal.test-failure-message",
         "Normal.test-failure-multiline-message",
         "Normal.test-failure-too-long-message",
+        "Normal.test-invalid-status-tags",
         "Normal.test-skipped",
         "Normal.test-system-elts",
         "Normal.test1",
@@ -370,6 +380,26 @@ Some failure logging</failure>
         "Some content for system-out.\n"
         "\n\nsystem-err:\n\n"
         "Some content for system-err.\n",
+    )
+
+    check(
+        "Normal.test-invalid-status-tags",
+        Status.ERROR,
+        "xUnit report decoding error",
+    )
+    check_log(
+        "Normal.test-invalid-status-tags",
+        "Failure log.\n"
+        "\n"
+        "\n"
+        "Errors while decoding the xUnit report for this testcase:\n"
+        "\n"
+        "  * unexpected tag: unknown\n"
+        "  * too many status elements\n"
+        "\n"
+        "So turning the following into an ERROR result:\n"
+        "\n"
+        "  SKIP: failure message\n",
     )
 
     check("Normal.MyClass.test_name", Status.PASS)

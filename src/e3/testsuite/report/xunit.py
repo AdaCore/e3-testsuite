@@ -209,6 +209,7 @@ class XUnitImporter:
                 result.time = float(time_str) if time_str else None
                 status = TestStatus.PASS
                 message: str | None = None
+                decoding_errors: list[str] = []
 
                 # Expect at most one "error", "failure" or "skipped" element.
                 # Presence of one such element or the absence of elements
@@ -236,12 +237,15 @@ class XUnitImporter:
                                 result.log += f"\n\n{elt.tag}:\n"
                                 result.log += elt.text
                             continue
-                        case tag:  # all: no cover
-                            raise AssertionError(f"invalid status tag: {tag}")
+                        case tag:
+                            decoding_errors.append(f"unexpected tag: {tag}")
+                            continue
 
                     # Execution reaches this point only for elements that
                     # encode the test status.
-                    assert not status_found, "Too many status elements"
+                    if status_found:
+                        decoding_errors.append("too many status elements")
+                        continue
                     status_found = True
                     if isinstance(elt.text, str):
                         result.log += elt.text
@@ -289,6 +293,23 @@ class XUnitImporter:
                     elif status in (TestStatus.FAIL, TestStatus.ERROR):
                         status = TestStatus.XFAIL
                         message = new_message
+
+                # If we had trouble making sense of the XML entry for this test
+                # result, turn it into an error and integrate our diagnostics.
+                # This bypasses the XFAIL messages intentionally.
+                if decoding_errors:
+                    result.log += (
+                        "\n\nErrors while decoding the xUnit report for this"
+                        " testcase:\n\n"
+                    )
+                    for e in decoding_errors:
+                        result.log += f"  * {e}\n"
+                    result.log += (
+                        "\nSo turning the following into an ERROR result:\n\n"
+                        f"  {status.name}: {message}\n"
+                    )
+                    status = TestStatus.ERROR
+                    message = "xUnit report decoding error"
 
                 result.set_status(status, message)
                 self.index.save_and_add_result(result)

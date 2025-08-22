@@ -6,6 +6,7 @@
   testsuite to a file in JSON format.
 * `e3-convert-xunit`: add testcase-level `<system-out>` and
   `<system-err>` handling.
+* `e3-convert-xunit`: robustify for unexpected status tags.
 
 27.2 (2025-06-17)
 =================
