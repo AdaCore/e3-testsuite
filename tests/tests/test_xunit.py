@@ -233,6 +233,36 @@ is not capped, so no content is lost in practice.
 ">Some failure logging</failure>
                     </testcase>
 
+                    <!-- Test handling of too long multi-line messages. -->
+                    <testcase name="test-failure-too-long-multiline-message">
+                        <failure message="
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA&#10;
+BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB&#10;
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC&#10;
+DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD&#10;
+">Some failure logging</failure>
+                    </testcase>
+
+                    <!-- Test handling of the system-out and system-err
+                         elements. -->
+                    <testcase name="test-system-elts">
+                        <system-out><![CDATA[
+Some content for system-out.
+]]></system-out>
+                        <system-err><![CDATA[
+Some content for system-err.
+]]></system-err>
+                    </testcase>
+
+                    <!-- Test handling of invalid status tags. -->
+                    <testcase name="test-invalid-status-tags">
+                        <unknown/>
+                        <failure message="failure message">Failure log.
+</failure>
+                        <skipped message="skip message">Skip log.
+</skipped>
+                    </testcase>
+
                 </testsuite>
 
                 <!-- Test usage of XFAILs. -->
@@ -292,7 +322,10 @@ Some failure logging</failure>
         "Normal.test-failure-message",
         "Normal.test-failure-multiline-message",
         "Normal.test-failure-too-long-message",
+        "Normal.test-failure-too-long-multiline-message",
+        "Normal.test-invalid-status-tags",
         "Normal.test-skipped",
+        "Normal.test-system-elts",
         "Normal.test1",
         "XFails.pytest-skip",
         "XFails.pytest-xfail",
@@ -329,7 +362,13 @@ Some failure logging</failure>
         Status.FAIL,
         message="Some multi [...]",
     )
-    check_log("Normal.test-failure-multiline-message", "Some failure logging")
+    check_log(
+        "Normal.test-failure-multiline-message",
+        "Status message was too long:\n\n"
+        "Some multi\n line\n message...\n\n"
+        "Some failure logging",
+    )
+
     check(
         "Normal.test-failure-too-long-message",
         Status.FAIL,
@@ -340,7 +379,38 @@ Some failure logging</failure>
             " will no [...]"
         ),
     )
-    check_log("Normal.test-failure-too-long-message", "Some failure logging")
+    check_log(
+        "Normal.test-failure-too-long-message",
+        "Status message was too long:\n"
+        "\n"
+        "Some extremely very ultra long message. Viewers may not like it, so"
+        " we are going to strip it to ~200 colons. The imported report will"
+        " include only a small prefix of this too long message. They will not"
+        " see the complete message. This is okay, as in known cases where"
+        " messages are too long, their content is actually also present in the"
+        " log, which is not capped, so no content is lost in practice. \n\n"
+        "Some failure logging",
+    )
+
+    check(
+        "Normal.test-failure-too-long-multiline-message",
+        Status.FAIL,
+        message="A" * 74 + " [...]",
+    )
+    check_log(
+        "Normal.test-failure-too-long-multiline-message",
+        "Status message was too long:\n"
+        "\n"
+        + " "
+        + "A" * 74
+        + "\n "
+        + "B" * 74
+        + "\n "
+        + "C" * 74
+        + "\n "
+        + "D" * 74
+        + "\n \n\nSome failure logging",
+    )
 
     check("Normal.test-error", Status.ERROR)
     check_log("Normal.test-error", "Some error logging")
@@ -350,6 +420,35 @@ Some failure logging</failure>
 
     check("Normal.test-failure-message", Status.FAIL, "Some failure message")
     check_log("Normal.test-failure-message", "Some failure logging")
+
+    check("Normal.test-system-elts", Status.PASS)
+    check_log(
+        "Normal.test-system-elts",
+        "\n\nsystem-out:\n\n"
+        "Some content for system-out.\n"
+        "\n\nsystem-err:\n\n"
+        "Some content for system-err.\n",
+    )
+
+    check(
+        "Normal.test-invalid-status-tags",
+        Status.ERROR,
+        "xUnit report decoding error",
+    )
+    check_log(
+        "Normal.test-invalid-status-tags",
+        "Failure log.\n"
+        "\n"
+        "\n"
+        "Errors while decoding the xUnit report for this testcase:\n"
+        "\n"
+        "  * unexpected tag: unknown\n"
+        "  * too many status elements\n"
+        "\n"
+        "So turning the following into an ERROR result:\n"
+        "\n"
+        "  SKIP: failure message\n",
+    )
 
     check("Normal.MyClass.test_name", Status.PASS)
 

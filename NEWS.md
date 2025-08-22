@@ -4,6 +4,10 @@
 * Introduce a notification system (`--notify-events` testsuite argument).
 * Add a `--list-json=FILE` CLI argument to dump the list of tests in a
   testsuite to a file in JSON format.
+* `e3-convert-xunit`: add testcase-level `<system-out>` and
+  `<system-err>` handling.
+* `e3-convert-xunit`: robustify for unexpected status tags.
+* `e3-convert-xunit`: copy capped messages to result logs.
 
 27.2 (2025-06-17)
 =================
