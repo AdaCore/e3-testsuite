@@ -233,6 +233,16 @@ is not capped, so no content is lost in practice.
 ">Some failure logging</failure>
                     </testcase>
 
+                    <!-- Test handling of too long multi-line messages. -->
+                    <testcase name="test-failure-too-long-multiline-message">
+                        <failure message="
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA&#10;
+BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB&#10;
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC&#10;
+DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD&#10;
+">Some failure logging</failure>
+                    </testcase>
+
                     <!-- Test handling of the system-out and system-err
                          elements. -->
                     <testcase name="test-system-elts">
@@ -312,6 +322,7 @@ Some failure logging</failure>
         "Normal.test-failure-message",
         "Normal.test-failure-multiline-message",
         "Normal.test-failure-too-long-message",
+        "Normal.test-failure-too-long-multiline-message",
         "Normal.test-invalid-status-tags",
         "Normal.test-skipped",
         "Normal.test-system-elts",
@@ -351,7 +362,13 @@ Some failure logging</failure>
         Status.FAIL,
         message="Some multi [...]",
     )
-    check_log("Normal.test-failure-multiline-message", "Some failure logging")
+    check_log(
+        "Normal.test-failure-multiline-message",
+        "Status message was too long:\n\n"
+        "Some multi\n line\n message...\n\n"
+        "Some failure logging",
+    )
+
     check(
         "Normal.test-failure-too-long-message",
         Status.FAIL,
@@ -362,7 +379,38 @@ Some failure logging</failure>
             " will no [...]"
         ),
     )
-    check_log("Normal.test-failure-too-long-message", "Some failure logging")
+    check_log(
+        "Normal.test-failure-too-long-message",
+        "Status message was too long:\n"
+        "\n"
+        "Some extremely very ultra long message. Viewers may not like it, so"
+        " we are going to strip it to ~200 colons. The imported report will"
+        " include only a small prefix of this too long message. They will not"
+        " see the complete message. This is okay, as in known cases where"
+        " messages are too long, their content is actually also present in the"
+        " log, which is not capped, so no content is lost in practice. \n\n"
+        "Some failure logging",
+    )
+
+    check(
+        "Normal.test-failure-too-long-multiline-message",
+        Status.FAIL,
+        message="A" * 74 + " [...]",
+    )
+    check_log(
+        "Normal.test-failure-too-long-multiline-message",
+        "Status message was too long:\n"
+        "\n"
+        + " "
+        + "A" * 74
+        + "\n "
+        + "B" * 74
+        + "\n "
+        + "C" * 74
+        + "\n "
+        + "D" * 74
+        + "\n \n\nSome failure logging",
+    )
 
     check("Normal.test-error", Status.ERROR)
     check_log("Normal.test-error", "Some error logging")

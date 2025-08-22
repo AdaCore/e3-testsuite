@@ -255,15 +255,22 @@ class XUnitImporter:
                 # "message" attribute, which produces unexpected results in
                 # e3-testsuite report viewers. Keep the first line only,
                 # and cap its length if needed.
-                capped = False
+                #
+                # If we end up modifying it, put the unmodified version in the
+                # logs, to avoid information loss.
                 if message is not None:
+                    original = message
                     if "\n" in message:
                         message = message.split("\n", 1)[0]
-                        capped = True
                     if len(message) > 200:
                         message = message[:200]
-                        capped = True
-                    if capped:
+                    if message != original:
+                        result.log.log = (
+                            "Status message was too long:\n\n"
+                            + original
+                            + "\n\n"
+                            + result.log.log
+                        )
                         message = message.strip() + " [...]"
 
                 # Now that the "unrefined" status for this result is known,
