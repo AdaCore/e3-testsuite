@@ -233,6 +233,17 @@ is not capped, so no content is lost in practice.
 ">Some failure logging</failure>
                     </testcase>
 
+                    <!-- Test handling of the system-out and system-err
+                         elements. -->
+                    <testcase name="test-system-elts">
+                        <system-out><![CDATA[
+Some content for system-out.
+]]></system-out>
+                        <system-err><![CDATA[
+Some content for system-err.
+]]></system-err>
+                    </testcase>
+
                 </testsuite>
 
                 <!-- Test usage of XFAILs. -->
@@ -293,6 +304,7 @@ Some failure logging</failure>
         "Normal.test-failure-multiline-message",
         "Normal.test-failure-too-long-message",
         "Normal.test-skipped",
+        "Normal.test-system-elts",
         "Normal.test1",
         "XFails.pytest-skip",
         "XFails.pytest-xfail",
@@ -350,6 +362,15 @@ Some failure logging</failure>
 
     check("Normal.test-failure-message", Status.FAIL, "Some failure message")
     check_log("Normal.test-failure-message", "Some failure logging")
+
+    check("Normal.test-system-elts", Status.PASS)
+    check_log(
+        "Normal.test-system-elts",
+        "\n\nsystem-out:\n\n"
+        "Some content for system-out.\n"
+        "\n\nsystem-err:\n\n"
+        "Some content for system-err.\n",
+    )
 
     check("Normal.MyClass.test_name", Status.PASS)
 

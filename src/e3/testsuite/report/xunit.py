@@ -212,50 +212,55 @@ class XUnitImporter:
 
                 # Expect at most one "error", "failure" or "skipped" element.
                 # Presence of one such element or the absence of elements
-                # enables us to determine the test status.
-                count = len(testcase)
-                assert count <= 1
-                if count == 1:
-                    status_elt = testcase[0]
-                    tag = status_elt.tag
-                    if tag == "error":
-                        status = TestStatus.ERROR
-                    elif tag == "failure":
-                        status = TestStatus.FAIL
-                    elif tag == "skipped":
-                        # xUnit reports created by py.test may contain a "type"
-                        # attribute that disambiguates between skip and xfail
-                        # results.
-                        kind = status_elt.attrib.get("type")
-                        status = (
-                            TestStatus.XFAIL
-                            if kind == "pytest.xfail"
-                            else TestStatus.SKIP
-                        )
-                    else:  # all: no cover
-                        raise AssertionError(f"invalid status tag: {tag}")
-                    if isinstance(status_elt.text, str):
-                        result.log += status_elt.text
+                # enables us to determine the test status. Also allow
+                # "system-out" and "system-err" elements, for extra logging.
+                status_found = False
+                for elt in testcase:
+                    match elt.tag:
+                        case "error":
+                            status = TestStatus.ERROR
+                        case "failure":
+                            status = TestStatus.FAIL
+                        case "skipped":
+                            # xUnit reports created by py.test may contain a
+                            # "type" attribute that disambiguates between skip
+                            # and xfail results.
+                            kind = elt.attrib.get("type")
+                            status = (
+                                TestStatus.XFAIL
+                                if kind == "pytest.xfail"
+                                else TestStatus.SKIP
+                            )
+                        case "system-out" | "system-err":
+                            if isinstance(elt.text, str):
+                                result.log += f"\n\n{elt.tag}:\n"
+                                result.log += elt.text
+                            continue
+                        case tag:  # all: no cover
+                            raise AssertionError(f"invalid status tag: {tag}")
 
-                    message = status_elt.attrib.get("message")
+                    # Execution reaches this point only for elements that
+                    # encode the test status.
+                    assert not status_found, "Too many status elements"
+                    status_found = True
+                    if isinstance(elt.text, str):
+                        result.log += elt.text
+                    message = elt.attrib.get("message")
 
-                    # Some XUnit producers are know to put full logs in the
-                    # "message" attribute, which produces unexpected results in
-                    # e3-testsuite report viewers. Keep the first line only,
-                    # and cap its length if needed.
-                    capped = False
-                    if message is not None:
-                        if "\n" in message:
-                            message = message.split("\n", 1)[0]
-                            capped = True
-                        if len(message) > 200:
-                            message = message[:200]
-                            capped = True
-                        if capped:
-                            message = message.strip() + " [...]"
-
-                else:
-                    message = None
+                # Some XUnit producers are know to put full logs in the
+                # "message" attribute, which produces unexpected results in
+                # e3-testsuite report viewers. Keep the first line only,
+                # and cap its length if needed.
+                capped = False
+                if message is not None:
+                    if "\n" in message:
+                        message = message.split("\n", 1)[0]
+                        capped = True
+                    if len(message) > 200:
+                        message = message[:200]
+                        capped = True
+                    if capped:
+                        message = message.strip() + " [...]"
 
                 # Now that the "unrefined" status for this result is known,
                 # apply XFAIL, if needed.
