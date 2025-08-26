@@ -217,29 +217,28 @@ class XUnitImporter:
                 # "system-out" and "system-err" elements, for extra logging.
                 status_found = False
                 for elt in testcase:
-                    match elt.tag:
-                        case "error":
-                            status = TestStatus.ERROR
-                        case "failure":
-                            status = TestStatus.FAIL
-                        case "skipped":
-                            # xUnit reports created by py.test may contain a
-                            # "type" attribute that disambiguates between skip
-                            # and xfail results.
-                            kind = elt.attrib.get("type")
-                            status = (
-                                TestStatus.XFAIL
-                                if kind == "pytest.xfail"
-                                else TestStatus.SKIP
-                            )
-                        case "system-out" | "system-err":
-                            if isinstance(elt.text, str):
-                                result.log += f"\n\n{elt.tag}:\n"
-                                result.log += elt.text
-                            continue
-                        case tag:
-                            decoding_errors.append(f"unexpected tag: {tag}")
-                            continue
+                    if elt.tag == "error":
+                        status = TestStatus.ERROR
+                    elif elt.tag == "failure":
+                        status = TestStatus.FAIL
+                    elif elt.tag == "skipped":
+                        # xUnit reports created by py.test may contain a "type"
+                        # attribute that disambiguates between skip and xfail
+                        # results.
+                        kind = elt.attrib.get("type")
+                        status = (
+                            TestStatus.XFAIL
+                            if kind == "pytest.xfail"
+                            else TestStatus.SKIP
+                        )
+                    elif elt.tag in ("system-out", "system-err"):
+                        if isinstance(elt.text, str):
+                            result.log += f"\n\n{elt.tag}:\n"
+                            result.log += elt.text
+                        continue
+                    else:
+                        decoding_errors.append(f"unexpected tag: {elt.tag}")
+                        continue
 
                     # Execution reaches this point only for elements that
                     # encode the test status.

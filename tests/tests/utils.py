@@ -1,5 +1,6 @@
 """Helpers for testcases."""
 
+from contextlib import contextmanager
 import os.path
 
 from e3.testsuite import Testsuite
@@ -175,3 +176,14 @@ def create_result(
         result.env["encoding"] = encoding
 
     return result
+
+
+@contextmanager
+def chdir_ctx(dirname):
+    """Reimplementation of contextlib.chdir for Python pre-3.11."""
+    old_cwd = os.getcwd()
+    try:
+        os.chdir(dirname)
+        yield
+    finally:
+        os.chdir(old_cwd)

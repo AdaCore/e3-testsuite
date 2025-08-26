@@ -1,5 +1,7 @@
 """Tests for the events notification system."""
 
+from __future__ import annotations
+
 import os
 import dataclasses
 import shlex
