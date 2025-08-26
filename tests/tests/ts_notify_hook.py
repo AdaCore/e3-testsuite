@@ -6,13 +6,10 @@ from e3.testsuite.result import TestResult
 
 
 def append_notif(filename, args):
-    match args[0]:
-        case "--result":
-            result = TestResult.load(args[2])
-            args[2] = result.test_name
-            args.append(result.status.name)
-        case _:
-            pass
+    if args[0] == "--result":
+        result = TestResult.load(args[2])
+        args[2] = result.test_name
+        args.append(result.status.name)
 
     with open(filename, "a") as f:
         print(shlex.join(args), file=f)

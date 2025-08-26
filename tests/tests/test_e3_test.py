@@ -1,6 +1,5 @@
 """Tests for the e3-test script."""
 
-from contextlib import chdir
 import sys
 
 import yaml
@@ -25,7 +24,7 @@ if __name__ == "__main__":
     sys.exit(MySuite().testsuite_main())
 
 
-from .utils import check_result_dirs
+from .utils import chdir_ctx, check_result_dirs
 
 
 def setup_testsuite(tmp_path, **config):
@@ -65,7 +64,7 @@ def test_root_dir(caplog, tmp_path):
         ("tests/c/1", "c__1"),
         ("tests/c/2", "c__2"),
     ]:
-        with chdir(tmp_path / cwd):
+        with chdir_ctx(tmp_path / cwd):
             assert main() == 0
             check_result_dirs(
                 new={t: Status.PASS for t in expected_results},
@@ -76,7 +75,7 @@ def test_root_dir(caplog, tmp_path):
 def test_default_args(caplog, tmp_path):
     """Check handling for the default_args entry in e3-test.yaml."""
     setup_testsuite(tmp_path, default_args=["-o", "my_results"])
-    with chdir(tmp_path / "tests" / "b"):
+    with chdir_ctx(tmp_path / "tests" / "b"):
         assert main() == 0
         check_result_dirs(
             new={"b": Status.PASS},
@@ -94,7 +93,7 @@ def test_invalid_e3_test_yaml(caplog, tmp_path):
         ] == messages
         caplog.clear()
 
-    with chdir(tmp_path):
+    with chdir_ctx(tmp_path):
         # Missing e3-test.yaml
         check_errors(["cannot find e3-test.yaml"])
 
