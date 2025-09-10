@@ -1,4 +1,7 @@
-27.3 (Not released yet)
+27.4 (Not released yet)
+=======================
+
+27.3 (2025-09-10)
 =================
 
 * Introduce a notification system (`--notify-events` testsuite argument).
