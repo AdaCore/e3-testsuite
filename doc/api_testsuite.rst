@@ -66,26 +66,25 @@ This holds a ``e3.env.BaseEnv`` instance: the testsuite originally creates it
 when starting and forwards it to test drivers.
 
 This environment holds information about the platform for which tests are
-running (host OS, target CPU, ... as well as parsed options from the
+running (host OS, target CPU, ...) as well as parsed options from the
 command-line (see below). The testsuite is also free to add more information to
 this environment.
 
-If a testsuite actually needs to deal with non-native targets, for instance
-running on GNU/Linux for x86_64 tests that involve programs for bare ARM ELF
-targets, then it's useful to override the ``enable_cross_support`` class
-attribute/property to return true (it returns false by default):
+Users can control these platforms using `e3's standard platform arguments
+<https://e3-core.readthedocs.io/en/latest/quickstart.html#e3-main-and-e3-env>`__,
+that is, ``--build``, ``--host`` and ``--target``.  These arguments have
+semantics similar to the homonym options in `GNU configure scripts
+<https://www.gnu.org/savannah-checkouts/gnu/autoconf/manual/autoconf-2.72/html_node/Specifying-Target-Triplets.html>`__,
+with the caveat that instead of cpu-vendor-os triplets, e3 expects cpu-os
+identifiers as found in ``e3.platform.get_knowledge_base().platform_info``.
 
-.. code-block:: python
+For instance, by passing ``--target=arm-elf``, users running tests on GNU/Linux
+for x86_64 will set ``self.env.target`` to describe a bare ARM ELF platform.
 
-   class MyTestsuite(Testsuite):
-       enable_cross_support = True
-
-In this case, the testsuite will add ``--build``, ``--host`` and ``--target``
-command-line arguments. These have the same semantics as the homonym options in
-GNU ``configure`` scripts: see `The GNU configure and build system
-<https://airs.com/ian/configure/configure_6.html>`_. The testsuite will then
-use these arguments to build the appropriate environment in ``self.env``, and
-thus for instance ``self.env.target.cpu.name`` will reflect the target CPU.
+As another example, because of ``e3.env``'s defaults (target falls back to host;
+host falls back to build), passing ``--build=x86-linux`` on a x86_64 GNU/Linux
+host (resp. ``--build=x86-windows`` on a x86_64 Windows host) is a common idiom
+to run tests in a "native 32-bit" configuration on a 64-bit host.
 
 
 Command-line options
