@@ -8,6 +8,7 @@ import yaml
 from e3.fs import mkdir
 from e3.testsuite import Testsuite as Suite
 from e3.testsuite.driver import TestDriver as Driver
+from e3.testsuite.driver.classic import ClassicTestDriver as ClassicDriver
 from e3.testsuite.report.index import ReportIndex
 from e3.testsuite.report.xunit import (
     XUnitImporter,
@@ -15,6 +16,7 @@ from e3.testsuite.report.xunit import (
     convert_main,
 )
 from e3.testsuite.result import TestStatus as Status
+from e3.testsuite.testcase_finder import ParsedTest
 
 from .utils import create_testsuite, run_testsuite
 
@@ -160,6 +162,55 @@ class TestControlChars:
         assert failure.text == "Control character: \\x01\nDone.\n"
 
 
+class TestFileAttr:
+    """Check that test matchers are correctly encoded in the xUnit report."""
+
+    class MyDriver(ClassicDriver):
+
+        copy_test_directory = False
+
+        def run(self):
+            pass
+
+    class MySuite(Suite):
+        def get_test_list(self, sublist):
+            return [
+                ParsedTest(
+                    test_name=n,
+                    driver_cls=TestFileAttr.MyDriver,
+                    test_env={},
+                    test_dir=d,
+                    test_matcher=m,
+                )
+                for n, d, m in [
+                    ("0_dirname", "tests/foo", None),
+                    ("1_matcher", "tests/bar", "mytest.txt"),
+                ]
+            ]
+
+    def test(self, tmp_path):
+        xunit_file = str(tmp_path / "xunit.xml")
+        run_testsuite(self.MySuite, ["--xunit-output", xunit_file, "-E"])
+
+        testsuites = ET.parse(xunit_file).getroot()
+        testsuite = testsuites[0]
+
+        # Sanity checks
+        assert testsuites.tag == "testsuites"
+        assert testsuite.tag == "testsuite"
+        assert len(testsuite) == 2
+
+        tests = sorted(testsuite, key=lambda t: t.get("name"))
+
+        def check_testcase(t, name, file):
+            assert t.tag == "testcase"
+            assert t.get("name") == name
+            assert t.get("file") == file
+
+        check_testcase(tests[0], "0_dirname", "tests/foo")
+        check_testcase(tests[1], "1_matcher", "mytest.txt")
+
+
 def test_import(tmp_path, capsys):
     """Test that the xUnit importer works as expected."""
     xml_filename = str(tmp_path / "tmp.xml")
@@ -263,6 +314,9 @@ Some content for system-err.
 </skipped>
                     </testcase>
 
+                    <!-- Test import of the "file" attribute -->
+                    <testcase name="test-file-attr" file="foobar.txt" />
+
                 </testsuite>
 
                 <!-- Test usage of XFAILs. -->
@@ -323,6 +377,7 @@ Some failure logging</failure>
         "Normal.test-failure-multiline-message",
         "Normal.test-failure-too-long-message",
         "Normal.test-failure-too-long-multiline-message",
+        "Normal.test-file-attr",
         "Normal.test-invalid-status-tags",
         "Normal.test-skipped",
         "Normal.test-system-elts",
@@ -336,7 +391,7 @@ Some failure logging</failure>
         "XFails.test-skipped",
     ]
 
-    def check(test_name, status, message=None, time=None):
+    def check(test_name, status, message=None, time=None, file=None):
         e = index.entries[test_name]
         assert e.status == status
         assert e.msg == message
@@ -344,6 +399,9 @@ Some failure logging</failure>
             assert e.time is None
         else:
             assert str(e.time) == time
+
+        r = e.load()
+        assert r.test_matcher == file
 
     def check_log(test_name, log):
         assert index.entries[test_name].load().log == log

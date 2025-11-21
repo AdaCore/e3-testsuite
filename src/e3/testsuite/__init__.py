@@ -819,6 +819,7 @@ class TestsuiteCore:
         test_env = dict(parsed_test.test_env)
         test_env["test_dir"] = parsed_test.test_dir
         test_env["test_name"] = test_name
+        test_env["test_matcher"] = parsed_test.test_matcher
 
         assert isinstance(self.env.working_dir, str)
         test_env["working_dir"] = os.path.join(self.env.working_dir, test_name)
