@@ -38,11 +38,19 @@ class RunningStatus:
         self.filename = filename
         self.lock = threading.Lock()
 
-        self.running: Dict[str, TestFragment] = {}
-        """Set of test fragments currently running, indexed by UID."""
+        self.running: Dict[str, int] = {}
+        """Set of test fragments ids currently running, indexed by UID.
 
-        self.completed: Dict[str, TestFragment] = {}
-        """Set of test fragments that completed their job, indexed by UID."""
+        The dict values come from the builtin `id()` function called on the
+        test fragments.
+        """
+
+        self.completed: Dict[str, int] = {}
+        """Set of test fragments ids that completed their job, indexed by UID.
+
+        The dict values come from the builtin `id()` function called on the
+        test fragments.
+        """
 
         self.status_counters: Dict[TestStatus, int] = {}
         """Snapshot of the testsuite's report index status counters.
@@ -84,7 +92,7 @@ class RunningStatus:
             assert fragment.uid in self.dag.vertex_data
             assert fragment.uid not in self.running
             assert fragment.uid not in self.completed
-            self.running[fragment.uid] = fragment
+            self.running[fragment.uid] = id(fragment)
 
             fragment.started_test = not driver.execution_started
             driver.execution_started = True
@@ -98,9 +106,9 @@ class RunningStatus:
         with self.lock:
             assert fragment.uid in self.dag.vertex_data
             assert fragment.uid not in self.completed
-            f = self.running.pop(fragment.uid)
-            assert f is fragment
-            self.completed[f.uid] = f
+            f_id = self.running.pop(fragment.uid)
+            assert f_id == id(fragment)
+            self.completed[fragment.uid] = f_id
 
             driver.pending_fragments.remove(fragment.uid)
             fragment.ended_test = not driver.pending_fragments
