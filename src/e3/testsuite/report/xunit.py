@@ -87,6 +87,8 @@ def dump_xunit_report(name: str, index: ReportIndex, filename: str) -> None:
         # We use the testsuite name for 'classname', as we don't really have
         # something more useful to display anyway.
         testcase = etree.Element("testcase", name=test_name, classname=name)
+        if result.test_matcher:
+            testcase.set("file", result.test_matcher)
         testsuite.append(testcase)
 
         # Get the XUnit-equivalent status for this test and update the
@@ -200,11 +202,13 @@ class XUnitImporter:
                 testcase_name = testcase.attrib["name"]
                 classname = testcase.attrib.get("classname")
                 time_str = testcase.attrib.get("time")
+                test_file = testcase.attrib.get("file")
 
                 result = TestResult(
                     self.get_test_name(
                         testsuite_name, testcase_name, classname
-                    )
+                    ),
+                    test_matcher=test_file,
                 )
                 result.time = float(time_str) if time_str else None
                 status = TestStatus.PASS

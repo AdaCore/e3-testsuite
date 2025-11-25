@@ -1,6 +1,9 @@
 27.4 (Not released yet)
 =======================
 
+* GitLab integration: add a ``file`` attribute for ``<testcase>`` elements in
+  xUnit reports.
+
 27.3 (2025-09-10)
 =================
 

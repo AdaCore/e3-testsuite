@@ -91,9 +91,23 @@ class TestDriver(object, metaclass=abc.ABCMeta):
         self.test_env: Dict[str, Any] = test_env
         self.test_name: str = test_env["test_name"]
 
+        # For GitLab integration, determine a test matcher so that it is
+        # convenient to get a list of failed tests to re-run. For this matcher
+        # to be useful, it must be applicable even when picked up from another
+        # machine: convert absolute paths to relative paths (relative to the
+        # current directory, so that they work when running the testsuite in
+        # the same directory).
+        test_matcher: str | None = test_env.get("test_matcher")
+        if test_matcher is None:
+            test_dir = test_env.get("test_dir")
+            if test_dir:
+                test_matcher = os.path.relpath(test_dir)
+
         # Initialize test result
         self.result: TestResult = TestResult(
-            name=self.test_name, env=self.test_env
+            name=self.test_name,
+            env=self.test_env,
+            test_matcher=test_matcher,
         )
 
         self.result_queue: ResultQueue = []

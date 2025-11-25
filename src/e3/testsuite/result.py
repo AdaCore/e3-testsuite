@@ -204,6 +204,7 @@ class TestResult(yaml.YAMLObject):
         env: Optional[dict] = None,
         status: Optional[TestStatus] = None,
         msg: str = "",
+        test_matcher: str | None = None,
     ):
         """Initialize a test result.
 
@@ -213,9 +214,12 @@ class TestResult(yaml.YAMLObject):
             to YAML format.
         :param status: Test status. If None status is set to ERROR.
         :param msg: Short message associated with the test result.
+        :param test_matcher: Matcher to pass to the testsuite in order to
+            re-run the test (see ``ParsedTest.test_matcher``).
         """
         self.test_name = name
         self.env = env
+        self.test_matcher = test_matcher
 
         # Use the set_status method to change these once initialization is done
         self.status = TestStatus.ERROR if status is None else status
