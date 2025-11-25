@@ -1,6 +1,7 @@
 27.4 (Not released yet)
 =======================
 
+* Fix a leak of threading locks for each test.
 * GitLab integration: add a ``file`` attribute for ``<testcase>`` elements in
   xUnit reports.
 
