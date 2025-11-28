@@ -100,7 +100,7 @@ Testcases can then put metadata in their ``test.yaml``:
 
    driver: my_driver
    control:
-   - [SKIP, "env.build.os != 'Windows'", "Tests a Windows-specific feature"]
+   - [SKIP, "env.build.os.name != 'windows'", "Tests a Windows-specific feature"]
    - [XFAIL, "True", "See bug #1234"]
 
 The ``control`` entry must contain a list of entries. Each entry contains a
