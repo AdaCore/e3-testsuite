@@ -98,11 +98,7 @@ def dump_xunit_report(name: str, index: ReportIndex, filename: str) -> None:
             counters[counter_key] += 1
         counters["tests"] += 1
 
-        # If applicable, create an element to describe the test status. In
-        # any case, if we have logs, include them in the report to ease
-        # post-mortem debugging. They are included in a standalone
-        # "system-out" element in case the test succeeded, or directly in
-        # the status element if the test failed.
+        # If applicable, create an element to describe the test status
         markup = counter_key and counter_to_markup.get(counter_key, None)
         if markup:
             status_elt = etree.Element(markup)
@@ -113,10 +109,9 @@ def dump_xunit_report(name: str, index: ReportIndex, filename: str) -> None:
             if counter_key in ("errors", "failures"):
                 status_elt.set("type", "error")
 
-            assert isinstance(result.log, str)
-            status_elt.text = escape_text(result.log)
-
-        elif result.log:
+        # If we have logs, include them in a standalone "system-out" element to
+        # ease post-mortem debugging.
+        if result.log:
             system_out = etree.Element("system-out")
             system_out.text = escape_text(str(result.log))
             testcase.append(system_out)

@@ -150,6 +150,7 @@ class TestControlChars:
         testsuite = testsuites[0]
         testcase = testsuite[0]
         failure = testcase[0]
+        system_out = testcase[1]
 
         # Sanity checks
         assert testsuites.tag == "testsuites"
@@ -159,7 +160,7 @@ class TestControlChars:
         assert failure.tag == "failure"
 
         assert failure.get("message") == "Another control char: \\x02"
-        assert failure.text == "Control character: \\x01\nDone.\n"
+        assert system_out.text == "Control character: \\x01\nDone.\n"
 
 
 class TestFileAttr:
