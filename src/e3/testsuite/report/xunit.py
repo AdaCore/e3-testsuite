@@ -3,17 +3,20 @@
 from __future__ import annotations
 
 import argparse
+import dataclasses
 import itertools
 import os
 import re
-from typing import Iterable, Optional
+import sys
+import tempfile
+from typing import Callable, ClassVar, Iterable, Optional
 import unicodedata
 import xml.etree.ElementTree as etree
 
 from e3.fs import mkdir
 from e3.testsuite.report.gaia import dump_gaia_report
 from e3.testsuite.report.index import ReportIndex
-from e3.testsuite.result import TestResult, TestStatus
+from e3.testsuite.result import Log, TestResult, TestStatus
 import e3.yaml
 
 
@@ -41,7 +44,122 @@ def escape_text(text: str) -> str:
     return "".join(result)
 
 
-def dump_xunit_report(name: str, index: ReportIndex, filename: str) -> None:
+@dataclasses.dataclass
+class AttachmentsSettings:
+    """Settings for the creation of attachments of XUnit reports.
+
+    Some platforms, such as GitLab, have restrictions on the size of XUnit
+    reports. To accomodate testsuite results which have big logs for these
+    platforms, we allow to write logs whose size exceed a given threshold as
+    separate files in a given directory, and put a reference to these files as
+    [[ATTACHMENT|/path/to/some/file]] stubs in the XUnit report itself.
+    """
+
+    output_directory: str
+    """
+    Output directory for attachments.
+    """
+
+    log_size_threshold: int
+    """
+    Logs larger than this size (in bytes) are written to separate files
+    (i.e. are turned into attachments).
+    """
+
+    output_dir_argname: ClassVar[str] = "--xunit-attachments-output-dir"
+    threshold_argname: ClassVar[str] = "--xunit-attachments-threshold"
+
+    @staticmethod
+    def add_options(
+        parser: argparse.ArgumentParser | argparse._ArgumentGroup,
+    ) -> None:
+        """Add command line arguments to describe attachments settings."""
+        parser.add_argument(
+            AttachmentsSettings.output_dir_argname,
+            help="Output directory for attachments (for bigs logs in XUnit"
+            " reports)",
+        )
+        parser.add_argument(
+            AttachmentsSettings.threshold_argname,
+            type=int,
+            help="Minimum log size (in bytes) to be stored as an attachment"
+            " (for big logs in XUnit reports)",
+        )
+
+    @staticmethod
+    def from_args(
+        args: argparse.Namespace,
+        print_error: Callable[[str], None],
+    ) -> AttachmentsSettings | None:
+        """Create attachments settings from command line arguments.
+
+        If the arguments are invalid, call ``print_error`` to display an error
+        message and exit with status code 1.
+        """
+        output_dir = args.xunit_attachments_output_dir
+        threshold = args.xunit_attachments_threshold
+
+        # If no argument is passed, we should never emit logs as separate
+        # attachment files.
+        if output_dir is None and threshold is None:
+            return None
+
+        # If one argument is passed, the others are mandatory
+        for name, value in [
+            (AttachmentsSettings.output_dir_argname, output_dir),
+            (AttachmentsSettings.threshold_argname, threshold),
+        ]:
+            if value is None:
+                print_error(f"{name} argument missing")
+                sys.exit(1)
+
+        # Make sure the output directory exists
+        output_dir = os.path.abspath(output_dir)
+        mkdir(output_dir)
+
+        return AttachmentsSettings(output_dir, threshold)
+
+
+def postprocess_log(
+    log: str | Log,
+    attachments_settings: AttachmentsSettings | None,
+) -> str:
+    """Refine a log for inclusion in a XUnit report.
+
+    :param log: Log to include in a report.
+    :param attachments_settings: Parameters to control if/how logs are stored
+        in separate attachment files.
+    """
+    actual_log = str(log)
+
+    # If we do not need to put the log in a separate file, just post-process it
+    # so that it can be embedded in an XML file.
+    if (
+        attachments_settings is None
+        or len(actual_log) < attachments_settings.log_size_threshold
+    ):
+        return escape_text(actual_log)
+
+    # Create an attachment file to host this log and return the reference to
+    # mention in the XML file as a placeholder.
+    with tempfile.NamedTemporaryFile(
+        mode="w",
+        encoding="utf-8",
+        dir=attachments_settings.output_directory,
+        prefix="attachment-",
+        suffix=".txt",
+        delete=False,
+    ) as f:
+        f.write(actual_log)
+        return f"[[ATTACHMENT|{f.name}]]"
+
+
+def dump_xunit_report(
+    name: str,
+    index: ReportIndex,
+    filename: str,
+    attachments_settings: AttachmentsSettings | None = None,
+) -> None:
     """
     Dump a testsuite report to `filename` in the standard XUnit XML format.
 
@@ -50,6 +168,8 @@ def dump_xunit_report(name: str, index: ReportIndex, filename: str) -> None:
     :param filename: Name of the text file to write.
     :param duration: Optional number of seconds for the total duration of the
         testsuite run.
+    :param attachments_settings: Controls if/how to write big logs as
+        attachment files.
     """
     testsuites = etree.Element("testsuites", name=name)
     testsuite = etree.Element("testsuite", name=name)
@@ -98,11 +218,7 @@ def dump_xunit_report(name: str, index: ReportIndex, filename: str) -> None:
             counters[counter_key] += 1
         counters["tests"] += 1
 
-        # If applicable, create an element to describe the test status. In
-        # any case, if we have logs, include them in the report to ease
-        # post-mortem debugging. They are included in a standalone
-        # "system-out" element in case the test succeeded, or directly in
-        # the status element if the test failed.
+        # If applicable, create an element to describe the test status
         markup = counter_key and counter_to_markup.get(counter_key, None)
         if markup:
             status_elt = etree.Element(markup)
@@ -113,12 +229,11 @@ def dump_xunit_report(name: str, index: ReportIndex, filename: str) -> None:
             if counter_key in ("errors", "failures"):
                 status_elt.set("type", "error")
 
-            assert isinstance(result.log, str)
-            status_elt.text = escape_text(result.log)
-
-        elif result.log:
+        # If we have logs, include them in a standalone "system-out" element to
+        # ease post-mortem debugging.
+        if result.log:
             system_out = etree.Element("system-out")
-            system_out.text = escape_text(str(result.log))
+            system_out.text = postprocess_log(result.log, attachments_settings)
             testcase.append(system_out)
 
         add_time_attribute(testcase, result.time)

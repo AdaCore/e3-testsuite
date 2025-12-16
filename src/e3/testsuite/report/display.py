@@ -17,7 +17,7 @@ from typing import (
 )
 
 from e3.testsuite.report.index import ReportIndex, ReportIndexEntry
-from e3.testsuite.report.xunit import dump_xunit_report
+from e3.testsuite.report.xunit import AttachmentsSettings, dump_xunit_report
 from e3.testsuite.result import (
     FailureReason,
     TestResult,
@@ -79,6 +79,7 @@ args_parser.add_argument(
     " format. This is useful to display results in continuous build systems"
     " such as Jenkins.",
 )
+AttachmentsSettings.add_options(args_parser)
 args_parser.add_argument(
     "--old-result-dir",
     help="Directory that contains the report from a previous testsuite run. If"
@@ -465,6 +466,8 @@ def main(argv: Optional[List[str]] = None) -> int:
         else ReportIndex.read(args.old_result_dir)
     )
 
+    attachments_settings = AttachmentsSettings.from_args(args, print)
+
     generate_report(
         output_file=sys.stdout,
         new_index=new_index,
@@ -477,7 +480,9 @@ def main(argv: Optional[List[str]] = None) -> int:
     )
 
     if args.xunit_output:
-        dump_xunit_report(args.xunit_name, new_index, args.xunit_output)
+        dump_xunit_report(
+            args.xunit_name, new_index, args.xunit_output, attachments_settings
+        )
 
     # Return the appropriate status code: the failure status code from the
     # --failure-exit-code=N option when there is a least one testcase failure,
