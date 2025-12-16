@@ -616,3 +616,75 @@ def test_output_file(tmp_path, capsys):
             "This test failed\n"
             "\n"
         )
+
+
+def test_yaml_deserialization_error(tmp_path, capsys):
+    """Check that YAML deserialization errors are not fatal."""
+
+    # Create an on-disk report for which one tests embeds a data structure that
+    # will be serializable, but that will not be deserializable: drivers are
+    # not supposed to do this, but it may happen by mistake, and we want here
+    # to check that report production is resilient to this.
+
+    class UnregisteredClass:
+        pass
+
+    results = [
+        create_result("regular", Status.PASS),
+        create_result(
+            "failing",
+            Status.FAIL,
+            msg="a test failure",
+            log="Logging for debugging...\n",
+        ),
+        create_result(
+            "failing__error",
+            Status.FAIL,
+            msg="another test failure",
+            log="Logging for debugging...\n",
+        ),
+    ]
+    results[1].env["extra_data"] = UnregisteredClass()
+
+    # Do not include the actual traceback in the comparison (it is not stable)
+    expected_log_prefix = (
+        "Summary:\n"
+        "\n"
+        "  Out of 3 results\n"
+        "  4 executed (not skipped)\n"
+        "  PASS         1\n"
+        "  FAIL         2\n"
+        "  ERROR        1\n"
+        "\n"
+        "  The following results may need further investigation:\n"
+        "  2 new failure(s):\n"
+        "    failing: a test failure\n"
+        "    failing__error: another test failure\n"
+        "\n"
+        "  1 test(s) aborted due to unknown error:\n"
+        "    failing__error1: YAML loading error for the test result\n"
+        "\n"
+        "Result logs:\n"
+        "\n"
+        f"{sep_line}\n"
+        "FAIL            failing: a test failure\n"
+        f"{sep_line}\n"
+        "\n"
+        "<all logs are empty>\n"
+        "\n"
+        f"{sep_line}\n"
+        "FAIL            failing__error: another test failure\n"
+        f"{sep_line}\n"
+        "\n"
+        "Logging for debugging...\n"
+        "\n"
+        "\n"
+        f"{sep_line}\n"
+        "ERROR           failing__error1: YAML loading error for the test"
+        " result\n"
+        f"{sep_line}\n"
+        "\n"
+        "Traceback (most recent call last):\n"
+    )
+    actual_log = run(results, [str(tmp_path)], tmp_path, capsys)
+    assert actual_log[: len(expected_log_prefix)] == expected_log_prefix
