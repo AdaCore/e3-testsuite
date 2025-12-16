@@ -1,6 +1,7 @@
 """Tests for the XUnit report feature."""
 
 import os.path
+import re
 import xml.etree.ElementTree as ET
 
 import yaml
@@ -18,7 +19,7 @@ from e3.testsuite.report.xunit import (
 from e3.testsuite.result import TestStatus as Status
 from e3.testsuite.testcase_finder import ParsedTest
 
-from .utils import create_testsuite, run_testsuite
+from .utils import create_testsuite, run_testsuite, suite_logs
 
 
 def write_xfails_yaml(filename, xfails):
@@ -763,3 +764,88 @@ def test_app_override(tmp_path):
     CustomTearDown().run(["-o", "custom-tear-down", xml_report])
     check_results("custom-tear-down", basic_results)
     assert os.path.exists(os.path.join("custom-tear-down", "foo.txt"))
+
+
+class TestAttachments:
+    """Check XUnit reports with logs stored as attachments."""
+
+    test_to_log = {
+        letter: letter * count + "\n"
+        for letter, count in [
+            ("a", 1),
+            ("b", 98),
+            ("c", 99),
+            ("d", 1000),
+        ]
+    }
+
+    class MyDriver(ClassicDriver):
+        def run(self):
+            self.result.log += TestAttachments.test_to_log[self.test_name]
+
+        def compute_failures(self):
+            return ["test has failed"]
+
+    def run_ts(self, tmp_path, *extra_args):
+        xunit_file = str(tmp_path / "xunit.xml")
+        run_testsuite(
+            create_testsuite(list(self.test_to_log), self.MyDriver),
+            [f"--xunit-output={xunit_file}", *extra_args],
+            expect_failure=True,
+        )
+        return xunit_file
+
+    def test_basic(self, tmp_path):
+        attachments_dir = tmp_path / "attachments"
+        attachments_dir.mkdir()
+
+        xunit_file = self.run_ts(
+            tmp_path,
+            f"--xunit-attachments-output-dir={attachments_dir}",
+            "--xunit-attachments-threshold=100",
+        )
+        testsuites = ET.parse(xunit_file).getroot()
+        testsuite = testsuites[0]
+        assert testsuites.tag == "testsuites"
+        assert testsuite.tag == "testsuite"
+
+        test_map = {}
+        for testcase in testsuite:
+            assert testcase.tag == "testcase"
+            assert len(testcase) == 2
+            assert testcase[0].tag == "failure"
+            assert testcase[1].tag == "system-out"
+
+            test_map[testcase.get("name")] = testcase[1].text
+
+        assert set(test_map) == set(self.test_to_log)
+        ref_re = re.compile(
+            re.escape("[[ATTACHMENT|") + r"(.*)" + re.escape("]]")
+        )
+        for test_name, actual_log in test_map.items():
+            expected_log = self.test_to_log[test_name]
+            m = ref_re.search(actual_log)
+            if m is None:
+                assert actual_log == expected_log
+            else:
+                with open(m.group(1)) as f:
+                    attachment_log = f.read()
+                assert attachment_log == expected_log
+
+    def test_missing_output_dir(self, caplog, tmp_path):
+        try:
+            self.run_ts(tmp_path, "--xunit-attachments-threshold=100")
+        except SystemExit:
+            logs = suite_logs(caplog)
+            assert "--xunit-attachments-output-dir argument missing" in logs
+        else:
+            raise AssertionError
+
+    def test_missing_threshold(self, caplog, tmp_path):
+        try:
+            self.run_ts(tmp_path, "--xunit-attachments-output-dir=foo")
+        except SystemExit:
+            logs = suite_logs(caplog)
+            assert "--xunit-attachments-threshold argument missing" in logs
+        else:
+            raise AssertionError

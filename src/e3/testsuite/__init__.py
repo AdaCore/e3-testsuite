@@ -42,7 +42,7 @@ from e3.testsuite.report.gaia import (
 )
 from e3.testsuite.report.display import generate_report, summary_line
 from e3.testsuite.report.index import ReportIndex
-from e3.testsuite.report.xunit import dump_xunit_report
+from e3.testsuite.report.xunit import AttachmentsSettings, dump_xunit_report
 from e3.testsuite.result import Log, TestResult, TestStatus
 from e3.testsuite.running_status import RunningStatus
 from e3.testsuite.testcase_finder import (
@@ -299,6 +299,7 @@ class TestsuiteCore:
             " XUnit XML format. This is useful to display results in"
             " continuous build systems such as Jenkins.",
         )
+        AttachmentsSettings.add_options(output_group)
         output_group.add_argument(
             "--gaia-output",
             action="store_true",
@@ -484,6 +485,10 @@ class TestsuiteCore:
         self.setup_result_dirs()
         self.report_index = ReportIndex(self.output_dir)
 
+        attachments_settings = AttachmentsSettings.from_args(
+            self.main.args, logger.critical
+        )
+
         # Set the cleanup mode from command-line arguments
         if self.main.args.cleanup_mode is not None:
             self.env.cleanup_mode = cleanup_mode_map[
@@ -651,6 +656,7 @@ class TestsuiteCore:
                 self.testsuite_name,
                 self.report_index,
                 self.main.args.xunit_output,
+                attachments_settings,
             )
         if self.main.args.gaia_output:
             dump_gaia_report(
