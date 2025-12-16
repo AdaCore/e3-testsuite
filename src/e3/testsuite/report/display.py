@@ -4,6 +4,7 @@ import argparse
 from enum import Enum
 import os.path
 import sys
+import traceback
 from typing import (
     Callable,
     Dict,
@@ -15,6 +16,8 @@ from typing import (
     Tuple,
     TypeVar,
 )
+
+import yaml
 
 from e3.testsuite.report.index import ReportIndex, ReportIndexEntry
 from e3.testsuite.report.xunit import AttachmentsSettings, dump_xunit_report
@@ -228,28 +231,75 @@ def generate_report(
     count_failure_reasons: Dict[FailureReason, int] = {
         reason: 0 for reason in FailureReason
     }
+    stats_counters = dict(new_index.status_counters)
 
     # Lists of results of interest (users may want to investigate them
     # further).
-    new_failures: List[ReportIndexEntry] = []
-    already_detected_failures: List[ReportIndexEntry] = []
-    fixed_failures: List[ReportIndexEntry] = []
-    xfail: List[ReportIndexEntry] = []
-    xpass: List[ReportIndexEntry] = []
-    verify: List[ReportIndexEntry] = []
-    error: List[ReportIndexEntry] = []
+    new_failures: List[ReportIndexEntry | TestResult] = []
+    already_detected_failures: List[ReportIndexEntry | TestResult] = []
+    fixed_failures: List[ReportIndexEntry | TestResult] = []
+    xfail: List[ReportIndexEntry | TestResult] = []
+    xpass: List[ReportIndexEntry | TestResult] = []
+    verify: List[ReportIndexEntry | TestResult] = []
+    error: List[ReportIndexEntry | TestResult] = []
 
-    # Collect information from all entries
-    for _, entry in sorted(new_index.entries.items()):
+    additional_errors = []
+
+    def try_load(
+        entry: ReportIndexEntry | TestResult,
+        result: TestResult | None,
+    ) -> TestResult:
+        """Load if needed the test result for a report index entry.
+
+        If loading the YAML file that stores the result fails, this appends an
+        error test result to "additional_errors".
+        """
+        if isinstance(entry, TestResult):
+            return entry
+        elif result is not None:
+            return result
+
+        try:
+            return entry.load()
+        except yaml.YAMLError:
+            # Create an incomplete test result from the index entry, so that we
+            # can still report from the little we have.
+            result = TestResult(
+                name=entry.test_name,
+                status=entry.status,
+                msg=entry.msg or "",
+            )
+            result.failure_reasons = entry.failure_reasons
+            result.time = entry.time
+            result.info = entry.info
+
+            # Add an extra error to report that we had trouble loading one
+            # entry.
+            error = TestResult(
+                name=entry.test_name + "__error",
+                status=TestStatus.ERROR,
+                msg="YAML loading error for the test result",
+            )
+            error.log += traceback.format_exc()
+            additional_errors.append(error)
+
+            return result
+
+    def process_entry(entry: ReportIndexEntry | TestResult) -> None:
+        """Add the given test result to the displayed report."""
+        nonlocal count_executed
+
         # Since this is costly, load the TestResult from disk on demand
-        result: Optional[TestResult] = None
+        result: Optional[TestResult] = (
+            entry if isinstance(entry, TestResult) else None
+        )
 
         if entry.status != TestStatus.SKIP:
             count_executed += 1
 
         if entry.status == TestStatus.FAIL:
             # Account for entry in failure reason counters
-            result = result or entry.load()
+            result = try_load(entry, result)
             for reason in result.failure_reasons:
                 count_failure_reasons[reason] += 1
 
@@ -294,12 +344,29 @@ def generate_report(
             and not show_all_logs
             and not show_xfail_logs
         ):
-            continue
+            return
 
-        result = result or entry.load()
+        result = try_load(entry, result)
         results_display[entry.test_name] = format_result_logs(
             result, colors, show_error_output, show_time_info
         )
+
+    # Collect information from all entries
+    for _, entry in sorted(new_index.entries.items()):
+        process_entry(entry)
+
+    # Include errors about the report production process itself
+    for result in additional_errors:
+        # Make sure that the result name is unique: it is only now that all
+        # original entries were processed that we can avoid conflicts.
+        prefix = result.test_name
+        i = 1
+        while result.test_name in results_display:
+            result.test_name = f"{prefix}{i}"
+            i += 1
+        process_entry(result)
+        stats_counters.setdefault(TestStatus.ERROR, 0)
+        stats_counters[TestStatus.ERROR] += 1
 
     # Write the summary
     print(
@@ -316,7 +383,7 @@ def generate_report(
     def get_key(enum: Enum) -> SupportsLessThan:
         return enum.value
 
-    stats = sorted_counters(new_index.status_counters, key=get_key)
+    stats = sorted_counters(stats_counters, key=get_key)
     failure_reason_stats = sorted_counters(count_failure_reasons, key=get_key)
 
     if stats:
@@ -377,7 +444,7 @@ def generate_report(
             def display_failures(
                 kind: str,
                 color: str,
-                failures: List[ReportIndexEntry],
+                failures: List[ReportIndexEntry | TestResult],
                 display_if_empty: bool = False,
             ) -> None:
                 if not display_if_empty and not failures:
