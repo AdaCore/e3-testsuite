@@ -802,6 +802,7 @@ class TestAttachments:
         xunit_file = self.run_ts(
             tmp_path,
             f"--xunit-attachments-output-dir={attachments_dir}",
+            f"--xunit-attachments-relative-root-dir={tmp_path}",
             "--xunit-attachments-threshold=100",
         )
         testsuites = ET.parse(xunit_file).getroot()
@@ -828,7 +829,8 @@ class TestAttachments:
             if m is None:
                 assert actual_log == expected_log
             else:
-                with open(m.group(1)) as f:
+                filename = tmp_path / m.group(1)
+                with filename.open() as f:
                     attachment_log = f.read()
                 assert attachment_log == expected_log
 
