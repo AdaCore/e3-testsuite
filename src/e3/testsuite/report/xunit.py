@@ -60,6 +60,12 @@ class AttachmentsSettings:
     Output directory for attachments.
     """
 
+    relative_root_directory: str
+    """
+    Root directory for attachments: references to attachment files mentionned
+    in the XUnit report will be relative to this directory.
+    """
+
     log_size_threshold: int
     """
     Logs larger than this size (in bytes) are written to separate files
@@ -67,6 +73,9 @@ class AttachmentsSettings:
     """
 
     output_dir_argname: ClassVar[str] = "--xunit-attachments-output-dir"
+    relative_root_dir_argname: ClassVar[str] = (
+        "--xunit-attachments-relative-root-dir"
+    )
     threshold_argname: ClassVar[str] = "--xunit-attachments-threshold"
 
     @staticmethod
@@ -78,6 +87,13 @@ class AttachmentsSettings:
             AttachmentsSettings.output_dir_argname,
             help="Output directory for attachments (for bigs logs in XUnit"
             " reports)",
+        )
+        parser.add_argument(
+            AttachmentsSettings.relative_root_dir_argname,
+            default=".",
+            help="Root directory for attachments: references to attachment"
+            " files mentionned in the XUnit report will be relative to this"
+            " directory.",
         )
         parser.add_argument(
             AttachmentsSettings.threshold_argname,
@@ -97,6 +113,7 @@ class AttachmentsSettings:
         message and exit with status code 1.
         """
         output_dir = args.xunit_attachments_output_dir
+        relative_root_dir = args.xunit_attachments_relative_root_dir
         threshold = args.xunit_attachments_threshold
 
         # If no argument is passed, we should never emit logs as separate
@@ -117,7 +134,9 @@ class AttachmentsSettings:
         output_dir = os.path.abspath(output_dir)
         mkdir(output_dir)
 
-        return AttachmentsSettings(output_dir, threshold)
+        return AttachmentsSettings(
+            output_dir, os.path.abspath(relative_root_dir), threshold
+        )
 
 
 def postprocess_log(
@@ -151,7 +170,10 @@ def postprocess_log(
         delete=False,
     ) as f:
         f.write(actual_log)
-        return f"[[ATTACHMENT|{f.name}]]"
+        ref = os.path.relpath(
+            f.name, attachments_settings.relative_root_directory
+        )
+        return f"[[ATTACHMENT|{ref}]]"
 
 
 def dump_xunit_report(
