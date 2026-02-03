@@ -742,7 +742,8 @@ class TestsuiteCore:
 
             # If the given pattern is a directory, do not go through the whole
             # tests subdirectory.
-            if os.path.isdir(spec):
+            spec_is_dir = os.path.isdir(spec)
+            if spec_is_dir:
                 root = spec
             else:
                 root = self.test_dir
@@ -768,7 +769,19 @@ class TestsuiteCore:
                 # Compute whether the pattern matches the directory only once
                 # (now) instead of once per test finder (in the for loop
                 # below).
-                pattern_matches = matches_pattern(pattern, dirpath)
+                #
+                # Note that we must match the directory name relative to the
+                # tests directory, so that the location of the testsuite in the
+                # filesystem does not interfere with matching. For instance, if
+                # the matcher is "home", no test should match just because they
+                # are located in "/home/username/my_testsuite/tests/".
+                #
+                # If "spec" designates a directory, the dir walk started from
+                # it (see above), and thus by construction, all directories
+                # found do match the pattern.
+                pattern_matches = spec_is_dir or matches_pattern(
+                    pattern, os.path.relpath(dirpath, self.test_dir)
+                )
 
                 # The first test finder that has a match "wins". When handling
                 # test data, we want to deal only with absolute paths, so get

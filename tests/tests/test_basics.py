@@ -586,7 +586,7 @@ class TestPushTwice:
 
     def test(self):
         suite = run_testsuite(
-            self.Mysuite, args=["simple-tests/test1"], expect_failure=True
+            self.Mysuite, args=["test1"], expect_failure=True
         )
         assert len(suite.report_index.entries) == 2
         check_result(
@@ -1349,7 +1349,7 @@ class TestSkipPassed:
 def test_filtering(tmp_path):
     """Check support for filtering tests on the command line."""
     # Create the hierarchy of test directories in the "tests" directory
-    tests_dir = tmp_path / "tests"
+    tests_dir = tmp_path / "deep" / "intermediate" / "tests"
     for tc, filename in [
         ("foo/a", "test.yaml"),
         ("foo/bar", "test.yaml"),
@@ -1425,6 +1425,11 @@ def test_filtering(tmp_path):
 
     # Pattern that matches the middle of multiple tests: run only these tests
     check(["a"], {"foo__a", "foo__bar", "bar", "custom.a"})
+
+    # Pattern that would match the absolute path to the tests dir, but not
+    # actual test names: this should match nothing.
+    # relative path: this should
+    check(["intermediate"], {})
 
 
 def test_symlink_loop(tmp_path):

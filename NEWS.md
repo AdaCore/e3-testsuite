@@ -1,6 +1,7 @@
 27.4 (Not released yet)
 =======================
 
+* Make test filtering insensitive to testsuite prefix.
 * `e3-testsuite-report`: be resilient to YAML parsing errors.
 * XUnit reports: add support for GitLab attachments for big logs.
 * Fix a leak of threading locks for each test.
