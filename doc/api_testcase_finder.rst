@@ -174,8 +174,8 @@ testcase for every ``*.txt`` file in the test tree, using the
                    # Preserve the ".txt" extension so that it matches "a.txt"
                    test_matcher=os.path.join(dirpath, f),
                )
-               for f in filenames:
-               if not f.endswith(".txt")
+               for f in filenames
+               if f.endswith(".txt")
            ]
 
 Thanks to this test finder:
