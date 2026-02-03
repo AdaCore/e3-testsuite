@@ -52,6 +52,7 @@ Topics
    api_report
    adacore
    multiprocessing
+   code_coverage
 
 
 Indices and tables
