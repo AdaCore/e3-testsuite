@@ -101,7 +101,7 @@ The special case of directories with multiple tests
 To keep reasonable performance when running a subset of testcases (i.e. when
 passing the ``sublist`` positional command line argument), the
 ``Testsuite.get_test_list`` method does not even try to call test finders on
-directories that don't match a requested sublist. For instance, with the given
+directories that don't match a requested sub-list. For instance, with the given
 tree of tests:
 
 .. code-block:: text
@@ -125,7 +125,7 @@ will call the ``TestFinder.probe`` method only on the ``tests/bar/`` directory
 (and ignores ``tests/foo/``).
 
 This is fine if each testcase has a dedicated directory, which is the
-recommended strategy to encode tests. However, if indvidual tests are actually
+recommended strategy to encode tests. However, if individual tests are actually
 encoded as single files (for instance ``*.txt`` files in the example above,
 which can happen with legacy testsuites), then the filtering of tests to run
 can work in unfriendly ways:
@@ -144,7 +144,7 @@ consider filenames (possibly at the expanse of performance), you need to:
   ``False`` (it returns ``True`` by default);
 
 * make its ``probe`` method pass ``ParsedTest``'s ``test_matcher`` constructor
-  argument a string to be matched against sublists.
+  argument a string to be matched against sub-lists.
 
 To continue with the previous example, let's write a test finder that creates a
 testcase for every ``*.txt`` file in the test tree, using the
@@ -174,8 +174,8 @@ testcase for every ``*.txt`` file in the test tree, using the
                    # Preserve the ".txt" extension so that it matches "a.txt"
                    test_matcher=os.path.join(dirpath, f),
                )
-               for f in filenames:
-               if not f.endswith(".txt")
+               for f in filenames
+               if f.endswith(".txt")
            ]
 
 Thanks to this test finder:

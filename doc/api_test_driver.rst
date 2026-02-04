@@ -95,10 +95,10 @@ Test fragments
 
 The ``TestDriver`` API deals with an abstraction called *test fragments*. In
 order to leverage machines with multiple cores so that testsuites run faster,
-we need processings to be separated into independent parts to be scheduled in
+we need processing to be separated into independent parts to be scheduled in
 parallel. Test fragments are such independent parts: the fact that a test
 driver can create multiple fragments for a single testcase allows finer
-granularity for testcase execution parallelisation compared to "a whole
+granularity for testcase execution parallelization compared to "a whole
 testcase reserves a whole core".
 
 When a testsuite runs, it first looks for all testcases to run, then ask their
@@ -273,7 +273,7 @@ messages will not necessarily make debugging easy (not so good).
 A better driver would catch manually likely exceptions, and create
 ``TestResult`` instances with useful information, such as the name of the
 current step (``build`` or ``parse``) and the current input JSON file (if
-applicable) so that testcase developpers have all the information they need to
+applicable) so that testcase developers have all the information they need to
 understand errors when they occur.
 
 
@@ -350,7 +350,7 @@ Most of the time, these drawbacks make inter-test dependencies inappropriate,
 and thus better avoided. However there are cases where they are necessary. Real
 world examples include:
 
-* Writing an ``e3-testsuite`` based test harness to exercize existing
+* Writing an ``e3-testsuite`` based test harness to exercise existing
   inter-dependent testcases that cannot be modified. For instance, the `ACATS
   (Ada Conformity Assessment Test Suite) <http://www.ada-auth.org/acats.html>`_
   has some tests which write files and other tests that then read later on.
@@ -373,7 +373,7 @@ First, a bit of theory regarding the logistics of test fragments in the
 testsuite:
 
 The description of the :ref:`TestDriver.add_fragment method
-<test_driver_add_fragment>` above mentionned a crucial data structure in the
+<test_driver_add_fragment>` above mentioned a crucial data structure in the
 testsuite: the DAG (Directed Acyclic Graph). This graph (an instance of
 ``e3.collections.dag.DAG``) contains the list of fragments to run as nodes and
 the dependencies between these fragments as edges. The DAG is then is used to

@@ -15,7 +15,7 @@ testsuite.
 By default, the testsuite framework assumes that every testcase is materialized
 as a directory that contains a ``test.yaml`` file, and that all testcases can
 be arbitrarily organized in a directory tree. However, this is just a default:
-the testcase format is completely customizeable.
+the testcase format is completely customizable.
 
 
 Test results

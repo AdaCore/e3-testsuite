@@ -75,7 +75,7 @@ Users can control these platforms using `e3's standard platform arguments
 that is, ``--build``, ``--host`` and ``--target``.  These arguments have
 semantics similar to the homonym options in `GNU configure scripts
 <https://www.gnu.org/savannah-checkouts/gnu/autoconf/manual/autoconf-2.72/html_node/Specifying-Target-Triplets.html>`__,
-with the caveat that instead of cpu-vendor-os triplets, e3 expects cpu-os
+with the caveat that instead of ``cpu-vendor-os`` triplets, e3 expects ``cpu-os``
 identifiers as found in ``e3.platform.get_knowledge_base().platform_info``.
 
 For instance, by passing ``--target=arm-elf``, users running tests on GNU/Linux

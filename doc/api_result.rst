@@ -17,7 +17,7 @@ This test result class is merely a data holder. It contains:
 * the name of the test corresponding to this result;
 * the test status (a ``TestStatus`` instance: see the section below) as well as
   an optional one-line message to describe it;
-* various information to help post-mortem investigation, should any problem
+* various information to help postmortem investigation, should any problem
   occur (logs, list of subprocesses spawned during test execution, environment
   variables, ...).
 
@@ -93,7 +93,7 @@ Here is the exhaustive list of ``TestResult`` attributes:
 
 ``log``
    :ref:`Log <result_log>` instance to contain free-form text, for test
-   execution post-mortem debugging purposes. Test drivers are invited to write
+   execution postmortem debugging purposes. Test drivers are invited to write
    content that will be useful if things go wrong during the test execution:
    test failure, test driver bug, and so on. This is what gets printed on the
    standard output when the test fails and the ``--show-error-output``
@@ -124,7 +124,7 @@ Here is the exhaustive list of ``TestResult`` attributes:
    comparison (see for instance the :ref:`output refining mechanism
    <api_diff_output_refining>`). These logs are supposed to contain the outputs
    actually passed to the diff computation function, i.e. *after* refining, so
-   that whatever attemps to re-compute the diff (report production, for
+   that whatever attempts to re-compute the diff (report production, for
    instance) get the same result.
 
    If, for some reason, it is not possible to store expected and actual
@@ -206,7 +206,7 @@ free-form textual logs, actual output, ... in ``TestResult`` instances.
 
 The only reason to have this class instead of just holding Python's
 ``string``/``bytes`` objects is to control the serialization of these logs to
-YAML. Interaction wiht these should be transparent to test drivers anyway, as
+YAML. Interaction with these should be transparent to test drivers anyway, as
 they are intended to be used in append-only mode. For instance, to add a line
 to a test result's free-form log:
 

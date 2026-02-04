@@ -52,7 +52,7 @@ no test.
 Creating a test driver
 ----------------------
 
-Most testcases will check the behavior of artithmetic computations, so we have
+Most testcases will check the behavior of arithmetic computations, so we have
 an obvious first driver to write: it will spawn a ``bc`` process, passing a
 file that contains the arithmetic expression to evaluate to it and check that
 the output is as expected. Testcases using this driver just need to provide the
@@ -85,7 +85,7 @@ Add the following class to ``testsuite.py``:
 The only mandatory thing to do for ``ClassicTestDriver`` concrete subclasses
 (``DiffTestDriver`` is an abstract subclass) is to override the ``run`` method.
 The role of this method is to do whatever actions the test driver is supposed
-to do in order for testcases to exercize the tested piece of software: compile
+to do in order for testcases to exercise the tested piece of software: compile
 software, prepare input files, run processes, and so on.
 
 The very goal of ``DiffTestDriver`` is to compare a "test output" against a
@@ -238,7 +238,7 @@ displays it, making it easy to quickly spot the difference between the two.
 Even though these 3 testcases take very little time to run, most testsuites
 require a lot of CPU time to run to completion. Nowadays, most working stations
 have several cores, so we can spawn one test per core to speedup testsuite
-execution time. ``e3.testsuite`` supports the ``--jobs/-j`` option to achive
+execution time. ``e3.testsuite`` supports the ``--jobs/-j`` option to achieve
 this. This option works the same way it does for the ``make`` program: ``-jN``
 is the default (run at most N testcases at a time, default is 1), and ``-j0``
 tells to set N to the number of CPU cores.

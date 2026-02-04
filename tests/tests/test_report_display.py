@@ -436,7 +436,7 @@ def test_generate_text_report(tmp_path):
     )
 
     # Replace the "new" report with other data and then re-run the testsuite in
-    # the same result dir, to exercize results comparison in the generated
+    # the same result dir, to exercise results comparison in the generated
     # report.
     new_result_dir = os.path.join(tmp_path, "new")
     shutil.rmtree(new_result_dir)
