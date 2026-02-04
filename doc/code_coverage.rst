@@ -11,7 +11,7 @@ its ecosystem used to develop the codebase on which one wants to compute code
 coverage. Thanks to ``e3-testsuite``'s extension points, it is convenient to
 compute code coverage reports directly in the testsuite scripts.
 
-This section demonstrates how to achive this with a simple Ada program, using
+This section demonstrates how to achieve this with a simple Ada program, using
 `GNATcoverage <https://github.com/AdaCore/gnatcoverage>`_ as the underlying
 technology for actual code coverage analysis.
 

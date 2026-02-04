@@ -259,9 +259,9 @@ class TestResult(yaml.YAMLObject):
         # running the comparison (see for instance the
         # e3.testsuite.driver.diff.OutputRefiner mechanism). These logs are
         # supposed to contain the outputs actually passed to the diff
-        # computation function, i.e. *after* refining, so that whatever attemps
-        # to re-compute the diff (report production, for instance) get the same
-        # result.
+        # computation function, i.e. *after* refining, so that whatever
+        # attempts to re-compute the diff (report production, for instance) get
+        # the same result.
         #
         # If, for some reason, it is not possible to store expected and actual
         # outputs, self.diff can be assigned a Log instance holding the diff
@@ -405,7 +405,7 @@ class TestResultSummary:
 
     This class holds a subset of the information available in ``TestResult``
     instances. This subset is meant to be small enough to be included in result
-    indexes while enabling efficient common processings such as "show logs for
+    indexes while enabling efficient common processing such as "show logs for
     tests that failed": no need to load all the test results for tests that
     succeeded.
     """

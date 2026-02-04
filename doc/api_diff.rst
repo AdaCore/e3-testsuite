@@ -166,11 +166,11 @@ Several very common subclasses are available in ``driver.diff``:
 
    .. code-block:: python
 
-      # Just remove occurences of <foo>
+      # Just remove occurrences of <foo>
       # (replace them with an empty string)
       Substitute("<foo>")
 
-      # Replace occurences of <foo> with <bar>
+      # Replace occurrences of <foo> with <bar>
       Substitute("<foo>", "<bar>")
 
 ``ReplacePath(path, replacement="")``

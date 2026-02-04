@@ -62,8 +62,8 @@ class AttachmentsSettings:
 
     relative_root_directory: str
     """
-    Root directory for attachments: references to attachment files mentionned
-    in the XUnit report will be relative to this directory.
+    Root directory for attachments: references to attachment files mentioned in
+    the XUnit report will be relative to this directory.
     """
 
     log_size_threshold: int
@@ -92,7 +92,7 @@ class AttachmentsSettings:
             AttachmentsSettings.relative_root_dir_argname,
             default=".",
             help="Root directory for attachments: references to attachment"
-            " files mentionned in the XUnit report will be relative to this"
+            " files mentioned in the XUnit report will be relative to this"
             " directory.",
         )
         parser.add_argument(

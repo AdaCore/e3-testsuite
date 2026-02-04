@@ -120,7 +120,7 @@ driver, so we will stick here to a summary, with a few pointers to go further:
 
 * It is the output of this script that is compared against the output baseline.
   To hide environment-specific differences, output refiners turn backslashes
-  into forward slashes, remove ``.exe`` extensions and also remove occurences
+  into forward slashes, remove ``.exe`` extensions and also remove occurrences
   of the working directory.
 
 * On Unix systems, this driver has a very crude conversion of Windows batch
@@ -252,7 +252,7 @@ subsequent ``DEAD`` commands.
 ``REQUIRED``
   Do not run a test if the current configuration does not contain the specified
   discriminant. The ``REQUIRED`` command is a variant of the ``DEAD`` command.
-  Its main difference is that it cannot be cancelled by other matching lines.
+  Its main difference is that it cannot be canceled by other matching lines.
   Currently it's mainly used in the GPRbuild testsuite in order to simplify the
   ``test.opt``:
 

@@ -215,7 +215,7 @@ class AdaCoreLegacyTestDriver(DiffTestDriver):
             # Remove ".exe" extension and CR characters anywhere in outputs.
             # TODO: same question as in the TODO in "cmd_substitutions".
             PatternSubstitute(rb"(\.exe\b|\015)", rb""),
-            # Remove occurences of the "src" working dir subdirectory
+            # Remove occurrences of the "src" working dir subdirectory
             LineByLine(
                 PatternSubstitute(
                     rb"[^ '\"]*"

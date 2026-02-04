@@ -39,7 +39,7 @@ def test_adacore():
         "3807-001": Status.PASS,
         # Check that test.cmd_suffix tests are converted
         "DB15-019": Status.PASS,
-        # Regular test execution, exercize output refiners
+        # Regular test execution, exercise output refiners
         "T415-993": Status.PASS,
         # Missing non-default baseline
         "T415-994": Status.ERROR,
