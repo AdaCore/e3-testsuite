@@ -45,7 +45,7 @@ this format provides a declarative formalism to describe settings depending on
 the environment, and more precisely on a set of *discriminants* ("the
 configuration"): simple case insensitive names for environment specificities.
 For instance: ``linux`` on a Linux system, ``windows`` on a Windows one,
-``x86`` on Intel 32 bits architecture, ``vxworks`` when targetting a VxWorks is
+``x86`` on Intel 32 bits architecture, ``vxworks`` when targeting a VxWorks is
 involved, etc. The set of discriminants for a given testsuite run is stored in
 testsuite reports, and visible in GAIA's ``Discriminants`` testsuite report
 section.
@@ -91,7 +91,7 @@ This driver has two requirements for ``Testsuite`` subclasses using it:
   standard discriminants based on the current host/build/target platforms.
   Testsuites can then add more discriminants as needed.
 
-For instance, imagine a testsuite that wants standard dircriminants plus the
+For instance, imagine a testsuite that wants standard discriminants plus the
 ``valgrind`` discriminant if the ``--valgrind`` command-line option is passed
 to the testsuite:
 
@@ -296,7 +296,7 @@ subsequent ``DEAD`` commands.
   configuration (as passed to e3's ``rlimit`` program).
 
 <empty>
-  Do run this test on specified target if not already explicitly cancelled. This
+  Do run this test on specified target if not already explicitly canceled. This
   is not a command; in particular, it will not override a previous ``DEAD`` command
   that is explicitly matched (i.e. a non-``ALL`` ``DEAD`` command). But it will
   override a previous ``ALL DEAD`` command, as well as disable all subsequent
@@ -350,7 +350,7 @@ Than this way:
 
 Indeed if you introduce afterward the builds for GCC 4.2.x, there is more
 chance that the new output match the GCC 4.1.x one than the GCC 3.4.x one. So
-when there is a difference trigerred by different GCC versions, use the last
+when there is a difference triggered by different GCC versions, use the last
 GCC version as the default.
 
 

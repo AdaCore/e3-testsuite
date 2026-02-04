@@ -208,7 +208,7 @@ testsuite report.
 
 That means that in practice, test drivers only need to override this
 ``compute_failures`` method in order to properly analyze test output. For
-instance, let's consider a test driver whose ``run`` method spawns a supbrocess
+instance, let's consider a test driver whose ``run`` method spawns a subprocess
 and must consider that the test succeeds iff the ``SUCCESS`` string appears in
 the output. The following would do the job:
 
@@ -286,7 +286,7 @@ The ``shell`` method already uses them to format the logging of subprocesses in
    )
 
 This will format ``Status code`` in bright style and the status code in dim
-style if formatting is enabled, and will just return ``Status code: 0```
+style if formatting is enabled, and will just return ``Status code: 0``
 without formatting when disabled.
 
 

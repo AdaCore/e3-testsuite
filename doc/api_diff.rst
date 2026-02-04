@@ -28,7 +28,7 @@ the output baseline:
 
 * The output baseline, which we could also call the *test expected output*, is
   by default the content of the ``test.out`` file, in the test directory. As
-  explained :ref:`below <api_diff_alternative_baselines>`, this defalut can be
+  explained :ref:`below <api_diff_alternative_baselines>`, this default can be
   changed.
 
 Thanks to this subclass, writing real world test drivers requires little code.
@@ -69,7 +69,7 @@ encoding.
 Handling output variations
 --------------------------
 
-In some cases, program outputs can contain unpredictible parts. For instance,
+In some cases, program outputs can contain unpredictable parts. For instance,
 the following script:
 
 .. code-block:: python
@@ -209,8 +209,8 @@ possible to also apply them to baselines. To do this, override the
    def refine_baseline(self):
        return True
 
-This behavior is disabled by default because a very common refinment is to
-remove occurences of the working directory from the test output. In that case,
+This behavior is disabled by default because a very common refinement is to
+remove occurrences of the working directory from the test output. In that case,
 baselines that contain the working directory (for instance
 ``/home/user/my-testsuite/tmp/my-test``) will be refined as expected with the
 setup of the original testcase author, but will not on another setup (for
