@@ -247,14 +247,16 @@ def test_timeout():
     )
     assert extract_results(suite) == {
         "pass": Status.PASS,
-        "timedout": Status.FAIL,
+        "timedout__text": Status.FAIL,
+        "timedout__binary": Status.FAIL,
     }
 
     with open(os.path.join("out", "new", "results")) as f:
         lines = sorted(f.read().splitlines())
         assert lines == [
             "pass:OK:",
-            "timedout:TIMEOUT:unexpected output | test timed out",
+            "timedout__binary:TIMEOUT:unexpected output | test timed out",
+            "timedout__text:TIMEOUT:unexpected output | test timed out",
         ]
 
 
