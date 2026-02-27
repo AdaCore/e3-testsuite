@@ -1,6 +1,7 @@
 27.4 (Not released yet)
 =======================
 
+* `ClassicTestDriver`: fix detection of timeouts with CRLF line endings.
 * Make test filtering insensitive to testsuite prefix.
 * `e3-testsuite-report`: be resilient to YAML parsing errors.
 * XUnit reports: add support for GitLab attachments for big logs.

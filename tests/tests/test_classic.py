@@ -438,12 +438,26 @@ class TestMayHaveTimedOut:
                     classic.ProcessResult(status, output)
                 )
 
-            matching_msg = "rlimit: Real time limit (1 s) exceeded\n"
+            def get_matching_msg(
+                timeout: int = 1,
+                crlf: bool = False,
+                binary: bool = False,
+            ) -> str | bytes:
+                line_ending = "\r\n" if crlf else "\n"
+                result = (
+                    f"rlimit: Real time limit ({timeout} s) exceeded"
+                    f"{line_ending}"
+                )
+                return result.encode("ascii") if binary else result
 
             assert not check(0, "foobar")
             assert not check(2, "foobar")
-            assert not check(0, matching_msg)
-            assert check(2, matching_msg)
+            assert not check(0, get_matching_msg())
+            assert check(2, get_matching_msg())
+            assert check(2, get_matching_msg(timeout=9876))
+            assert check(2, get_matching_msg(crlf=True))
+            assert check(2, get_matching_msg(binary=True))
+            assert check(2, get_matching_msg(crlf=True, binary=True))
 
     def test(self):
         class Mysuite(Suite):
