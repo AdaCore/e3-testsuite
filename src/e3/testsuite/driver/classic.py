@@ -71,7 +71,7 @@ class TestAbortWithFailure(Exception):
 
 # Regular expressions to match the "timeout" error message from the rlimit
 # program.
-TIMEOUT_OUTPUT_PATTERN = r"rlimit: Real time limit ([^\n]+) exceeded\n"
+TIMEOUT_OUTPUT_PATTERN = r"rlimit: Real time limit ([^\n]+) exceeded(\r?)\n"
 TIMEOUT_OUTPUT_STR_RE = re.compile(TIMEOUT_OUTPUT_PATTERN)
 TIMEOUT_OUTPUT_BYTES_RE = re.compile(TIMEOUT_OUTPUT_PATTERN.encode("ascii"))
 
