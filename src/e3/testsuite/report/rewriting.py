@@ -9,7 +9,7 @@ import os.path
 import sys
 
 from e3.testsuite.report.index import ReportIndex
-from e3.testsuite.result import FailureReason, TestStatus
+from e3.testsuite.result import FailureReason, TestResult, TestStatus
 from e3.testsuite.utils import ColorConfig
 
 
@@ -134,12 +134,29 @@ class BaseBaselineRewriter(abc.ABC):
                     )
                     continue
                 assert isinstance(result.out, (bytes, str))
-                self.handle_test_diff(summary, test_name, result.out, encoding)
+                self.rewrite_from_result(summary, result, result.out, encoding)
 
             elif entry.status == TestStatus.ERROR:
                 self.handle_test_error(
                     summary, test_name, "test aborted because of an error"
                 )
+
+    def rewrite_from_result(
+        self,
+        summary: RewritingSummary,
+        result: TestResult,
+        output: str | bytes,
+        encoding: str,
+    ) -> None:
+        """Rewrite a baseline from a native e3-testsuite test result.
+
+        :param summary: Summary of rewritten baselines.
+        :param result: Test result for the test (assumed to be failing because
+            of a DIFF) whose baseline must be updated.
+        :param output: Actual output (i.e. new baseline).
+        :param encoding: Encoding for the test baseline.
+        """
+        self.handle_test_diff(summary, result.test_name, output, encoding)
 
     def rewrite_from_gaia(
         self, summary: RewritingSummary, results: list[str]

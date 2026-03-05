@@ -158,10 +158,10 @@ def write_baselines(tmp_path, baselines):
                 f.write(baseline)
 
 
-def check_baselines(tmp_path, baselines):
+def check_baselines(tmp_path, baselines, filename_keys: bool = False):
     """Check actual baselines against expectations."""
-    for test_name, baseline in baselines.items():
-        filename = baseline_filename(tmp_path, test_name)
+    for key, baseline in baselines.items():
+        filename = key if filename_keys else baseline_filename(tmp_path, key)
         if baseline:
             with open(filename, "rb") as f:
                 assert f.read() == baseline
@@ -306,3 +306,69 @@ def test_baseline_postprocessing(tmp_path):
     )
 
     check_baselines(tmp_path, updated_baselines)
+
+
+def test_baseline_from_result(tmp_path, capsys):
+    """Check that baseline filenames can be computed from test results."""
+
+    class BR(BaseBaselineRewriter):
+        def __init__(self):
+            self.baseline_files = {}
+            super().__init__(ColorConfig(colors_enabled=False))
+
+        def rewrite_from_result(self, summary, result, output, encoding):
+            test_name = result.test_name
+            origin = result.env.get("origin")
+            if origin:
+                outdir = tmp_path / origin
+                outdir.mkdir()
+                self.baseline_files[test_name] = f"{outdir / test_name}.txt"
+                super().rewrite_from_result(summary, result, output, encoding)
+            else:
+                self.handle_test_error(summary, test_name, "origin is missing")
+
+        def baseline_filename(self, test_name):
+            return self.baseline_files[test_name]
+
+    tests = [f"t{i}" for i in range(3)]
+    test_results = [
+        create_result(
+            test_name,
+            Status.FAIL,
+            failure_reasons={FailureReason.DIFF},
+            out=f"New Baseline for {test_name}",
+        )
+        for test_name in tests
+    ]
+    test_results[0].env["origin"] = "orig1"
+    test_results[1].env["origin"] = None
+    test_results[2].env["origin"] = "orig2"
+
+    results_dir = tmp_path / "results"
+    results_dir.mkdir()
+    report = create_report(test_results, str(results_dir))
+
+    br = BR()
+    assert br.rewrite(report.results_dir) == RewritingSummary(
+        errors={"t1"},
+        updated_baselines=set(),
+        new_baselines={"t0", "t2"},
+        deleted_baselines=set(),
+    )
+
+    check_baselines(
+        tmp_path,
+        {
+            str(tmp_path / "orig1" / "t0.txt"): b"New Baseline for t0",
+            str(tmp_path / "orig2" / "t2.txt"): b"New Baseline for t2",
+        },
+        filename_keys=True,
+    )
+
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert sorted(captured.err.splitlines()) == [
+        "INFO: no baseline file for t0, creating it",
+        "INFO: no baseline file for t2, creating it",
+        "WARNING: cannot update baseline for t1: origin is missing",
+    ]
