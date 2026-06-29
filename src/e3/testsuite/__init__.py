@@ -1065,20 +1065,6 @@ class TestsuiteCore:
             self.output_dir = os.path.join(d, "new")
             old_output_dir = os.path.join(d, "old")
 
-        # If this testsuite run should skip tests that passed in a previous
-        # testsuite run, try to load the previous testsuite report.
-        if args.skip_passed:
-            try:
-                self.old_report_index = ReportIndex.read(self.output_dir)
-            except OSError as exc:
-                logger.warning(
-                    f"Could not load the previous testsuite report: {exc}"
-                )
-
-                # Create a dummy report. We must run all tests that did not
-                # pass last time: with no result, all tests should run.
-                self.old_report_index = ReportIndex(self.output_dir)
-
         # Rotate results directories if requested. In both cases, make sure the
         # new results dir is clean.
         if args.rotate_output_dirs:
@@ -1089,6 +1075,19 @@ class TestsuiteCore:
         elif os.path.isdir(self.output_dir):
             rm(self.output_dir, recursive=True)
         mkdir(self.output_dir)
+
+        # If this testsuite run should skip tests that passed in a previous
+        # testsuite run, try to load the previous testsuite report.
+        if args.skip_passed:
+            try:
+                self.old_report_index = ReportIndex.read(old_output_dir)
+            except OSError as exc:
+                logger.warning(
+                    f"Could not load the previous testsuite report: {exc}"
+                )
+                # Create a dummy report. We must run all tests that did not
+                # pass last time: with no result, all tests should run.
+                self.old_report_index = ReportIndex(old_output_dir)
 
         # Remember about the old output directory only if it exists and does
         # contain results. If not, this info will be unused at best, or lead to
