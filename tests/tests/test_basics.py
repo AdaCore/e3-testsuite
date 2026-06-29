@@ -5,11 +5,14 @@ This checks the behavior of the Testsuite, TestDriver and BasicTestDriver
 classes.
 """
 
+from __future__ import annotations
+
 import gc
 import os
 import re
 import warnings
 import weakref
+from typing import Callable
 
 from e3.fs import mkdir, mv
 from e3.testsuite import TestAbort as E3TestAbort, Testsuite as Suite
@@ -1299,51 +1302,139 @@ class TestSkipPassed:
             self.result.set_status(status)
             self.push_result()
 
-    def test(self):
-        # Run the testsuite a first time. All tests should be scheduled and
-        # thus be present in the report.
-        tests_1 = [
-            "t1-pass",
-            "t1-fail",
-            "t1-xfail",
-            "t1-xpass",
-            "t1-verify",
-            "t1-skip",
-            "t1-not_applicable",
-            "t1-error",
-        ]
-        suite = run_testsuite(
-            create_testsuite(tests_1, self.MyDriver),
-            ["--skip-passed"],
-            expect_failure=True,
-        )
-        assert extract_results(suite) == {
-            "t1-pass": Status.PASS,
-            "t1-fail": Status.FAIL,
-            "t1-xfail": Status.XFAIL,
-            "t1-xpass": Status.XPASS,
-            "t1-verify": Status.VERIFY,
-            "t1-skip": Status.SKIP,
-            "t1-not_applicable": Status.NOT_APPLICABLE,
-            "t1-error": Status.ERROR,
-        }
+    def run_common(
+        self,
+        baseline_tests: list[str],
+        baseline_args: list[str],
+        baseline_expected_results: dict[str, Status],
+        final_additional_tests: list[str],
+        final_args: list[str],
+        final_expected_results: dict[str, Status],
+        inter_test_cb: Callable[[], None] | None = None,
+    ) -> None:
+        """Run common actions to test --skip-passed.
 
-        # Run the testsuite a second time. All tests but PASS, XFAIL and XPASS
-        # ones should run, and the new one should run, too.
-        tests_2 = tests_1 + ["t2-pass"]
+        Run a testsuite twice with --skip-passed and check the output report in
+        both runs.
+
+        :param baseline_tests: List of tests for the first testsuite run.
+        :param baseline_args: Arguments for the first testsuite run.
+        :param baseline_expected_results: Expected test results for the first
+            testsuite run.
+        :param final_tests: List of tests for the second testsuite run.
+        :param final_args: Arguments for the second testsuite run.
+        :param final_expected_results: Expected test results for the second
+            testsuite run.
+        :param inter_test_cb: Optional callback to invoke between the two
+            testsuite runs.
+        """
+
+        # Run the testsuite to create the aseline and check its report
         suite = run_testsuite(
-            create_testsuite(tests_2, self.MyDriver),
-            ["--skip-passed"],
+            create_testsuite(baseline_tests, self.MyDriver),
+            ["--skip-passed"] + baseline_args,
             expect_failure=True,
         )
-        assert extract_results(suite) == {
-            "t1-fail": Status.FAIL,
-            "t1-verify": Status.VERIFY,
-            "t1-skip": Status.SKIP,
-            "t1-not_applicable": Status.NOT_APPLICABLE,
-            "t1-error": Status.ERROR,
-            "t2-pass": Status.PASS,
-        }
+        assert extract_results(suite) == baseline_expected_results
+
+        if inter_test_cb:
+            inter_test_cb()
+
+        # Run the testsuite a second time and check its report to verify that
+        # the expected tests were skipped.
+        suite = run_testsuite(
+            create_testsuite(
+                baseline_tests + final_additional_tests, self.MyDriver
+            ),
+            ["--skip-passed"] + final_args,
+            expect_failure=True,
+        )
+        assert extract_results(suite) == final_expected_results
+
+    def test_basic(self):
+        """Test --skip-passed with default output dir control settings."""
+
+        def manual_rotate() -> None:
+            mv("out/new", "out/old")
+
+        self.run_common(
+            # Minimal settings to observe the effect of --skip-passed
+            baseline_tests=["t1-pass", "t2-fail"],
+            baseline_args=[],
+            baseline_expected_results={
+                "t1-pass": Status.PASS,
+                "t2-fail": Status.FAIL,
+            },
+            final_additional_tests=[],
+            final_args=[],
+            final_expected_results={"t2-fail": Status.FAIL},
+            # Manually rotate the output reports so that the second run uses
+            # the report from the first run as a baseline.
+            inter_test_cb=manual_rotate,
+        )
+
+    def test_rotate(self):
+        self.run_common(
+            # Run the testsuite a first time. All tests should be scheduled and
+            # thus be present in the report.
+            baseline_tests=[
+                "t1-pass",
+                "t1-fail",
+                "t1-xfail",
+                "t1-xpass",
+                "t1-verify",
+                "t1-skip",
+                "t1-not_applicable",
+                "t1-error",
+            ],
+            baseline_args=["--rotate-output-dirs"],
+            baseline_expected_results={
+                "t1-pass": Status.PASS,
+                "t1-fail": Status.FAIL,
+                "t1-xfail": Status.XFAIL,
+                "t1-xpass": Status.XPASS,
+                "t1-verify": Status.VERIFY,
+                "t1-skip": Status.SKIP,
+                "t1-not_applicable": Status.NOT_APPLICABLE,
+                "t1-error": Status.ERROR,
+            },
+            # Run the testsuite a second time. All tests but PASS, XFAIL and
+            # XPASS ones should run, and the new one should run, too.
+            final_additional_tests=["t2-pass"],
+            final_args=["--rotate-output-dirs"],
+            final_expected_results={
+                "t1-fail": Status.FAIL,
+                "t1-verify": Status.VERIFY,
+                "t1-skip": Status.SKIP,
+                "t1-not_applicable": Status.NOT_APPLICABLE,
+                "t1-error": Status.ERROR,
+                "t2-pass": Status.PASS,
+            },
+        )
+
+    def test_explicit_old_output_dir(self, tmp_path):
+        baseline_dir = str(tmp_path / "baseline")
+        new_dir = str(tmp_path / "out")
+        self.run_common(
+            # Create the baseline report
+            baseline_tests=["t1-pass", "t2-fail"],
+            baseline_args=[
+                f"--old-output-dir={new_dir}",
+                f"--output-dir={baseline_dir}",
+            ],
+            baseline_expected_results={
+                "t1-pass": Status.PASS,
+                "t2-fail": Status.FAIL,
+            },
+            # Run it a second time with --skip-passed, with an explicit
+            # --old-output-dir to point at the baseline.
+            final_additional_tests=[],
+            final_args=[
+                f"--old-output-dir={baseline_dir}",
+                f"--output-dir={new_dir}",
+            ],
+            final_expected_results={"t2-fail": Status.FAIL},
+        )
 
 
 def test_filtering(tmp_path):
