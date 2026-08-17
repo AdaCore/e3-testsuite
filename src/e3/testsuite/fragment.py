@@ -323,7 +323,9 @@ class ProcessTestFragment(
         # successfully.
         return Run(
             cmds=[
-                "e3-run-test-fragment",
+                sys.executable,
+                "-m",
+                "e3.testsuite.run_fragment",
                 self.env.env_filename,
                 f.name,
             ],
