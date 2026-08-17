@@ -1,6 +1,7 @@
 27.4 (Not released yet)
 =======================
 
+* Fix multiprocessing on Windows and relocatable distribs.
 * Baseline rewriting: introduce a test result overriding point.
 * `ClassicTestDriver`: fix detection of timeouts with CRLF line endings.
 * Make test filtering insensitive to testsuite prefix.
