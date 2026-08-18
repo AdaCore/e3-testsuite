@@ -161,12 +161,17 @@ def run_opt_parser_script(filename, tags=None):
     return Run(parser_cmd)
 
 
+def refined_output(p: Run) -> str:
+    """Return p's output with canonicalized line endings."""
+    return p.out.replace("\r\n", "\n")
+
+
 def test_eval_main():
     """Test the function called by the command-line wrapper to OptFileParse."""
     p = run_opt_parser_script("tags.opt", None)
     assert p.status == 0
     assert (
-        p.out
+        refined_output(p)
         == """\
 cmd="default.cmd"
 xfail=""
@@ -176,7 +181,7 @@ xfail=""
     p = run_opt_parser_script("tags.opt", ["linux"])
     assert p.status == 0
     assert (
-        p.out
+        refined_output(p)
         == """\
 cmd="linux.cmd"
 """
@@ -185,7 +190,7 @@ cmd="linux.cmd"
     p = run_opt_parser_script("tags.opt", ["linux", "powerpc"])
     assert p.status == 0
     assert (
-        p.out
+        refined_output(p)
         == """\
 cmd="linux.cmd"
 """
@@ -196,7 +201,7 @@ def test_eval_main_syntax_error():
     """Check that e3-opt-parser exits cleanly in case of parsing error."""
     p = run_opt_parser_script("syntax_error.opt", None)
     assert p.status == 1
-    assert p.out == "Can not parse line 2: ? ?\n"
+    assert refined_output(p) == "Can not parse line 2: ? ?\n"
 
 
 def test_check_syntax_main():
@@ -212,14 +217,14 @@ def test_check_syntax_main():
         cwd=optfiles_dir,
     )
     assert p.status == 1
-    assert p.out == (
+    assert refined_output(p) == (
         "syntax_error.opt: Can not parse line 2: ? ?\n"
         "syntax_error_2.opt: Can not parse line 2:  ALL DEAD\n"
     )
 
     p = Run(["e3-opt-check", "dead.opt", "tags.opt"], cwd=optfiles_dir)
     assert p.status == 0
-    assert p.out == ""
+    assert refined_output(p) == ""
 
 
 def test_sharp():
