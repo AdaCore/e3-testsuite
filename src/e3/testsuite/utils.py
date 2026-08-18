@@ -104,8 +104,19 @@ def enum_to_cmdline_args_map(enum_cls: Type[EnumType]) -> Dict[str, EnumType]:
 
 
 def dump_environ(filename: str, env: Env) -> None:
-    """Dump environment variables into a sourceable file."""
-    with open(os.path.join(filename), "w") as f:
+    """Dump environment variables into a sourceable file (always UTF-8)."""
+
+    # Always encode the output file in UTF-8, as environment variables may
+    # contain any Unicode codepoint, and the default IO encoding may not be
+    # enough. Shell scripts are generally more useful in UTF-8 anyway.
+    #
+    # Note that on configurations where Python does not use UTF-8 but the
+    # environment variables do contain "wide" codepoints, Python includes
+    # surrogate codepoints in os.environ: use the "surrogateescape" error
+    # handler so that they are turned back into valid UTF-8 in the output file.
+    with open(
+        os.path.join(filename), "w", encoding="utf-8", errors="surrogateescape"
+    ) as f:
         for var_name in sorted(os.environ):
             if (
                 # Ignore environment variables whose names will make

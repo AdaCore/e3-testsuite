@@ -10,9 +10,11 @@ from __future__ import annotations
 import gc
 import os
 import re
+import subprocess
+import sys
+from typing import Callable
 import warnings
 import weakref
-from typing import Callable
 
 from e3.fs import mkdir, mv
 from e3.testsuite import TestAbort as E3TestAbort, Testsuite as Suite
@@ -164,6 +166,45 @@ class TestDumpEnviron:
     def test(self):
         run_testsuite(self.Mysuite, args=["--dump-environ"])
         assert os.path.exists(os.path.join("out", "new", "environ.sh"))
+
+    def test_utf8(self, tmp_path):
+        """Check that environ dumps always uses UTF-8."""
+
+        # Run the environ dump helper with an environment variable that
+        # contains a codepoint that the default file encoding does not support.
+        #
+        # To achieve this, this default encoding must not be UTF-8 (the default
+        # on Unix), so run a Python subprocess tuned to use ASCII by default.
+        env = dict(os.environ)
+        env["LC_ALL"] = "C"
+        env["PYTHONUTF8"] = "0"
+        env["TEST_DUMP_ENVIRON"] = "\U0001f642\xe9"
+
+        output_filename = tmp_path / "env.sh"
+        script = [
+            "import sys",
+            "from e3.env import Env",
+            "from e3.testsuite.utils import dump_environ",
+            "dump_environ(sys.argv[1], Env())",
+        ]
+        subprocess.check_call(
+            [
+                sys.executable,
+                "-c",
+                ";\n".join(script),
+                str(output_filename),
+            ],
+            env=env,
+        )
+
+        with output_filename.open(encoding="utf-8") as f:
+            matched_lines = [
+                line
+                for line in f.readlines()
+                if line.startswith("export TEST_DUMP_ENVIRON=")
+            ]
+        assert len(matched_lines) == 1
+        assert matched_lines[0] == "export TEST_DUMP_ENVIRON=\U0001f642\xe9\n"
 
 
 class TestNoTestcase:
