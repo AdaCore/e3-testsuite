@@ -209,14 +209,14 @@ class TestFileAttr:
             assert t.get("name") == name
             assert t.get("file") == file
 
-        check_testcase(tests[0], "0_dirname", "tests/foo")
+        check_testcase(tests[0], "0_dirname", "tests" + os.path.sep + "foo")
         check_testcase(tests[1], "1_matcher", "mytest.txt")
 
 
 def test_import(tmp_path, capsys):
     """Test that the xUnit importer works as expected."""
     xml_filename = str(tmp_path / "tmp.xml")
-    with open(xml_filename, "w") as f:
+    with open(xml_filename, "w", encoding="utf-8") as f:
         f.write(
             """<?xml version="1.0" encoding="utf-8"?>
             <testsuites name="MyTestsuites">

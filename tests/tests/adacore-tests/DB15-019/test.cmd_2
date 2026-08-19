@@ -1,2 +1,2 @@
 touch -- -o test.exe
-ls test
+ls test.exe

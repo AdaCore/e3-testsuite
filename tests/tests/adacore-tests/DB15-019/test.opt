@@ -1,1 +1,8 @@
-foo CMD test.cmd_1
+--  Naming the test test.cmd_1 used to result in the cmd script not being
+--  converted to shell syntax. The `ls` call would then fail because `test`
+--  didn't exist.
+!windows CMD test.cmd_1
+
+--  Windows-specific script: this one is supposed not to be converted to shell
+--  syntax ("test.exe" preserved).
+windows CMD test.cmd_2

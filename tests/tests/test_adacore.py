@@ -37,7 +37,7 @@ def test_adacore():
         "0000-097": Status.PASS,
         # Check that test.sh aren't converted from cmd to Bourne syntax
         "3807-001": Status.PASS,
-        # Check that test.cmd_suffix tests are converted
+        # Check that test.cmd_suffix tests are converted, except on Windows
         "DB15-019": Status.PASS,
         # Regular test execution, exercise output refiners
         "T415-993": Status.PASS,

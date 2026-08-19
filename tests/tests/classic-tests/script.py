@@ -6,8 +6,8 @@ crlf = False
 
 
 def print_line(line):
-    sys.stdout.write(line)
-    sys.stdout.write("\r\n" if crlf else "\n")
+    sys.stdout.buffer.write(line.encode("ascii"))
+    sys.stdout.buffer.write(b"\r\n" if crlf else b"\n")
 
 
 for arg in sys.argv[1:]:
@@ -16,7 +16,7 @@ for arg in sys.argv[1:]:
     if arg == "-crlf":
         crlf = True
     elif arg == "-cwd":
-        print_line(os.getcwd())
+        print_line(os.path.realpath(os.getcwd()))
     elif arg.startswith("-read="):
         with open(arg[6:], "r"):
             pass

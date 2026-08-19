@@ -377,9 +377,9 @@ class TestCleanupFailure:
             "RuntimeError: some cleanup failure\n"
             "\n"
             "Remaining files:\n"
-            f"  test.yaml\n"
-            f"  foo\n"
-            f"  foo{os.path.sep}bar.txt\n",
+            f"  {re.escape('test.yaml')}\n"
+            f"  {re.escape('foo')}\n"
+            f"  {re.escape('foo' + os.path.sep + 'bar.txt')}\n",
             r.log,
         )
 
@@ -487,7 +487,7 @@ def test_decoding_error(caplog):
     assert extract_results(suite) == {"t": Status.ERROR}
     log = suite.report_index.entries["t"].load().log
     assert re.match(
-        "Running: .*script.py -b \\(cwd=.*\\)"
+        "Running: .*script.py.* -b \\(cwd=.*\\)"
         "\nCannot decode subprocess output:"
         "\n"
         "\n  h\\\\xe9llo",
@@ -514,4 +514,6 @@ def test_shell_stdin():
     suite = run_testsuite(create_testsuite(["t"], MyDriver), args=["-E"])
     assert extract_results(suite) == {"t": Status.PASS}
     r = suite.report_index.entries["t"].load()
-    assert r.out == "From stdin: 'This is the content of input.txt\\n'\n"
+    assert r.out.replace("\r\n", "\n") == (
+        "From stdin: 'This is the content of input.txt\\n'\n"
+    )

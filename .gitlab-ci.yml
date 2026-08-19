@@ -2,6 +2,7 @@ include:
   - component: $CI_SERVER_FQDN/eng/gitlab-templates/pre-commit@~latest
   - component: $CI_SERVER_FQDN/eng/gitlab-templates/tox@~latest
     inputs:
+      name-suffix: ":linux"
       tox-section: py313-cov
       stage: test
   - component: $CI_SERVER_FQDN/it/gitlab-templates/gitleaks@~latest
@@ -12,6 +13,15 @@ stages:
   - check
   - test
   - upload
+
+tox:windows:
+  extends: tox:linux
+  services:
+    - image:e3-windows-2025
+    - platform:x86_64-windows
+    - cpu:2
+    - mem:4
+    - disk:80
 
 upload-python-registry:
   stage: upload
