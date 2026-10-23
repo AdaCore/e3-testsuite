@@ -250,4 +250,4 @@ def dump_gaia_report(
                     new_filename = os.path.join(
                         output_dir, f"{entry.test_name}.{ext}"
                     )
-                    os.rename(filename, new_filename)
+                    os.replace(filename, new_filename)

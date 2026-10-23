@@ -1,6 +1,7 @@
 27.4 (Not released yet)
 =======================
 
+* GAIA reports: replace existing report files on Windows.
 * Fix Unicode support for `--dump-environ` on Windows.
 * Fix multiprocessing on Windows and relocatable distribs.
 * Baseline rewriting: introduce a test result overriding point.
