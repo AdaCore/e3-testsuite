@@ -78,7 +78,9 @@ def test_basics(tmp_path):
 
 
 @pytest.mark.parametrize("pre_generated", (False, True))
-def test_overwrite_existing_report(tmp_path: Path, pre_generated: bool) -> None:
+def test_overwrite_existing_report(
+    tmp_path: Path, pre_generated: bool
+) -> None:
     """Replace existing GAIA files with the latest report contents."""
     report_dir = tmp_path / "report"
     report_dir.mkdir()
